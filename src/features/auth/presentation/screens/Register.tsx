@@ -1,6 +1,6 @@
 import { authProvider } from "@/features/auth/auth";
 import { CustomFilledButton, CustomForm, FadeInUp, PasswordFormField, SelectFormField, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { RoleOptions } from "@/features/auth/auth";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import type { RegisterForm } from "@/features/auth/auth";
 
 export function Register() {
   const { information, error } = useNotification();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -22,6 +23,7 @@ export function Register() {
     mutationFn: (payload: RegisterForm) => authProvider.register(payload),
     onSuccess: (message) => {
       information(message);
+      navigate('/confirmar-cuenta');
       reset();
     },
     onError: (err) => {
