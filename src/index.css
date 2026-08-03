@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+/* Paleta: cadena de frío (verde profundo) + señal de carretera (ámbar) */
+@theme {
+    --color-canvas: #edf1ec;
+    --color-surface: #ffffff;
+    --color-ink: #12241c;
+    --color-ink-deep: #0b1712;
+    --color-ink-muted: #56685e;
+    --color-ink-subtle: #8a9990;
+    --color-line: #dde4dc;
+    --color-line-strong: #c4cec2;
+    --color-primary: #e8a33d;
+    --color-danger: #c0483c;
+    --color-success: #2f7a52;
+
+    --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+@layer base {
+    html {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+        background-color: var(--color-canvas);
+        color: var(--color-ink);
+        font-family: var(--font-sans);
+    }
+}
+
+@layer components {
+    .text_form_field,
+    .text_form_field_error {
+        width: 100%;
+        border-radius: 0.5rem;
+        border: 1px solid var(--color-line-strong);
+        background-color: var(--color-surface);
+        padding: 0.625rem 0.875rem;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        color: var(--color-ink);
+        outline: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+
+    .text_form_field::placeholder,
+    .text_form_field_error::placeholder {
+        color: var(--color-ink-subtle);
+    }
+
+    .text_form_field:focus {
+        border-color: var(--color-ink);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ink) 14%, transparent);
+    }
+
+    .text_form_field:disabled,
+    .text_form_field_error:disabled {
+        background-color: var(--color-canvas);
+        color: var(--color-ink-subtle);
+        cursor: not-allowed;
+    }
+
+    .text_form_field_error {
+        border-color: var(--color-danger);
+    }
+
+    .text_form_field_error:focus {
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 18%, transparent);
+    }
+}
+
+/* Firma visual: tramo de ruta finca -> planta -> puerto */
+@layer utilities {
+    .route_line {
+        background-image: linear-gradient(
+            to bottom,
+            color-mix(in srgb, var(--color-canvas) 34%, transparent) 0 8px,
+            transparent 8px 16px
+        );
+        background-size: 1px 16px;
+        background-repeat: repeat-y;
+        animation: route_travel 1.6s linear infinite;
+    }
+
+    .route_node_active {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 55%, transparent);
+        animation: route_pulse 2.6s ease-out infinite;
+    }
+
+    .otp_caret {
+        animation: otp_blink 1s steps(1) infinite;
+    }
+}
+
+@keyframes otp_blink {
+    0%,
+    50% {
+        opacity: 1;
+    }
+    50.01%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes route_travel {
+    to {
+        background-position-y: 16px;
+    }
+}
+
+@keyframes route_pulse {
+    0% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 55%, transparent);
+    }
+    70%,
+    100% {
+        box-shadow: 0 0 0 10px transparent;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
