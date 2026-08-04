@@ -14,6 +14,9 @@ const ROUTE_DOTS_FAINT =
 const ROW =
     "group relative flex h-14 w-full items-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink/20";
 
+const TOOLTIP =
+    "pointer-events-none invisible absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-xs text-canvas shadow-sm group-hover:visible group-focus-visible:visible";
+
 export function AdminNavItem({ item, collapsed }: Props) {
     const { to, text, icon, disabled } = item;
 
@@ -50,12 +53,20 @@ export function AdminNavItem({ item, collapsed }: Props) {
                     </span>
                 </span>
 
-                <span
-                    className={`relative z-10 whitespace-nowrap text-[13px] transition-[opacity,transform] duration-200 ease-out ${label} ${collapsed ? "-translate-x-1 opacity-0" : "translate-x-0 opacity-100"
-                        }`}
-                >
-                    {text}
+                <span className="relative z-10 min-w-0 flex-1 overflow-hidden">
+                    <span
+                        className={`block whitespace-nowrap text-[13px] transition-[opacity,transform] duration-200 ease-out ${label} ${collapsed ? "-translate-x-1 opacity-0" : "translate-x-0 opacity-100"
+                            }`}
+                    >
+                        {text}
+                    </span>
                 </span>
+
+                {collapsed && (
+                    <span aria-hidden="true" className={TOOLTIP}>
+                        {text}
+                    </span>
+                )}
             </>
         );
     };

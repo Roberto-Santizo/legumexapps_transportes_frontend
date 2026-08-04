@@ -18,7 +18,7 @@ export function AdminSidebar({ collapsed }: Props) {
 
     return (
         <aside
-            className={`flex h-full shrink-0 flex-col overflow-hidden border-r border-line bg-surface transition-[width] duration-200 ease-out ${collapsed ? "w-16" : "w-64"
+            className={`flex h-full shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200 ease-out ${collapsed ? "w-16" : "w-64"
                 }`}
         >
             <Link
@@ -29,15 +29,17 @@ export function AdminSidebar({ collapsed }: Props) {
                     <img src={LOGO} alt="Legumex" className="size-6 object-contain" />
                 </span>
 
-                <span
-                    className={`whitespace-nowrap font-display text-[15px] font-semibold tracking-tight text-ink transition-[opacity,transform] duration-200 ease-out ${collapsed ? "-translate-x-1 opacity-0" : "translate-x-0 opacity-100"
-                        }`}
-                >
-                    Transportes
+                <span className="min-w-0 flex-1 overflow-hidden">
+                    <span
+                        className={`block whitespace-nowrap font-display text-[15px] font-semibold tracking-tight text-ink transition-[opacity,transform] duration-200 ease-out ${collapsed ? "-translate-x-1 opacity-0" : "translate-x-0 opacity-100"
+                            }`}
+                    >
+                        Transportes
+                    </span>
                 </span>
             </Link>
 
-            <nav className="flex-1 overflow-y-auto overflow-x-hidden">
+            <nav className="flex-1">
                 <ul>
                     {items.map((item) => (
                         <AdminNavItem key={item.to} item={item} collapsed={collapsed} />
