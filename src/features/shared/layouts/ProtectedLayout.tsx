@@ -1,5 +1,5 @@
 import type { RootState } from "@/config/config";
-import { AdminSidebar } from "@/features/shared/shared";
+import { AdminHeader, AdminSidebar } from "@/features/shared/shared";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Navigate, Outlet } from "react-router-dom";
@@ -17,8 +17,7 @@ function readCollapsed(): boolean {
 
 export function ProtectedLayout() {
     const isSignedIn = useSelector((state: RootState) => state.auth.isSignedIn);
-    // el setter se cablea al toggle del header en el paso 9
-    const [collapsed] = useState(readCollapsed);
+    const [collapsed, setCollapsed] = useState(readCollapsed);
 
     useEffect(() => {
         try {
@@ -35,6 +34,11 @@ export function ProtectedLayout() {
             <AdminSidebar collapsed={collapsed} />
 
             <div className="flex min-w-0 flex-1 flex-col">
+                <AdminHeader
+                    collapsed={collapsed}
+                    onToggle={() => setCollapsed((value) => !value)}
+                />
+
                 <main className="flex-1 overflow-y-auto bg-canvas">
                     <Outlet />
                 </main>
