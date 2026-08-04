@@ -1,19 +1,14 @@
-import type { RootState } from "@/config/config";
 import { AdminHeader, AdminSidebar } from "@/features/shared/shared";
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/react";
+import { Navigate, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { Navigate, Outlet } from "react-router-dom";
+import type { RootState } from "@/config/config";
 
 const SIDEBAR_COLLAPSED = "SIDEBAR_COLLAPSED";
 
 function readCollapsed(): boolean {
-    try {
-        return localStorage.getItem(SIDEBAR_COLLAPSED) === "true";
-    } catch {
-        // localStorage deshabilitado: el sidebar arranca expandido
-        return false;
-    }
+    return localStorage.getItem(SIDEBAR_COLLAPSED) === "true";
 }
 
 export function ProtectedLayout() {
@@ -22,11 +17,7 @@ export function ProtectedLayout() {
     const [drawerOpen, setDrawerOpen] = useState(false);
 
     useEffect(() => {
-        try {
-            localStorage.setItem(SIDEBAR_COLLAPSED, String(collapsed));
-        } catch {
-            // sin persistencia el sidebar sigue funcionando
-        }
+        localStorage.setItem(SIDEBAR_COLLAPSED, String(collapsed));
     }, [collapsed]);
 
     if (!isSignedIn) return <Navigate to={'/login'} />
@@ -61,7 +52,7 @@ export function ProtectedLayout() {
                     onOpenDrawer={() => setDrawerOpen(true)}
                 />
 
-                <main className="flex-1 overflow-y-auto bg-canvas">
+                <main className="flex-1 overflow-y-auto bg-canvas p-10">
                     <Outlet />
                 </main>
             </div>
