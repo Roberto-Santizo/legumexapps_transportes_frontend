@@ -1,6 +1,6 @@
 # SPEC 01 — Sidebar y header del panel administrativo
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** ninguna spec previa
 > **Fecha:** 2026-08-04
 > **Objetivo:** Dar al `ProtectedLayout` un chrome administrativo compuesto por un sidebar de navegación anclado a la izquierda (colapsable a rail de iconos, drawer en móvil) y un header con título de página, notificaciones, menú de usuario y toggle del sidebar.
@@ -165,24 +165,24 @@ Convive con la clave `AUTH_TOKEN` que ya usa `authSlice`. Si la clave no existe 
 
 ## Criterios de aceptación
 
-- [ ] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
-- [ ] Entrar a `/dashboard` autenticado muestra el sidebar sobre el borde izquierdo de la ventana y el contenido a su derecha.
-- [ ] Entrar a `/dashboard` sin autenticar sigue redirigiendo a `/login`.
-- [ ] El sidebar lista exactamente cuatro ítems: Dashboard, Viajes, Pilotos y Vehículos.
-- [ ] Hacer clic en Viajes, Pilotos o Vehículos no cambia la URL.
-- [ ] La estación de Dashboard en `/dashboard` es la única con el anillo ámbar.
-- [ ] Pulsar el toggle del header en desktop lleva el sidebar de `w-64` a `w-16` y mantiene visibles los cuatro iconos.
-- [ ] Con el sidebar colapsado, hacer hover sobre una estación muestra el nombre del módulo.
-- [ ] Colapsar el sidebar y recargar la página deja el sidebar colapsado.
-- [ ] Borrar la clave `SIDEBAR_COLLAPSED` de `localStorage` y recargar deja el sidebar expandido.
-- [ ] El título del header en `/dashboard` dice "Dashboard".
-- [ ] El menú de usuario muestra el `name` y el `role` del usuario en sesión.
-- [ ] "Cerrar sesión" redirige a `/login` y deja `localStorage` sin `AUTH_TOKEN`.
-- [ ] El icono de campana abre un panel que dice que no hay notificaciones.
-- [ ] En un viewport de 375px de ancho el sidebar no ocupa espacio y el toggle abre un overlay desde la izquierda.
-- [ ] Con el overlay abierto, elegir Dashboard cierra el overlay.
-- [ ] Se puede recorrer marca, estaciones habilitadas y los tres controles del header con Tab, y cada elemento enfocado tiene un anillo de foco visible.
-- [ ] `CustomSideBar.tsx` y `CustomNavLink.tsx` siguen en el repositorio sin cambios.
+- [x] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
+- [x] Entrar a `/dashboard` autenticado muestra el sidebar sobre el borde izquierdo de la ventana y el contenido a su derecha.
+- [x] Entrar a `/dashboard` sin autenticar sigue redirigiendo a `/login`.
+- [x] El sidebar lista exactamente cuatro ítems: Dashboard, Viajes, Pilotos y Vehículos.
+- [x] Hacer clic en Viajes, Pilotos o Vehículos no cambia la URL.
+- [x] La estación de Dashboard en `/dashboard` es la única con el anillo ámbar.
+- [x] Pulsar el toggle del header en desktop lleva el sidebar de `w-64` a `w-16` y mantiene visibles los cuatro iconos.
+- [x] Con el sidebar colapsado, hacer hover sobre una estación muestra el nombre del módulo.
+- [x] Colapsar el sidebar y recargar la página deja el sidebar colapsado.
+- [x] Borrar la clave `SIDEBAR_COLLAPSED` de `localStorage` y recargar deja el sidebar expandido.
+- [x] El título del header en `/dashboard` dice "Dashboard".
+- [x] El menú de usuario muestra el `name` y el `role` del usuario en sesión.
+- [x] "Cerrar sesión" redirige a `/login` y deja `localStorage` sin `AUTH_TOKEN`.
+- [x] El icono de campana abre un panel que dice que no hay notificaciones.
+- [x] En un viewport de 375px de ancho el sidebar no ocupa espacio y el toggle abre un overlay desde la izquierda.
+- [x] Con el overlay abierto, elegir Dashboard cierra el overlay.
+- [x] Se puede recorrer marca, estaciones habilitadas y los tres controles del header con Tab, y cada elemento enfocado tiene un anillo de foco visible.
+- [x] `CustomSideBar.tsx` y `CustomNavLink.tsx` siguen en el repositorio sin cambios.
 
 ---
 

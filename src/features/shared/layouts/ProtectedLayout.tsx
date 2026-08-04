@@ -13,6 +13,7 @@ function readCollapsed(): boolean {
 
 export function ProtectedLayout() {
     const isSignedIn = useSelector((state: RootState) => state.auth.isSignedIn);
+    const user = useSelector((state: RootState) => state.auth.user);
     const [collapsed, setCollapsed] = useState(readCollapsed);
     const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -21,6 +22,10 @@ export function ProtectedLayout() {
     }, [collapsed]);
 
     if (!isSignedIn) return <Navigate to={'/login'} />
+
+    if (user?.role === "carrier" && user.carrierId === null) {
+        return <Navigate to={'/completar-perfil'} replace />
+    }
 
     return (
         <div className="flex h-screen overflow-hidden bg-canvas">
