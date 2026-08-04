@@ -32,3 +32,4 @@ export * from './AdminNavItem';
 export * from './AdminSidebar';
 export * from './NotificationsMenu';
 export * from './UserMenu';
+export * from './AdminHeader';
