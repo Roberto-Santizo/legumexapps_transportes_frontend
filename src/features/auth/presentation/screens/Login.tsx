@@ -1,18 +1,32 @@
-import { CustomFilledButton, CustomForm, FadeInUp, PasswordFormField, StaggerContainer, StaggerItem, TextFormField, Title } from "@/features/shared/shared";
+import { authProvider, login, type LoginForm } from "@/features/auth/auth";
+import { CustomFilledButton, CustomForm, FadeInUp, PasswordFormField, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
 import { Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { useForm } from "react-hook-form";
-import type { LoginForm } from "@/features/auth/auth";
+import { useMutation } from "@tanstack/react-query";
+import type { AppDispatch } from "@/config/store/store";
 
 export function Login() {
+  const dispatch = useDispatch<AppDispatch>();
+  const notification = useNotification();
+
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginForm>();
 
-  const onSubmit = (data: LoginForm) => {
-    console.log(data);
-  };
+  const { mutate, isPending } = useMutation({
+    mutationFn: (payload: LoginForm) => authProvider.login(payload),
+    onSuccess: (data) => {
+      dispatch(login(data));
+    },
+    onError: (err) => {
+      notification.error(err.message);
+    }
+  });
+
+  const onSubmit = (data: LoginForm) => mutate(data);
 
   return (
     <main className="min-h-screen w-full bg-canvas lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
@@ -95,7 +109,7 @@ export function Login() {
                 label="Iniciar sesión"
                 type="submit"
                 fullWitdh
-                disabled={isSubmitting}
+                disabled={isPending}
               />
 
               <p className="text-center text-sm text-ink-muted">

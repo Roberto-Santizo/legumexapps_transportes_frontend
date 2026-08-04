@@ -16,6 +16,10 @@ export class AuthProvider {
     confirmAccount(payload: ConfirmAccountForm){
         return this.repository.confirmAccount(payload);
     }
+
+    checkStatus(){
+        return this.repository.checkStatus();
+    }
 }
 
 const datasource = new AuthDatasourceImpl(api);

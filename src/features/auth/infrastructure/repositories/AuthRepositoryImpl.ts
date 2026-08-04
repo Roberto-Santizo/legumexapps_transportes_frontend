@@ -2,6 +2,9 @@ import type { AuthDatasource, AuthRepository, ConfirmAccountForm, LoginForm, Log
 
 export class AuthRepositoryImpl implements AuthRepository {
     constructor(private datasource: AuthDatasource) { }
+    checkStatus(): Promise<LoginResponse> {
+        return this.datasource.checkStatus();
+    }
     
     confirmAccount(payload: ConfirmAccountForm): Promise<string> {
         return this.datasource.confirmAccount(payload);

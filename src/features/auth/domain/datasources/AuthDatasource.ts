@@ -3,5 +3,6 @@ import type { ConfirmAccountForm, LoginForm, LoginResponse, RegisterForm } from 
 export abstract class AuthDatasource {
     abstract register(payload: RegisterForm): Promise<string>;
     abstract login(payload: LoginForm): Promise<LoginResponse>;
+    abstract checkStatus(): Promise<LoginResponse>;
     abstract confirmAccount(payload: ConfirmAccountForm): Promise<string>;
 }
