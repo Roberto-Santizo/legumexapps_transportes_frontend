@@ -1,11 +1,24 @@
-import { CustomForm, FadeInUp, StaggerContainer, StaggerItem, Title } from "@/features/shared/shared";
+import { CustomFilledButton, CustomForm, FadeInUp, StaggerContainer, StaggerItem, TextFormField, Title } from "@/features/shared/shared";
 import { Navigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
+import type { CarrierForm } from "@/features/carriers/carriers";
 import type { RootState } from "@/config/config";
 
 export function CompleteProfile() {
   const isSignedIn = useSelector((state: RootState) => state.auth.isSignedIn);
   const user = useSelector((state: RootState) => state.auth.user);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CarrierForm>();
+
+  // TODO: crear el transportista — spec de creación
+  const onSubmit = (data: CarrierForm) => {
+    void data;
+  };
 
   if (!isSignedIn) return <Navigate to={'/login'} replace />
 
@@ -54,10 +67,31 @@ export function CompleteProfile() {
           </div>
 
           <FadeInUp>
-            <CustomForm onSubmit={(e) => e.preventDefault()}>
+            <CustomForm onSubmit={handleSubmit(onSubmit)}>
               <Title
                 title="Completa tu perfil"
                 subtitle="Registra tu transportista para empezar a operar en LegumexApps."
+              />
+
+              <TextFormField<CarrierForm>
+                label="Nombre"
+                name="name"
+                type="text"
+                placeholder="Nombre del transportista"
+                register={register}
+                errorMessage={errors.name?.message}
+                validation={{
+                  required: "Ingresa el nombre del transportista",
+                }}
+              />
+
+              {/* TODO: campo de imagen — spec de creación */}
+
+              <CustomFilledButton
+                label="Guardar"
+                type="submit"
+                fullWitdh
+                disabled={false}
               />
             </CustomForm>
           </FadeInUp>
