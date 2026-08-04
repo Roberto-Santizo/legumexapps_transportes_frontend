@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ConfirmAccount, Login, Register } from "@/features/auth/auth";
+import { Dashboard } from "@/features/dashboard/dashboard";
 import { ProtectedLayout, PublicLayout } from "@/features/shared/shared";
 
 export default function AppRouter() {
@@ -14,7 +15,7 @@ export default function AppRouter() {
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/dashboard" element={<div></div>} />
+                    <Route path="/dashboard" element={<Dashboard />} />
                 </Route>
             </Routes>
         </BrowserRouter>
