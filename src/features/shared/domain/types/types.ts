@@ -1,4 +1,5 @@
 import { BarChartDatumSchema, FileResponseSchema } from '@/features/shared/shared';
+import type { ReactNode } from 'react';
 import z, { type ZodSchema } from 'zod';
 
 export type Option = {
@@ -48,3 +49,13 @@ export interface ExportExcelOptions<T> {
     columns: Column<T>[];
     data: T[];
 }
+
+export type UserRole = "administrator" | "carrier" | "pilot";
+
+export type NavItem = {
+    to: string;
+    text: string;
+    icon: ReactNode;
+    roles?: UserRole[];
+    disabled?: boolean;
+};
