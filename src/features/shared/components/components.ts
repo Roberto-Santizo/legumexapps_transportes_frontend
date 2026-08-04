@@ -28,3 +28,4 @@ export * from './ActionsMenu';
 export * from './CustomForm';
 export * from './ToastViewport';
 export * from './ConfirmNotificationDialog';
+export * from './AdminNavItem';
