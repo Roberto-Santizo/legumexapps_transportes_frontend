@@ -4,6 +4,7 @@ import { NavLink } from "react-router-dom";
 type Props = {
     item: NavItem;
     collapsed: boolean;
+    onNavigate?: () => void;
 };
 
 /* Tramo de la espina de ruta: mismo gradiente punteado que `route_line`, sin la animación. */
@@ -17,7 +18,7 @@ const ROW =
 const TOOLTIP =
     "pointer-events-none invisible absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-xs text-canvas shadow-sm group-hover:visible group-focus-visible:visible";
 
-export function AdminNavItem({ item, collapsed }: Props) {
+export function AdminNavItem({ item, collapsed, onNavigate }: Props) {
     const { to, text, icon, disabled } = item;
 
     const station = (isActive: boolean) => {
@@ -83,7 +84,7 @@ export function AdminNavItem({ item, collapsed }: Props) {
 
     return (
         <li>
-            <NavLink to={to} className={`${ROW} hover:bg-black/4`}>
+            <NavLink to={to} onClick={onNavigate} className={`${ROW} hover:bg-black/4`}>
                 {({ isActive }) => station(isActive)}
             </NavLink>
         </li>

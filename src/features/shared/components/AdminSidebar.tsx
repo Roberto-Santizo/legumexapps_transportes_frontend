@@ -7,9 +7,10 @@ const LOGO = "https://legumexappsapi-storage.s3.us-east-1.amazonaws.com/resource
 
 type Props = {
     collapsed: boolean;
+    onNavigate?: () => void;
 };
 
-export function AdminSidebar({ collapsed }: Props) {
+export function AdminSidebar({ collapsed, onNavigate }: Props) {
     const role = useSelector((state: RootState) => state.auth.user?.role);
 
     const items = NAVIGATION.filter(
@@ -23,6 +24,7 @@ export function AdminSidebar({ collapsed }: Props) {
         >
             <Link
                 to="/dashboard"
+                onClick={onNavigate}
                 className="flex h-16 shrink-0 items-center border-b border-line focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink/20"
             >
                 <span className="flex w-16 shrink-0 justify-center">
@@ -42,7 +44,12 @@ export function AdminSidebar({ collapsed }: Props) {
             <nav className="flex-1">
                 <ul>
                     {items.map((item) => (
-                        <AdminNavItem key={item.to} item={item} collapsed={collapsed} />
+                        <AdminNavItem
+                            key={item.to}
+                            item={item}
+                            collapsed={collapsed}
+                            onNavigate={onNavigate}
+                        />
                     ))}
                 </ul>
             </nav>
