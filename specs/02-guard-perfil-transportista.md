@@ -1,6 +1,6 @@
 # SPEC 02 — Guard de perfil de transportista
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 01 (panel administrativo: sidebar y header)
 > **Fecha:** 2026-08-04
 > **Objetivo:** Impedir que un usuario con rol `carrier` y sin transportista asociado use el panel, redirigiéndolo a `/completar-perfil`, una pantalla propia a pantalla completa donde más adelante creará su transportista.
@@ -165,23 +165,23 @@ Sin paleta ni tipografías nuevas: los mismos tokens de SPEC 01 (`canvas`, `surf
 
 ## Criterios de aceptación
 
-- [ ] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
-- [ ] Un usuario con `role === "carrier"` y `carrierId === null` que entra a `/dashboard` termina en `/completar-perfil`.
-- [ ] Ese mismo usuario, al pulsar Atrás en el navegador, no vuelve a `/dashboard` (la redirección usa `replace`).
-- [ ] Un usuario con `role === "carrier"` y `carrierId` no nulo entra a `/dashboard` con normalidad, aunque `carrierName` o `carrierCode` sean `null`.
-- [ ] Un usuario con rol `administrator` o `pilot` entra a `/dashboard` con normalidad aunque tenga `carrierId` en `null`.
-- [ ] Un usuario con rol `administrator` que escribe `/completar-perfil` termina en `/dashboard`.
-- [ ] Un usuario `carrier` que ya tiene `carrierId` y escribe `/completar-perfil` termina en `/dashboard`.
-- [ ] Sin sesión iniciada, `/completar-perfil` redirige a `/login`.
-- [ ] `/completar-perfil` no muestra sidebar ni header administrativo.
-- [ ] La pantalla muestra un único campo de formulario, **Nombre**.
-- [ ] Dejar Nombre vacío y enviar muestra el mensaje "Ingresa el nombre del transportista".
-- [ ] El botón de envío está deshabilitado y no dispara ninguna petición HTTP.
-- [ ] "Cerrar sesión" deja `localStorage` sin `AUTH_TOKEN` y lleva a `/login`.
-- [ ] `src/features/carriers/` no contiene carpetas `infrastructure/`, `datasources/`, `repositories/`, `providers/` ni `schemas/`.
-- [ ] `CarrierForm` declara `name: string` e `image: File`, e importarlo desde `@/features/carriers/carriers` compila.
-- [ ] No existe un componente `FileFormField` creado por esta spec.
-- [ ] En un viewport de 375px la pantalla se ve en una sola columna sin scroll horizontal.
+- [x] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
+- [x] Un usuario con `role === "carrier"` y `carrierId === null` que entra a `/dashboard` termina en `/completar-perfil`.
+- [x] Ese mismo usuario, al pulsar Atrás en el navegador, no vuelve a `/dashboard` (la redirección usa `replace`).
+- [x] Un usuario con `role === "carrier"` y `carrierId` no nulo entra a `/dashboard` con normalidad, aunque `carrierName` o `carrierCode` sean `null`.
+- [x] Un usuario con rol `administrator` o `pilot` entra a `/dashboard` con normalidad aunque tenga `carrierId` en `null`.
+- [x] Un usuario con rol `administrator` que escribe `/completar-perfil` termina en `/dashboard`.
+- [x] Un usuario `carrier` que ya tiene `carrierId` y escribe `/completar-perfil` termina en `/dashboard`.
+- [x] Sin sesión iniciada, `/completar-perfil` redirige a `/login`.
+- [x] `/completar-perfil` no muestra sidebar ni header administrativo.
+- [x] La pantalla muestra un único campo de formulario, **Nombre**.
+- [x] Dejar Nombre vacío y enviar muestra el mensaje "Ingresa el nombre del transportista".
+- [x] El botón de envío está deshabilitado y no dispara ninguna petición HTTP.
+- [x] "Cerrar sesión" deja `localStorage` sin `AUTH_TOKEN` y lleva a `/login`.
+- [x] `src/features/carriers/` no contiene carpetas `infrastructure/`, `datasources/`, `repositories/`, `providers/` ni `schemas/`.
+- [x] `CarrierForm` declara `name: string` e `image: File`, e importarlo desde `@/features/carriers/carriers` compila.
+- [x] No existe un componente `FileFormField` creado por esta spec.
+- [x] En un viewport de 375px la pantalla se ve en una sola columna sin scroll horizontal.
 
 ---
 

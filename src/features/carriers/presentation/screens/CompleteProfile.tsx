@@ -1,11 +1,14 @@
 import { CustomFilledButton, CustomForm, FadeInUp, StaggerContainer, StaggerItem, TextFormField, Title } from "@/features/shared/shared";
+import { useDispatch, useSelector } from "react-redux";
 import { Navigate } from "react-router-dom";
+import { logout } from "@/features/auth/auth";
 import { useForm } from "react-hook-form";
-import { useSelector } from "react-redux";
+import type { AppDispatch } from "@/config/store/store";
 import type { CarrierForm } from "@/features/carriers/carriers";
 import type { RootState } from "@/config/config";
 
 export function CompleteProfile() {
+  const dispatch = useDispatch<AppDispatch>();
   const isSignedIn = useSelector((state: RootState) => state.auth.isSignedIn);
   const user = useSelector((state: RootState) => state.auth.user);
 
@@ -94,6 +97,17 @@ export function CompleteProfile() {
                 disabled={false}
               />
             </CustomForm>
+
+            <p className="mt-6 text-center text-sm text-ink-muted">
+              ¿Prefieres hacerlo más tarde?{" "}
+              <button
+                type="button"
+                onClick={() => dispatch(logout())}
+                className="cursor-pointer font-medium text-ink underline underline-offset-4 transition-colors hover:text-ink-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
+              >
+                Cerrar sesión
+              </button>
+            </p>
           </FadeInUp>
         </div>
       </section>
