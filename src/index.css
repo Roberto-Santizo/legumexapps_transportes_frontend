@@ -71,6 +71,52 @@
     .text_form_field_error:focus {
         box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 18%, transparent);
     }
+
+    /* Tablas: filas de hairline, encabezado en versalitas mono como una guía de carga */
+    .table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid var(--color-line);
+        border-radius: 1rem;
+        background-color: var(--color-surface);
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .thead {
+        background-color: var(--color-canvas);
+    }
+
+    .thead-th {
+        padding: 0.75rem 1.25rem;
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        white-space: nowrap;
+        color: var(--color-ink-muted);
+    }
+
+    .tbody-tr {
+        border-top: 1px solid var(--color-line);
+        transition: background-color 0.15s ease;
+    }
+
+    .tbody-tr:hover {
+        background-color: color-mix(in srgb, var(--color-canvas) 55%, var(--color-surface));
+    }
+
+    .tbody-td {
+        padding: 0.875rem 1.25rem;
+        font-size: 0.875rem;
+        color: var(--color-ink-muted);
+        vertical-align: middle;
+    }
 }
 
 /* Firma visual: tramo de ruta finca -> planta -> puerto */

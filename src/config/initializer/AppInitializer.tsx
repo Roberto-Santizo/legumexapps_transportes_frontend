@@ -1,38 +1,46 @@
-import { logout, login, authProvider } from '@/features/auth/auth';
+import { AUTH_SESSION_QUERY_KEY } from '@/config/initializer/session';
+import { authProvider, login, logout, type LoginResponse } from '@/features/auth/auth';
 import { useDispatch } from "react-redux";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useQuery } from '@tanstack/react-query';
+import type { AppDispatch } from '@/config/store/store';
 
 export const AppInitializer = ({ children }: { children: React.ReactNode }) => {
-    const dispatch = useDispatch();
-    const [loading, setLoading] = useState<boolean>(true);
+    const dispatch = useDispatch<AppDispatch>();
 
-    useEffect(() => {
-        const initAuth = async () => {
-            try {
-                const token = localStorage.getItem("AUTH_TOKEN");
+    const { data, isPending, isError } = useQuery<LoginResponse | null>({
+        queryKey: AUTH_SESSION_QUERY_KEY,
+        queryFn: () => {
+            const token = localStorage.getItem("AUTH_TOKEN");
 
-                if (!token) {
-                    dispatch(logout());
-                    return;
-                }
+            if (!token) return null;
 
-                const user = await authProvider.checkStatus();
-                dispatch(login(user));
-
-            } catch (error) {
-                dispatch(logout());
-            } finally {
-                setLoading(false);
-            }
-        }
-        initAuth();
+            return authProvider.checkStatus();
+        },
+        retry: false,
+        refetchOnWindowFocus: false,
+        staleTime: Infinity,
     });
 
-    if (loading) {
-        return <p>Cargando...</p>;
+    useEffect(() => {
+        if (isPending) return;
+
+        if (isError || !data) {
+            dispatch(logout());
+            return;
+        }
+
+        dispatch(login(data));
+    }, [data, isPending, isError, dispatch]);
+
+    if (isPending) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-canvas">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-primary" />
+                <span className="sr-only">Cargando...</span>
+            </div>
+        );
     }
 
     return <>{children}</>;
 }
-
-

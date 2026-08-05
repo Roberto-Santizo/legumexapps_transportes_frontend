@@ -33,3 +33,4 @@ export * from './AdminSidebar';
 export * from './NotificationsMenu';
 export * from './UserMenu';
 export * from './AdminHeader';
+export * from './FileFormField';
