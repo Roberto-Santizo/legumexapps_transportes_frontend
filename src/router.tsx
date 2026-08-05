@@ -3,6 +3,7 @@ import { ConfirmAccount, Login, Register } from "@/features/auth/auth";
 import { CompleteProfile } from "@/features/carriers/carriers";
 import { Dashboard } from "@/features/dashboard/dashboard";
 import { Profile, ProtectedLayout, PublicLayout } from "@/features/shared/shared";
+import { CreateVehicle, IndexVehicles, ShowVehicle, UpdateVehicle } from "@/features/vehicles/vehicles";
 
 export default function AppRouter() {
     return (
@@ -20,6 +21,13 @@ export default function AppRouter() {
                 <Route element={<ProtectedLayout />}>
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/perfil" element={<Profile />} />
+                </Route>
+
+                <Route element={<ProtectedLayout />}>
+                    <Route path="/vehiculos" element={<IndexVehicles />} />
+                    <Route path="/vehiculos/crear" element={<CreateVehicle />} />
+                    <Route path="/vehiculos/:id" element={<ShowVehicle />} />
+                    <Route path="/vehiculos/:id/editar" element={<UpdateVehicle />} />
                 </Route>
             </Routes>
         </BrowserRouter>
