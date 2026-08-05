@@ -3,11 +3,13 @@ import { CustomFilledButton, CustomForm, FadeInUp, PasswordFormField, StaggerCon
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { useForm } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AUTH_SESSION_QUERY_KEY } from "@/config/config";
 import type { AppDispatch } from "@/config/store/store";
 
 export function Login() {
   const dispatch = useDispatch<AppDispatch>();
+  const queryClient = useQueryClient();
   const notification = useNotification();
 
   const {
@@ -20,6 +22,7 @@ export function Login() {
     mutationFn: (payload: LoginForm) => authProvider.login(payload),
     onSuccess: (data) => {
       dispatch(login(data));
+      queryClient.setQueryData(AUTH_SESSION_QUERY_KEY, data);
     },
     onError: (err) => {
       notification.error(err.message);

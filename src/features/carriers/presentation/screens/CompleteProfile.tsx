@@ -1,27 +1,40 @@
-import { CustomFilledButton, CustomForm, FadeInUp, StaggerContainer, StaggerItem, TextFormField, Title } from "@/features/shared/shared";
-import { useDispatch, useSelector } from "react-redux";
-import { Navigate } from "react-router-dom";
+import { carrierProvider, type CarrierForm } from "@/features/carriers/carriers";
+import { CustomFilledButton, CustomForm, FadeInUp, FileFormField, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
 import { logout } from "@/features/auth/auth";
+import { Navigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { useForm } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
+import { useRefreshSession } from "@/config/config";
 import type { AppDispatch } from "@/config/store/store";
-import type { CarrierForm } from "@/features/carriers/carriers";
 import type { RootState } from "@/config/config";
 
 export function CompleteProfile() {
   const dispatch = useDispatch<AppDispatch>();
+  const refreshSession = useRefreshSession();
   const isSignedIn = useSelector((state: RootState) => state.auth.isSignedIn);
   const user = useSelector((state: RootState) => state.auth.user);
+  const notification = useNotification();
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<CarrierForm>();
 
-  // TODO: crear el transportista — spec de creación
-  const onSubmit = (data: CarrierForm) => {
-    void data;
-  };
+  const { mutate, isPending } = useMutation({
+    mutationFn: (payload: CarrierForm) => carrierProvider.createCarrier(payload),
+    onSuccess: (message) => {
+      notification.success(message);
+      refreshSession();
+    },
+    onError: (err) => {
+      notification.error(err.message);
+    }
+  });
+
+  const onSubmit = (data: CarrierForm) => mutate(data);
 
   if (!isSignedIn) return <Navigate to={'/login'} replace />
 
@@ -88,13 +101,20 @@ export function CompleteProfile() {
                 }}
               />
 
-              {/* TODO: campo de imagen — spec de creación */}
+              <FileFormField<CarrierForm>
+                label="Logo o fotografía"
+                name="image"
+                control={control}
+                validation={{
+                  required: "Selecciona una imagen",
+                }}
+              />
 
               <CustomFilledButton
                 label="Guardar"
                 type="submit"
                 fullWitdh
-                disabled={false}
+                disabled={isPending}
               />
             </CustomForm>
 
