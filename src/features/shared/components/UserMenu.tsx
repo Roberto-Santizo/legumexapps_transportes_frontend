@@ -1,8 +1,9 @@
 import type { AppDispatch, RootState } from "@/config/config";
 import { logout } from "@/features/auth/slices/authSlice";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { LogOut } from "lucide-react";
+import { CircleUser, LogOut } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 
 function getInitials(name: string): string {
     return name
@@ -44,6 +45,18 @@ export function UserMenu() {
                 transition
                 className="z-20 w-52 origin-top-right rounded-xl border border-line bg-surface p-1 shadow-lg transition duration-150 ease-out [--anchor-gap:6px] focus:outline-none data-closed:scale-95 data-closed:opacity-0"
             >
+                <MenuItem>
+                    <Link
+                        to="/perfil"
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-muted transition-colors duration-100 data-focus:bg-canvas data-focus:text-ink data-focus:outline-none [&>svg]:size-4"
+                    >
+                        <CircleUser />
+                        Perfil
+                    </Link>
+                </MenuItem>
+
+                <div className="my-1 h-px bg-line" />
+
                 <MenuItem>
                     <button
                         type="button"
