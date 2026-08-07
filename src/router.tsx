@@ -1,9 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { ConfirmAccount, Login, Register } from "@/features/auth/auth";
 import { CompleteProfile } from "@/features/carriers/carriers";
+import { ConfirmAccount, Login, Register } from "@/features/auth/auth";
+import { CreateFuelPrice, IndexFuelPrices, ShowFuelPrice, UpdateFuelPrice } from "@/features/fuel-prices/fuel-prices";
+import { CreateVehicle, IndexVehicles, ShowVehicle, UpdateVehicle } from "@/features/vehicles/vehicles";
 import { Dashboard } from "@/features/dashboard/dashboard";
 import { Profile, ProtectedLayout, PublicLayout } from "@/features/shared/shared";
-import { CreateVehicle, IndexVehicles, ShowVehicle, UpdateVehicle } from "@/features/vehicles/vehicles";
 
 export default function AppRouter() {
     return (
@@ -28,6 +29,13 @@ export default function AppRouter() {
                     <Route path="/vehiculos/crear" element={<CreateVehicle />} />
                     <Route path="/vehiculos/:id" element={<ShowVehicle />} />
                     <Route path="/vehiculos/:id/editar" element={<UpdateVehicle />} />
+                </Route>
+
+                <Route element={<ProtectedLayout />}>
+                    <Route path="/gasolina-precios" element={<IndexFuelPrices />} />
+                    <Route path="/gasolina-precios/crear" element={<CreateFuelPrice />} />
+                    <Route path="/gasolina-precios/:id" element={<ShowFuelPrice />} />
+                    <Route path="/gasolina-precios/:id/editar" element={<UpdateFuelPrice />} />
                 </Route>
             </Routes>
         </BrowserRouter>

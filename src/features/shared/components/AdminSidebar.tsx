@@ -25,24 +25,29 @@ export function AdminSidebar({ collapsed, onNavigate }: Props) {
             <Link
                 to="/dashboard"
                 onClick={onNavigate}
-                className="flex h-16 shrink-0 items-center border-b border-line focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink/20"
+                className="group flex h-16 shrink-0 items-center border-b border-line px-3 focus-visible:outline-none"
             >
-                <span className="flex w-16 shrink-0 justify-center">
-                    <img src={LOGO} alt="Legumex" className="size-6 object-contain" />
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-canvas ring-1 ring-line transition-colors duration-150 group-hover:ring-line-strong group-focus-visible:ring-2 group-focus-visible:ring-ink/25">
+                    <img src={LOGO} alt="Legumex" className="size-5 object-contain" />
                 </span>
 
-                <span className="min-w-0 flex-1 overflow-hidden">
+                <span className="min-w-0 flex-1 overflow-hidden pl-3">
                     <span
-                        className={`block whitespace-nowrap font-display text-[15px] font-semibold tracking-tight text-ink transition-[opacity,transform] duration-200 ease-out ${collapsed ? "-translate-x-1 opacity-0" : "translate-x-0 opacity-100"
+                        className={`block transition-[opacity,transform] duration-200 ease-out ${collapsed ? "-translate-x-1 opacity-0" : "translate-x-0 opacity-100"
                             }`}
                     >
-                        Transportes
+                        <span className="block whitespace-nowrap font-mono text-[10px] leading-none tracking-[0.18em] text-ink-subtle uppercase">
+                            Legumex
+                        </span>
+                        <span className="mt-1.5 block whitespace-nowrap font-display text-[15px] leading-none font-semibold tracking-tight text-ink">
+                            Transportes
+                        </span>
                     </span>
                 </span>
             </Link>
 
-            <nav className="flex-1">
-                <ul>
+            <nav className="flex-1 overflow-x-hidden overflow-y-auto py-4">
+                <ul className="flex flex-col gap-1 px-3">
                     {items.map((item) => (
                         <AdminNavItem
                             key={item.to}

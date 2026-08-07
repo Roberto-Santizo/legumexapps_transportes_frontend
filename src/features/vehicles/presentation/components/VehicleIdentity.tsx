@@ -6,7 +6,9 @@
  */
 
 import { VEHICLE_TYPES } from "@/features/vehicles/vehicles";
-import { ImageOff, Truck } from "lucide-react";
+import { Dialog, Transition } from "@headlessui/react";
+import { ImageOff, Maximize2, Truck, X } from "lucide-react";
+import { Fragment, useState } from "react";
 
 type PlateProps = {
     plate: string;
@@ -21,7 +23,7 @@ export function VehiclePlate({ plate, size = "sm" }: PlateProps) {
     return (
         <span className="inline-flex flex-col overflow-hidden rounded-md border border-ink-deep bg-surface">
             {size === "lg" && (
-                <span className="bg-ink-deep py-[3px] text-center font-mono text-[8px] uppercase tracking-[0.4em] text-canvas">
+                <span className="bg-ink-deep py-0.75 text-center font-mono text-[8px] uppercase tracking-[0.4em] text-canvas">
                     Placa
                 </span>
             )}
@@ -50,20 +52,156 @@ export function VehicleThumb({ size = "sm" }: ThumbProps) {
     );
 }
 
-/**
- * Fotografía de la unidad. La API todavía no arma la URL del archivo, así que
- * por ahora se compone la bahía vacía —mismo encuadre y mismo marco que tendrá
- * la foto— para que el panel no cambie de tamaño cuando llegue la imagen.
- */
-export function VehiclePhoto() {
-    return (
-        <div className="flex aspect-4/3 w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line-strong bg-canvas text-ink-subtle">
-            <ImageOff size={26} strokeWidth={1.5} aria-hidden />
+/** El backend expone los archivos fuera de `/api`, así que la ruta relativa se cuelga de esa raíz. */
+const ASSETS_BASE_URL = (import.meta.env.VITE_BASE_URL ?? '').replace(/\/api\/?$/, '');
 
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em]">
-                Sin fotografía
-            </span>
-        </div>
+const resolveImageUrl = (image: string) => {
+    if (/^(https?:|data:|blob:)/.test(image)) return image;
+
+    return `${ASSETS_BASE_URL}/${image.replace(/^\//, '')}`;
+}
+
+type PhotoProps = {
+    image?: string | null;
+    alt?: string;
+    /** Si se pasa, la ampliación rotula la foto con la placa en lugar del texto alterno. */
+    plate?: string;
+}
+
+/**
+ * Fotografía de la unidad. Sin archivo —o si la URL no carga— se compone la
+ * bahía vacía con el mismo encuadre y marco que la foto, para que el panel no
+ * cambie de tamaño entre un caso y otro.
+ *
+ * Con foto el marco es un botón: al abrirlo la unidad se ve completa, sin el
+ * recorte 4/3 de la ficha, rotulada con su placa.
+ */
+export function VehiclePhoto({ image, alt = "Fotografía del vehículo", plate }: PhotoProps) {
+    /** Se guarda la URL que falló, no un booleano, para que otra unidad vuelva a intentar cargar. */
+    const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+    const [expanded, setExpanded] = useState(false);
+
+    const source = image ? resolveImageUrl(image) : null;
+
+    if (!source || source === brokenUrl) {
+        return (
+            <div className="flex aspect-4/3 w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line-strong bg-canvas text-ink-subtle">
+                <ImageOff size={26} strokeWidth={1.5} aria-hidden />
+
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em]">
+                    Sin fotografía
+                </span>
+            </div>
+        );
+    }
+
+    return (
+        <>
+            <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                aria-label="Ampliar fotografía"
+                className="group relative block w-full cursor-pointer overflow-hidden rounded-xl border border-line focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-deep/25"
+            >
+                <img
+                    src={source}
+                    alt={alt}
+                    loading="lazy"
+                    onError={() => setBrokenUrl(source)}
+                    className="aspect-4/3 w-full object-cover"
+                />
+
+                {/* La marca de ampliar solo aparece al apuntar o tabular: en reposo manda la foto. */}
+                <span className="pointer-events-none absolute right-2 bottom-2 inline-flex items-center gap-1.5 rounded-md bg-ink-deep/80 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.2em] text-canvas opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none">
+                    <Maximize2 size={11} aria-hidden />
+                    Ampliar
+                </span>
+            </button>
+
+            <VehiclePhotoDialog
+                open={expanded}
+                onClose={() => setExpanded(false)}
+                source={source}
+                alt={alt}
+                plate={plate}
+            />
+        </>
+    );
+}
+
+type PhotoDialogProps = {
+    open: boolean;
+    onClose: () => void;
+    source: string;
+    alt: string;
+    plate?: string;
+}
+
+/**
+ * Ampliación de la fotografía. Se compone como una placa fotográfica de patio:
+ * fondo apagado, la unidad al centro sin recortar y la placa como pie de foto,
+ * que es como se identifica la unidad en el resto de la ficha.
+ */
+function VehiclePhotoDialog({ open, onClose, source, alt, plate }: PhotoDialogProps) {
+    return (
+        <Transition appear show={open} as={Fragment}>
+            <Dialog as="div" className="relative z-50" onClose={onClose}>
+                <Transition.Child
+                    as={Fragment}
+                    enter="ease-out duration-200"
+                    enterFrom="opacity-0"
+                    enterTo="opacity-100"
+                    leave="ease-in duration-150"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
+                >
+                    <div className="fixed inset-0 bg-ink-deep/85 backdrop-blur-sm" />
+                </Transition.Child>
+
+                <div className="fixed inset-0 overflow-y-auto">
+                    <div className="flex min-h-full items-center justify-center p-4 sm:p-8">
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-200"
+                            enterFrom="opacity-0 scale-95"
+                            enterTo="opacity-100 scale-100"
+                            leave="ease-in duration-150"
+                            leaveFrom="opacity-100 scale-100"
+                            leaveTo="opacity-0 scale-95"
+                        >
+                            <Dialog.Panel className="flex w-full max-w-3xl flex-col items-center gap-5">
+                                <Dialog.Title className="sr-only">{alt}</Dialog.Title>
+
+                                <div className="relative w-full">
+                                    <img
+                                        src={source}
+                                        alt={alt}
+                                        className="max-h-[72vh] w-full rounded-xl border border-canvas/15 bg-ink-deep object-contain shadow-2xl"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        onClick={onClose}
+                                        aria-label="Cerrar fotografía"
+                                        className="absolute top-3 right-3 inline-flex cursor-pointer items-center justify-center rounded-md bg-ink-deep/80 p-1.5 text-canvas transition-colors hover:bg-ink-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-canvas/40 motion-reduce:transition-none"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+
+                                {plate
+                                    ? <VehiclePlate plate={plate} size="lg" />
+                                    : (
+                                        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-canvas/60">
+                                            {alt}
+                                        </p>
+                                    )}
+                            </Dialog.Panel>
+                        </Transition.Child>
+                    </div>
+                </div>
+            </Dialog>
+        </Transition>
     );
 }
 

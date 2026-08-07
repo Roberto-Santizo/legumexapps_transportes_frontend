@@ -7,56 +7,39 @@ type Props = {
     onNavigate?: () => void;
 };
 
-/* Tramo de la espina de ruta: mismo gradiente punteado que `route_line`, sin la animación. */
-const ROUTE_DOTS = "linear-gradient(to bottom, var(--color-line) 0 4px, transparent 4px 8px)";
-const ROUTE_DOTS_FAINT =
-    "linear-gradient(to bottom, color-mix(in srgb, var(--color-line) 55%, transparent) 0 4px, transparent 4px 8px)";
-
 const ROW =
-    "group relative flex h-14 w-full items-center transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink/20";
+    "group relative flex h-10 w-full items-center rounded-xl transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25";
 
 const TOOLTIP =
-    "pointer-events-none invisible absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-xs text-canvas shadow-sm group-hover:visible group-focus-visible:visible";
+    "pointer-events-none invisible absolute top-1/2 left-full z-50 ml-3 -translate-y-1/2 rounded-lg bg-ink-deep px-2.5 py-1.5 text-xs whitespace-nowrap text-canvas shadow-lg group-hover:visible group-focus-visible:visible";
 
 export function AdminNavItem({ item, collapsed, onNavigate }: Props) {
     const { to, text, icon, disabled } = item;
 
     const station = (isActive: boolean) => {
-        const chip = disabled
-            ? "border-dashed border-line text-ink-subtle"
+        const iconTone = disabled
+            ? "text-ink-subtle"
             : isActive
-                ? "border-primary text-ink"
-                : "border-line text-ink-muted group-hover:text-ink";
+                ? "text-primary"
+                : "text-ink-subtle group-hover:text-ink-muted";
 
         const label = disabled
             ? "text-ink-subtle"
             : isActive
-                ? "text-ink font-medium"
-                : "text-ink-muted group-hover:text-ink";
+                ? "font-medium text-canvas"
+                : "";
 
         return (
             <>
                 <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-y-0 left-8 w-px -translate-x-1/2"
-                    style={{
-                        backgroundImage: disabled ? ROUTE_DOTS_FAINT : ROUTE_DOTS,
-                        backgroundSize: "1px 8px",
-                        backgroundRepeat: "repeat-y",
-                    }}
-                />
-
-                <span className="relative z-10 flex w-16 shrink-0 justify-center">
-                    <span
-                        className={`flex size-9 items-center justify-center rounded-full border bg-surface transition-colors duration-150 [&>svg]:size-4.5 ${chip}`}
-                    >
-                        {icon}
-                    </span>
+                    className={`flex w-10 shrink-0 items-center justify-center transition-colors duration-150 [&>svg]:size-4.5 [&>svg]:stroke-[1.75] ${iconTone}`}
+                >
+                    {icon}
                 </span>
 
-                <span className="relative z-10 min-w-0 flex-1 overflow-hidden">
+                <span className="min-w-0 flex-1 overflow-hidden pr-3">
                     <span
-                        className={`block whitespace-nowrap text-[13px] transition-[opacity,transform] duration-200 ease-out ${label} ${collapsed ? "-translate-x-1 opacity-0" : "translate-x-0 opacity-100"
+                        className={`block text-[13px] whitespace-nowrap transition-[opacity,transform] duration-200 ease-out ${label} ${collapsed ? "-translate-x-1 opacity-0" : "translate-x-0 opacity-100"
                             }`}
                     >
                         {text}
@@ -75,7 +58,7 @@ export function AdminNavItem({ item, collapsed, onNavigate }: Props) {
     if (disabled) {
         return (
             <li>
-                <div aria-disabled="true" className={`${ROW} cursor-not-allowed`}>
+                <div aria-disabled="true" className={`${ROW} cursor-not-allowed text-ink-subtle`}>
                     {station(false)}
                 </div>
             </li>
@@ -84,7 +67,16 @@ export function AdminNavItem({ item, collapsed, onNavigate }: Props) {
 
     return (
         <li>
-            <NavLink to={to} onClick={onNavigate} className={`${ROW} hover:bg-black/4`}>
+            <NavLink
+                to={to}
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                    `${ROW} ${isActive
+                        ? "bg-ink-deep text-canvas shadow-sm"
+                        : "text-ink-muted hover:bg-canvas hover:text-ink"
+                    }`
+                }
+            >
                 {({ isActive }) => station(isActive)}
             </NavLink>
         </li>

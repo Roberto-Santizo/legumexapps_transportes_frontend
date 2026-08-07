@@ -115,7 +115,11 @@ export function ShowVehicle() {
                         <div className="grid lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
                             {/* La unidad se reconoce por foto y placa: van juntas y separadas del resto de la ficha. */}
                             <div className="flex flex-col gap-5 border-b border-line bg-canvas/40 p-6 lg:border-b-0 lg:border-r">
-                                <VehiclePhoto />
+                                <VehiclePhoto
+                                    image={vehicle.image}
+                                    alt={`Vehículo ${vehicle.plate}`}
+                                    plate={vehicle.plate}
+                                />
 
                                 <div className="flex justify-center">
                                     <VehiclePlate plate={vehicle.plate} size="lg" />
