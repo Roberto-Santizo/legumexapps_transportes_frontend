@@ -34,9 +34,9 @@ function Toast({ toast }: { toast: ToastItem }) {
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="pointer-events-auto relative flex gap-3 overflow-hidden rounded-lg border border-line bg-surface py-3 pl-4 pr-3 shadow-[0_10px_28px_-12px_rgba(11,23,18,0.28)]"
         >
-            <span className="absolute left-0 top-0 h-full w-[3px] bg-line" />
+            <span className="absolute left-0 top-0 h-full w-0.75 bg-line" />
             <motion.span
-                className={`absolute left-0 top-0 h-full w-[3px] origin-top ${rail}`}
+                className={`absolute left-0 top-0 h-full w-0.75 origin-top ${rail}`}
                 initial={{ scaleY: 1 }}
                 animate={{ scaleY: toast.duration > 0 ? 0 : 1 }}
                 transition={{ duration: toast.duration / 1000, ease: "linear" }}
@@ -46,9 +46,9 @@ function Toast({ toast }: { toast: ToastItem }) {
 
             <div className="min-w-0 flex-1">
                 <p className={`font-mono text-[10px] uppercase tracking-[0.14em] ${text}`}>{label}</p>
-                <p className="mt-1 break-words text-sm font-medium text-ink">{toast.message}</p>
+                <p className="mt-1 wrap-break-words text-sm font-medium text-ink">{toast.message}</p>
                 {toast.description && (
-                    <p className="mt-0.5 break-words text-[13px] leading-snug text-ink-muted">{toast.description}</p>
+                    <p className="mt-0.5 wrap-break-words text-[13px] leading-snug text-ink-muted">{toast.description}</p>
                 )}
             </div>
 
@@ -70,7 +70,7 @@ export function ToastViewport() {
     return createPortal(
         <div
             aria-live="polite"
-            className="pointer-events-none fixed right-4 top-4 z-60 flex w-full max-w-[380px] flex-col gap-2.5"
+            className="pointer-events-none fixed right-4 top-4 z-60 flex w-full max-w-95 flex-col gap-2.5"
         >
             <AnimatePresence initial={false}>
                 {toasts.map((toast) => (

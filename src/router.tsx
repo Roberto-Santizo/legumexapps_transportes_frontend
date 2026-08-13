@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { CompleteProfile } from "@/features/carriers/carriers";
 import { ConfirmAccount, Login, Register } from "@/features/auth/auth";
 import { CreateFuelPrice, IndexFuelPrices, ShowFuelPrice, UpdateFuelPrice } from "@/features/fuel-prices/fuel-prices";
+import { CreateProduct, IndexProducts, ShowProduct, UpdateProduct } from "@/features/products/products";
 import { CreateVehicle, IndexVehicles, ShowVehicle, UpdateVehicle } from "@/features/vehicles/vehicles";
 import { Dashboard } from "@/features/dashboard/dashboard";
 import { Profile, ProtectedLayout, PublicLayout } from "@/features/shared/shared";
@@ -36,6 +37,13 @@ export default function AppRouter() {
                     <Route path="/gasolina-precios/crear" element={<CreateFuelPrice />} />
                     <Route path="/gasolina-precios/:id" element={<ShowFuelPrice />} />
                     <Route path="/gasolina-precios/:id/editar" element={<UpdateFuelPrice />} />
+                </Route>
+               
+                <Route element={<ProtectedLayout />}>
+                    <Route path="/productos" element={<IndexProducts />} />
+                    <Route path="/productos/crear" element={<CreateProduct />} />
+                    <Route path="/productos/:id" element={<ShowProduct />} />
+                    <Route path="/productos/:id/editar" element={<UpdateProduct />} />
                 </Route>
             </Routes>
         </BrowserRouter>
