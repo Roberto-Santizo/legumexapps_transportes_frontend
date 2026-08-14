@@ -4,6 +4,7 @@ import { ConfirmAccount, Login, Register } from "@/features/auth/auth";
 import { CreateFuelPrice, IndexFuelPrices, ShowFuelPrice, UpdateFuelPrice } from "@/features/fuel-prices/fuel-prices";
 import { CreateProduct, IndexProducts, ShowProduct, UpdateProduct } from "@/features/products/products";
 import { CreateVehicle, IndexVehicles, ShowVehicle, UpdateVehicle } from "@/features/vehicles/vehicles";
+import { CreateZone, IndexZones, ShowZone, UpdateZone } from "@/features/zones/zones";
 import { Dashboard } from "@/features/dashboard/dashboard";
 import { Profile, ProtectedLayout, PublicLayout } from "@/features/shared/shared";
 
@@ -44,6 +45,13 @@ export default function AppRouter() {
                     <Route path="/productos/crear" element={<CreateProduct />} />
                     <Route path="/productos/:id" element={<ShowProduct />} />
                     <Route path="/productos/:id/editar" element={<UpdateProduct />} />
+                </Route>
+
+                <Route element={<ProtectedLayout />}>
+                    <Route path="/zonas" element={<IndexZones />} />
+                    <Route path="/zonas/crear" element={<CreateZone />} />
+                    <Route path="/zonas/:id" element={<ShowZone />} />
+                    <Route path="/zonas/:id/editar" element={<UpdateZone />} />
                 </Route>
             </Routes>
         </BrowserRouter>
