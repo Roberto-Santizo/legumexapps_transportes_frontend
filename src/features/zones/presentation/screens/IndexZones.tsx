@@ -1,11 +1,11 @@
-import type { RootState } from "@/config/store/store";
-import type { Zone } from "@/features/zones/zones";
-import { ZoneGlyph, ZoneMoment, ZoneName, ZoneStatus, ZoneVertices, zoneProvider } from "@/features/zones/zones";
 import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
 import { Eye, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { ZoneGlyph, ZoneMoment, ZoneName, ZoneStatus, zoneProvider } from "@/features/zones/zones";
+import type { RootState } from "@/config/store/store";
+import type { Zone } from "@/features/zones/zones";
 
 export function IndexZones() {
     const navigate = useNavigate();
@@ -14,7 +14,6 @@ export function IndexZones() {
     const [searchParams, setSearchParams] = useSearchParams();
     const { page, rowsPerPage } = usePagination(searchParams);
 
-    // Escribir es solo de administrador; el 403 del servidor es la red, no la UX.
     const role = useSelector((state: RootState) => state.auth.user?.role);
     const canWrite = role === 'administrator';
 
@@ -141,7 +140,6 @@ export function IndexZones() {
                     <Table>
                         <Thead>
                             <Th text="Zona" />
-                            <Th text="Vértices" />
                             <Th text="Estado" />
                             <Th text="Registró" />
                             <Th text="Fecha" />
@@ -165,10 +163,6 @@ export function IndexZones() {
                                                 )}
                                             </div>
                                         </div>
-                                    </Td>
-
-                                    <Td>
-                                        <ZoneVertices area={zone.area} />
                                     </Td>
 
                                     <Td>
