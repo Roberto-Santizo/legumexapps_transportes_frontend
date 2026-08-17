@@ -50,7 +50,7 @@ export interface ExportExcelOptions<T> {
     data: T[];
 }
 
-export type UserRole = "administrator" | "carrier" | "pilot";
+export type UserRole = "administrator" | "carrier" | "pilot" | "manager";
 
 export type NavItem = {
     to: string;

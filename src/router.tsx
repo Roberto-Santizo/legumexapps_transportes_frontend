@@ -5,6 +5,7 @@ import { CreateFuelPrice, IndexFuelPrices, ShowFuelPrice, UpdateFuelPrice } from
 import { CreateProduct, IndexProducts, ShowProduct, UpdateProduct } from "@/features/products/products";
 import { CreateVehicle, IndexVehicles, ShowVehicle, UpdateVehicle } from "@/features/vehicles/vehicles";
 import { CreateZone, IndexZones, ShowZone, UpdateZone } from "@/features/zones/zones";
+import { IndexPilots } from "@/features/pilots/pilots";
 import { Dashboard } from "@/features/dashboard/dashboard";
 import { Profile, ProtectedLayout, PublicLayout } from "@/features/shared/shared";
 
@@ -52,6 +53,10 @@ export default function AppRouter() {
                     <Route path="/zonas/crear" element={<CreateZone />} />
                     <Route path="/zonas/:id" element={<ShowZone />} />
                     <Route path="/zonas/:id/editar" element={<UpdateZone />} />
+                </Route>
+
+                <Route element={<ProtectedLayout />}>
+                    <Route path="/pilotos" element={<IndexPilots />} />
                 </Route>
             </Routes>
         </BrowserRouter>
