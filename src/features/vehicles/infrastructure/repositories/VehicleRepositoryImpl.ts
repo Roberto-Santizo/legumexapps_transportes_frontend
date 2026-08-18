@@ -1,4 +1,4 @@
-import type { PaginatedVehicles, Vehicle, VehicleDatasource, VehicleForm } from "@/features/vehicles/vehicles";
+import type { PaginatedVehicles, Vehicle, VehicleDatasource, VehicleFilters, VehicleForm } from "@/features/vehicles/vehicles";
 import { VehicleRepository } from "@/features/vehicles/vehicles";
 
 export class VehicleRepositoryImpl extends VehicleRepository {
@@ -10,8 +10,8 @@ export class VehicleRepositoryImpl extends VehicleRepository {
         return this.datasource.createVehicle(payload);
     }
 
-    getVehicles(limit: string, page: string): Promise<PaginatedVehicles> {
-        return this.datasource.getVehicles(limit, page);
+    getVehicles(limit: string, page: string, filters?: VehicleFilters): Promise<PaginatedVehicles> {
+        return this.datasource.getVehicles(limit, page, filters);
     }
 
     getVehicleById(id: string): Promise<Vehicle> {

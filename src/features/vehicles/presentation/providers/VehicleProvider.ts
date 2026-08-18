@@ -1,4 +1,4 @@
-import type { VehicleForm, VehicleRepository } from "@/features/vehicles/vehicles";
+import type { VehicleFilters, VehicleForm, VehicleRepository } from "@/features/vehicles/vehicles";
 import { VehicleDatasourceImpl, VehicleRepositoryImpl } from "@/features/vehicles/infrastructure/infrastructure";
 import api from "@/config/http/axios";
 
@@ -9,8 +9,8 @@ export class VehicleProvider {
         return this.repository.createVehicle(payload);
     }
 
-    getVehicles(limit: string, page: string) {
-        return this.repository.getVehicles(limit, page);
+    getVehicles(limit: string, page: string, filters?: VehicleFilters) {
+        return this.repository.getVehicles(limit, page, filters);
     }
 
     getVehicleById(id: string) {

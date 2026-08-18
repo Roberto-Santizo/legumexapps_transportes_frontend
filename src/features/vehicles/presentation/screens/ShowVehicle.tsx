@@ -1,4 +1,18 @@
-import { VehicleCapacity, VehiclePageHeader, VehiclePhoto, VehiclePlate, VehicleStatus, VehicleTypeTag, vehicleProvider } from "@/features/vehicles/vehicles";
+import {
+    isLegacyVehicle,
+    VehicleCapacity,
+    VehicleCondition,
+    VehicleEfficiency,
+    VehicleEngineNumber,
+    VehicleMoney,
+    VehicleOdometer,
+    VehiclePageHeader,
+    VehiclePhoto,
+    VehiclePlate,
+    VehicleStatus,
+    VehicleTypeTag,
+    vehicleProvider
+} from "@/features/vehicles/vehicles";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { Pencil, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -63,13 +77,13 @@ export function ShowVehicle() {
         onError: (err) => notification.error(err.message)
     });
 
-    const askToDelete = () => {
+    const askToDeactivate = () => {
         if (!vehicle) return;
 
         notification.question(
-            `Eliminar ${vehicle.plate}`,
-            "Eliminar",
-            "Los viajes que tengan asignada esta unidad se quedan sin vehículo.",
+            `Desactivar ${vehicle.plate}`,
+            "Desactivar",
+            "La unidad deja de estar disponible, pero no se borra: sigue en el listado y se puede reactivar desde la edición.",
             () => mutate()
         );
     };
@@ -93,11 +107,11 @@ export function ShowVehicle() {
 
                         <button
                             type="button"
-                            onClick={askToDelete}
+                            onClick={askToDeactivate}
                             className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/20"
                         >
                             <Trash2 size={16} />
-                            Eliminar
+                            Desactivar
                         </button>
                     </div>
                 )}
@@ -121,8 +135,11 @@ export function ShowVehicle() {
                                     plate={vehicle.plate}
                                 />
 
-                                <div className="flex justify-center">
+                                <div className="flex flex-col items-center gap-4">
                                     <VehiclePlate plate={vehicle.plate} size="lg" />
+
+                                    {/* El odómetro se lee junto a la placa: identifica el uso igual que la placa identifica la unidad. */}
+                                    <VehicleOdometer mileage={vehicle.mileage} size="lg" />
                                 </div>
                             </div>
 
@@ -141,6 +158,15 @@ export function ShowVehicle() {
                                     <VehicleStatus status={vehicle.status} />
                                 </div>
 
+                                {/* La única marca fiable de ficha anterior a la migración: la API nunca produce este estado. */}
+                                {isLegacyVehicle(vehicle.engineNumber) && (
+                                    <p className="rounded-lg border border-dashed border-line-strong bg-canvas px-4 py-3 text-sm text-ink-muted">
+                                        Esta unidad se registró antes de que la ficha pidiera número de motor,
+                                        rendimiento y costos. Los importes que aparecen abajo son de relleno:
+                                        edítala para capturar los datos reales.
+                                    </p>
+                                )}
+
                                 <Section title="Ficha técnica">
                                     <Field label="Marca">
                                         {vehicle.brand}
@@ -158,14 +184,36 @@ export function ShowVehicle() {
                                         <VehicleTypeTag type={vehicle.type} />
                                     </Field>
 
-                                    <Field label="Capacidad">
+                                    <Field label="Condición de compra">
+                                        <VehicleCondition condition={vehicle.condition} />
+                                    </Field>
+
+                                    <Field label="Número de motor">
+                                        <VehicleEngineNumber engineNumber={vehicle.engineNumber} />
+                                    </Field>
+
+                                    <Field label="Capacidad de carga">
                                         <VehicleCapacity capacity={vehicle.capacity} />
+                                    </Field>
+
+                                    <Field label="Rendimiento">
+                                        <VehicleEfficiency kilometersPerGallon={vehicle.kilometersPerGallon} />
+                                    </Field>
+                                </Section>
+
+                                <Section title="Costos">
+                                    <Field label="Valor de compra">
+                                        <VehicleMoney amount={vehicle.purchasePrice} />
+                                    </Field>
+
+                                    <Field label="Seguro">
+                                        <VehicleMoney amount={vehicle.monthlyInsuranceCost} period="al mes" />
                                     </Field>
                                 </Section>
 
                                 <Section title="Asignación">
                                     <Field label="Transportista">
-                                        {vehicle.carrierName}
+                                        {vehicle.carrierName ?? "Sin empresa asignada"}
                                     </Field>
                                 </Section>
                             </div>

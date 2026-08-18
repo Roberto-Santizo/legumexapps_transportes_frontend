@@ -5,9 +5,18 @@
  * tracking abierto— y solo en tamaño grande lleva la banda superior.
  */
 
-import { VEHICLE_TYPES } from "@/features/vehicles/vehicles";
+import {
+    formatCapacity,
+    formatKilometersPerGallon,
+    formatMileage,
+    formatQuetzales,
+    isLegacyVehicle,
+    VEHICLE_CONDITION_LABELS,
+    VEHICLE_STATUS_LABELS,
+    VEHICLE_TYPE_LABELS
+} from "@/features/vehicles/vehicles";
 import { Dialog, Transition } from "@headlessui/react";
-import { ImageOff, Maximize2, Truck, X } from "lucide-react";
+import { FileWarning, ImageOff, Maximize2, Truck, X } from "lucide-react";
 import { Fragment, useState } from "react";
 
 type PlateProps = {
@@ -224,18 +233,10 @@ export function VehicleSpec({ brand, model, year }: SpecProps) {
     );
 }
 
-/** La capacidad llega como cadena decimal ("15000.50"); se compone en mono porque es un dato de carga. */
-const formatCapacity = (capacity: string) => {
-    const kilograms = Number(capacity);
-
-    if (Number.isNaN(kilograms)) return capacity;
-
-    return kilograms.toLocaleString('es-GT', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-    });
-}
-
+/**
+ * La capacidad llega como cadena decimal ("15000.50") y viaja **en libras**,
+ * no en kilos: la unidad se rotula siempre para que nadie la lea al revés.
+ */
 type CapacityProps = {
     capacity: string;
 }
@@ -244,14 +245,10 @@ export function VehicleCapacity({ capacity }: CapacityProps) {
     return (
         <span className="font-mono text-sm text-ink">
             {formatCapacity(capacity)}
-            <span className="ml-1 text-[11px] uppercase tracking-[0.14em] text-ink-subtle">kg</span>
+            <span className="ml-1 text-[11px] uppercase tracking-[0.14em] text-ink-subtle">lb</span>
         </span>
     );
 }
-
-const TYPE_LABELS: Record<string, string> = Object.fromEntries(
-    VEHICLE_TYPES.map((type) => [type.value, type.label])
-);
 
 type TypeProps = {
     type: string;
@@ -260,16 +257,10 @@ type TypeProps = {
 export function VehicleTypeTag({ type }: TypeProps) {
     return (
         <span className="inline-flex items-center rounded-md border border-line bg-canvas px-2 py-1 text-xs text-ink-muted">
-            {TYPE_LABELS[type] ?? type}
+            {VEHICLE_TYPE_LABELS[type] ?? type}
         </span>
     );
 }
-
-const STATUS_LABELS: Record<string, string> = {
-    active: "Activo",
-    inactive: "Inactivo",
-    under_repair: "En taller",
-};
 
 const STATUS_DOTS: Record<string, string> = {
     active: "bg-success",
@@ -280,11 +271,119 @@ type StatusProps = {
     status: string;
 }
 
+/** Estado **operativo**: punto de color y etiqueta. Es el único eje que lleva color. */
 export function VehicleStatus({ status }: StatusProps) {
     return (
         <span className="inline-flex items-center gap-2 text-sm text-ink-muted">
             <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOTS[status] ?? "bg-ink-subtle"}`} />
-            {STATUS_LABELS[status] ?? status}
+            {VEHICLE_STATUS_LABELS[status] ?? status}
+        </span>
+    );
+}
+
+type ConditionProps = {
+    condition: string;
+}
+
+/**
+ * **Condición**, no estado. En español los dos se leen igual, así que se
+ * componen a propósito distinto: el estado lleva punto de color, la condición
+ * va entre corchetes y sin color. Ni la misma forma ni el mismo código.
+ */
+export function VehicleCondition({ condition }: ConditionProps) {
+    return (
+        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted">
+            <span className="text-ink-subtle">[</span>
+            <span className="px-1">{VEHICLE_CONDITION_LABELS[condition] ?? condition}</span>
+            <span className="text-ink-subtle">]</span>
+        </span>
+    );
+}
+
+type OdometerProps = {
+    mileage: number;
+    size?: "sm" | "lg";
+}
+
+/**
+ * El kilometraje se compone como el odómetro que es: cifra en negativo, dígitos
+ * en mono con tracking abierto y la unidad rotulada. Es el único campo con una
+ * regla de permiso propia y no hay bitácora que lo recupere, así que se lee
+ * como un instrumento y no como un dato más de la ficha.
+ */
+export function VehicleOdometer({ mileage, size = "sm" }: OdometerProps) {
+    const digits = size === "lg"
+        ? "px-3 py-1.5 text-base tracking-[0.24em]"
+        : "px-2 py-0.5 text-[13px] tracking-[0.16em]";
+
+    return (
+        <span className="inline-flex items-baseline gap-1.5">
+            <span className={`rounded bg-ink-deep font-mono font-medium text-canvas tabular-nums ${digits}`}>
+                {formatMileage(mileage)}
+            </span>
+
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-subtle">
+                km
+            </span>
+        </span>
+    );
+}
+
+type MoneyProps = {
+    amount: string;
+    /** Rotula la periodicidad: el backend no manda ni símbolo ni «al mes». */
+    period?: string;
+}
+
+export function VehicleMoney({ amount, period }: MoneyProps) {
+    return (
+        <span className="font-mono text-sm tabular-nums text-ink">
+            {formatQuetzales(amount)}
+
+            {period && (
+                <span className="ml-1 text-[11px] tracking-[0.1em] text-ink-subtle">
+                    {period}
+                </span>
+            )}
+        </span>
+    );
+}
+
+type EfficiencyProps = {
+    kilometersPerGallon: string;
+}
+
+export function VehicleEfficiency({ kilometersPerGallon }: EfficiencyProps) {
+    return (
+        <span className="font-mono text-sm tabular-nums text-ink">
+            {formatKilometersPerGallon(kilometersPerGallon)}
+            <span className="ml-1 text-[11px] uppercase tracking-[0.14em] text-ink-subtle">km/gal</span>
+        </span>
+    );
+}
+
+type EngineNumberProps = {
+    engineNumber: string | null;
+}
+
+/**
+ * `null` no es un hueco cualquiera: es la única marca fiable de ficha anterior
+ * a la migración, porque la API nunca produce ese estado. Se rotula como
+ * pendiente de capturar, no como «sin dato».
+ */
+export function VehicleEngineNumber({ engineNumber }: EngineNumberProps) {
+    if (isLegacyVehicle(engineNumber)) {
+        return (
+            <span className="inline-flex items-center gap-1.5 text-sm text-ink-subtle">
+                <FileWarning size={13} aria-hidden />
+                Ficha pendiente
+            </span>
+        );
+    }
+
+    return (
+        <span className="font-mono text-sm uppercase tracking-[0.12em] text-ink">
+            {engineNumber}
         </span>
     );
 }
