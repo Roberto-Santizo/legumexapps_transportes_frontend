@@ -13,10 +13,13 @@ import {
     VehicleTypeTag,
     vehicleProvider
 } from "@/features/vehicles/vehicles";
+import { canReadVehicleExpenses, VehicleExpensesPanel } from "@/features/vehicle-expenses/vehicle-expenses";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { Pencil, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/config/store/store";
 import type { ReactNode } from "react";
 
 type SectionProps = {
@@ -60,6 +63,10 @@ export function ShowVehicle() {
     const navigate = useNavigate();
     const notification = useNotification();
     const queryClient = useQueryClient();
+
+    const role = useSelector((state: RootState) => state.auth.user?.role);
+    /** Un `pilot` recibe 403 en los cinco endpoints de gastos: no se le pinta el panel. */
+    const canReadExpenses = canReadVehicleExpenses(role);
 
     const { data: vehicle, isLoading, isError, error } = useQuery({
         queryKey: ['getVehicleById', id],
@@ -220,6 +227,18 @@ export function ShowVehicle() {
                         </div>
                     </div>
                 </FadeInUp>
+            )}
+
+            {/*
+              * Los gastos no tienen pantalla propia: la API exige `vehicleId` en el
+              * listado y no hay comparativa de flota, así que el mantenimiento se
+              * administra aquí, junto a la ficha de la unidad.
+              */}
+            {!isLoading && vehicle && canReadExpenses && (
+                <VehicleExpensesPanel
+                    vehicleId={vehicle.id.toString()}
+                    plate={vehicle.plate}
+                />
             )}
         </div>
     );
