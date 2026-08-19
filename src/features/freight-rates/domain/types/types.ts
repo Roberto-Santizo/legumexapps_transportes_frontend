@@ -10,7 +10,7 @@ export type FreightQuote = z.infer<typeof FreightQuoteSchema>;
  * como cadena. `registeredBy` no existe aquí: sale del token.
  */
 export type FreightRateForm = {
-    zoneId: number;
+    locationId: number;
     productId: number;
     fuelType: string;
     /** GTQ por galón, [0.01, 999999.99]. */
@@ -20,12 +20,12 @@ export type FreightRateForm = {
 }
 
 /**
- * La zona no se envía: se deduce del punto. Sin `pounds` la respuesta llega
- * igual, pero con `pounds` y `total` en `null`.
+ * El destino se manda por `id`, no por punto: `lat` y `lng` ya no cotizan
+ * nada. Sin `pounds` la respuesta llega igual, pero con `pounds` y `total` en
+ * `null`.
  */
 export type FreightQuoteForm = {
-    lat: number;
-    lng: number;
+    locationId: number;
     productId: number;
     fuelType: string;
     pounds?: number;

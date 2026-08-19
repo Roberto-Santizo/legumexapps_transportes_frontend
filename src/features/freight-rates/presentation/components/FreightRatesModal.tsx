@@ -1,8 +1,8 @@
 /**
- * Las bandas de una zona se administran aquí y no en una pantalla propia: una
- * tarifa no significa nada fuera de su zona, y el listado sin filtro devuelve
- * zonas × productos × combustibles × bandas de una sola vez. El modal vive
- * dentro del detalle de la zona y siempre consulta con `zoneId`.
+ * Las bandas de un destino se administran aquí y no en una pantalla propia: una
+ * tarifa no significa nada fuera de su destino, y el listado sin filtro devuelve
+ * destinos × productos × combustibles × bandas de una sola vez. El modal vive
+ * dentro del detalle del destino y siempre consulta con `locationId`.
  */
 
 import type { FreightRate, FreightRateForm } from "@/features/freight-rates/freight-rates";
@@ -34,7 +34,7 @@ import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 const PRODUCTS_LIMIT = '500';
 
 type FormPanelProps = {
-    zoneId: number;
+    locationId: number;
     /** `null` da de alta una banda nueva; con tarifa, la edita. */
     rate: FreightRate | null;
     products: Option[];
@@ -47,7 +47,7 @@ type FormPanelProps = {
  * Se monta con los valores ya puestos y se desmonta al volver al listado: así
  * no hace falta resetear el formulario entre un alta y una edición.
  */
-function FreightRateFormPanel({ zoneId, rate, products, isPending, onSubmit, onCancel }: FormPanelProps) {
+function FreightRateFormPanel({ locationId, rate, products, isPending, onSubmit, onCancel }: FormPanelProps) {
     const {
         register,
         control,
@@ -55,9 +55,9 @@ function FreightRateFormPanel({ zoneId, rate, products, isPending, onSubmit, onC
         formState: { errors },
     } = useForm<FreightRateForm>({
         defaultValues: {
-            zoneId,
+            locationId,
             productId: rate?.productId,
-            fuelType: rate?.fuelType ?? '',
+            fuelType: rate?.fuelType ?? 'diesel',
             fuelMin: rate ? Number(rate.fuelMin) : undefined,
             pricePerPound: rate ? Number(rate.pricePerPound) : undefined
         }
@@ -71,7 +71,7 @@ function FreightRateFormPanel({ zoneId, rate, products, isPending, onSubmit, onC
                 className="inline-flex w-fit cursor-pointer items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-subtle transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
             >
                 <ArrowLeft size={14} />
-                Bandas de la zona
+                Bandas del destino
             </button>
 
             {products.length === 0 && (
@@ -81,7 +81,7 @@ function FreightRateFormPanel({ zoneId, rate, products, isPending, onSubmit, onC
             )}
 
             <form
-                onSubmit={handleSubmit((data) => onSubmit(buildFreightRatePayload({ ...data, zoneId })))}
+                onSubmit={handleSubmit((data) => onSubmit(buildFreightRatePayload({ ...data, locationId })))}
                 noValidate
                 className="flex flex-col gap-5"
             >
@@ -104,16 +104,16 @@ function FreightRateFormPanel({ zoneId, rate, products, isPending, onSubmit, onC
 }
 
 type Props = {
-    zoneId: number;
-    zoneName: string;
-    /** Una zona dada de baja congela sus tarifas: se leen, pero no se cotizan ni se editan. */
-    zoneActive: boolean;
+    locationId: number;
+    locationName: string;
+    /** Un destino dado de baja congela sus tarifas: se leen, pero no se cotizan ni se editan. */
+    locationActive: boolean;
     canWrite: boolean;
     modal: boolean;
     closeModal: () => void;
 }
 
-export function FreightRatesModal({ zoneId, zoneName, zoneActive, canWrite, modal, closeModal }: Props) {
+export function FreightRatesModal({ locationId, locationName, locationActive, canWrite, modal, closeModal }: Props) {
     const notification = useNotification();
     const queryClient = useQueryClient();
 
@@ -121,8 +121,8 @@ export function FreightRatesModal({ zoneId, zoneName, zoneActive, canWrite, moda
     const [showForm, setShowForm] = useState(false);
 
     const { data: rates, isLoading, isError, error } = useQuery({
-        queryKey: ['getFreightRates', zoneId],
-        queryFn: () => freightRateProvider.getFreightRates(zoneId.toString()),
+        queryKey: ['getFreightRates', locationId],
+        queryFn: () => freightRateProvider.getFreightRates(locationId.toString()),
         enabled: modal
     });
 
@@ -143,7 +143,7 @@ export function FreightRatesModal({ zoneId, zoneName, zoneActive, canWrite, moda
     };
 
     const invalidate = () => {
-        queryClient.invalidateQueries({ queryKey: ['getFreightRates', zoneId] });
+        queryClient.invalidateQueries({ queryKey: ['getFreightRates', locationId] });
     };
 
     const { mutate: createRate, isPending: isCreating } = useMutation({
@@ -206,12 +206,12 @@ export function FreightRatesModal({ zoneId, zoneName, zoneActive, canWrite, moda
         <Modal
             modal={modal}
             closeModal={handleClose}
-            title={`Tarifas de flete · ${zoneName}`}
+            title={`Tarifas de flete · ${locationName}`}
             width="sm:max-w-3xl"
         >
             {showForm ? (
                 <FreightRateFormPanel
-                    zoneId={zoneId}
+                    locationId={locationId}
                     rate={editing}
                     products={products}
                     isPending={isCreating || isUpdating}
@@ -226,7 +226,7 @@ export function FreightRatesModal({ zoneId, zoneName, zoneActive, canWrite, moda
                             El techo lo marca la banda siguiente del mismo producto.
                         </p>
 
-                        {canWrite && zoneActive && (
+                        {canWrite && locationActive && (
                             <CustomFilledButton
                                 label="Cotizar banda"
                                 type="button"
@@ -236,9 +236,9 @@ export function FreightRatesModal({ zoneId, zoneName, zoneActive, canWrite, moda
                         )}
                     </div>
 
-                    {canWrite && !zoneActive && (
+                    {canWrite && !locationActive && (
                         <p className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-3 text-sm text-ink">
-                            La zona está dada de baja: sus tarifas quedan congeladas hasta reactivarla.
+                            El destino está dado de baja: sus tarifas quedan congeladas hasta reactivarlo.
                             Se pueden leer y eliminar, pero no cotizar ni editar.
                         </p>
                     )}
@@ -258,11 +258,11 @@ export function FreightRatesModal({ zoneId, zoneName, zoneActive, canWrite, moda
                             </p>
 
                             <p className="mx-auto mt-3 max-w-[34ch] font-display text-lg font-semibold tracking-tight text-ink">
-                                Esta zona todavía no tiene ninguna tarifa cotizada.
+                                Este destino todavía no tiene ninguna tarifa cotizada.
                             </p>
 
                             <p className="mx-auto mt-2 max-w-[46ch] text-sm text-ink-muted">
-                                Hasta que exista una banda, cotizar un flete a cualquier punto de esta zona falla.
+                                Hasta que exista una banda, cotizar un flete a este destino falla.
                             </p>
                         </div>
                     )}
@@ -312,7 +312,7 @@ export function FreightRatesModal({ zoneId, zoneName, zoneActive, canWrite, moda
                                                         {canWrite && (
                                                             <ActionsMenu
                                                                 items={[
-                                                                    ...(zoneActive
+                                                                    ...(locationActive
                                                                         ? [{
                                                                             label: "Editar",
                                                                             icon: <Pencil />,

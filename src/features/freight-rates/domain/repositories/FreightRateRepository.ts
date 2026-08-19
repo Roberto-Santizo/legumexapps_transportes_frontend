@@ -2,7 +2,7 @@ import type { FreightQuote, FreightQuoteForm, FreightRate, FreightRateForm } fro
 
 export abstract class FreightRateRepository {
     abstract createFreightRate(payload: FreightRateForm): Promise<string>;
-    abstract getFreightRates(zoneId?: string): Promise<FreightRate[]>;
+    abstract getFreightRates(locationId?: string): Promise<FreightRate[]>;
     abstract getFreightRateById(id: string): Promise<FreightRate>;
     abstract updateFreightRateById(id: string, payload: FreightRateForm): Promise<string>;
     abstract deleteFreightRateById(id: string): Promise<string>;

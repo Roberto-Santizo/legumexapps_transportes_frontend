@@ -1,20 +1,13 @@
-import type { RootState } from "@/config/store/store";
-import {
-    ZoneColorTag,
-    ZoneMoment,
-    ZoneName,
-    ZonePageHeader,
-    ZonePolygonPreview,
-    ZoneStatus,
-    formatLatLng,
-    zoneProvider
-} from "@/features/zones/zones";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
-import { Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { LocationMoment, LocationName, LocationPinPreview, LocationStatus, locationProvider } from "@/features/locations/locations";
+import { Coins, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { FreightRatesModal } from "@/features/freight-rates/freight-rates";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
-import type { ReactNode } from "react";
+import { LocationPageHeader } from "@/features/locations/locations";
+import { useState, type ReactNode } from "react";
+import type { RootState } from "@/config/store/store";
 
 type FieldProps = {
     label: string;
@@ -32,38 +25,40 @@ function Field({ label, children }: FieldProps) {
     );
 }
 
-export function ShowZone() {
+export function ShowLocation() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const notification = useNotification();
     const queryClient = useQueryClient();
 
+    const [ratesModal, setRatesModal] = useState(false);
+
     const role = useSelector((state: RootState) => state.auth.user?.role);
     const canWrite = role === 'administrator';
 
-    const { data: zone, isLoading, isError, error } = useQuery({
-        queryKey: ['getZoneById', id],
-        queryFn: () => zoneProvider.getZoneById(id!),
+    const { data: location, isLoading, isError, error } = useQuery({
+        queryKey: ['getLocationById', id],
+        queryFn: () => locationProvider.getLocationById(id!),
         enabled: Boolean(id)
     });
 
     const invalidate = () => {
-        queryClient.invalidateQueries({ queryKey: ['getZones'] });
-        queryClient.invalidateQueries({ queryKey: ['getZoneById', id] });
+        queryClient.invalidateQueries({ queryKey: ['getLocations'] });
+        queryClient.invalidateQueries({ queryKey: ['getLocationById', id] });
     };
 
-    const { mutate: removeZone } = useMutation({
-        mutationFn: () => zoneProvider.deleteZoneById(id!),
+    const { mutate: removeLocation } = useMutation({
+        mutationFn: () => locationProvider.deleteLocationById(id!),
         onSuccess: (message) => {
             notification.success(message);
             invalidate();
-            navigate('/zonas');
+            navigate('/ubicaciones');
         },
         onError: (err) => notification.error(err.message)
     });
 
-    const { mutate: toggleZone } = useMutation({
-        mutationFn: () => zoneProvider.toggleZoneStatusById(id!),
+    const { mutate: toggleLocation } = useMutation({
+        mutationFn: () => locationProvider.toggleLocationStatusById(id!),
         onSuccess: (message) => {
             notification.success(message);
             invalidate();
@@ -72,13 +67,13 @@ export function ShowZone() {
     });
 
     const askToDeactivate = () => {
-        if (!zone) return;
+        if (!location) return;
 
         notification.question(
-            `Dar de baja ${zone.name}`,
+            `Dar de baja ${location.name}`,
             "Dar de baja",
-            "La zona deja de estar disponible, pero no se borra: sigue en el listado y se puede reactivar.",
-            () => removeZone()
+            "El destino deja de cotizar y sus tarifas dejan de poder editarse, pero no se borra: sigue en el listado y se puede reactivar.",
+            () => removeLocation()
         );
     };
 
@@ -86,22 +81,31 @@ export function ShowZone() {
 
     return (
         <div className="flex flex-col gap-8">
-            <ZonePageHeader
-                title="Detalle de la zona"
-                subtitle="El territorio que cubre, cómo se pinta en el mapa y quién la registró."
+            <LocationPageHeader
+                title="Detalle del destino"
+                subtitle="A qué lugar apunta, dónde cae su pin y quién lo registró."
             >
-                {zone && (
+                {location && (
                     <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setRatesModal(true)}
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
+                        >
+                            <Coins size={16} />
+                            Tarifas de flete
+                        </button>
+
                         {canWrite && (
                             <CustomFilledButton
                                 label="Editar"
                                 type="button"
                                 icon={<Pencil size={16} />}
-                                onClick={() => navigate(`/zonas/${zone.id}/editar`)}
+                                onClick={() => navigate(`/ubicaciones/${location.id}/editar`)}
                             />
                         )}
 
-                        {canWrite && (zone.status ? (
+                        {canWrite && (location.status ? (
                             <button
                                 type="button"
                                 onClick={askToDeactivate}
@@ -113,7 +117,7 @@ export function ShowZone() {
                         ) : (
                             <button
                                 type="button"
-                                onClick={() => toggleZone()}
+                                onClick={() => toggleLocation()}
                                 className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
                             >
                                 <RotateCcw size={16} />
@@ -122,76 +126,67 @@ export function ShowZone() {
                         ))}
                     </div>
                 )}
-            </ZonePageHeader>
+            </LocationPageHeader>
 
             {isLoading && (
                 <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-subtle">
-                    Cargando zona
+                    Cargando destino
                 </p>
             )}
 
-            {!isLoading && zone && (
+            {!isLoading && location && (
                 <FadeInUp>
                     <div className="flex max-w-5xl flex-col gap-6">
                         <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
                             <div className="flex flex-wrap items-center justify-between gap-4 bg-ink-deep px-7 py-6 text-canvas">
-                                <div className="flex flex-col gap-2">
-                                    <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-canvas/50">
-                                        Registro {zone.id}
-                                    </span>
-
-                                    <ZoneName name={zone.name} size="lg" />
+                                <div className="flex flex-col gap-2 p-5">
+                                    <LocationName name={location.name} size="lg" />
                                 </div>
 
-                                <span
-                                    className="h-10 w-10 rounded-full border border-canvas/20"
-                                    style={{ backgroundColor: zone.color }}
-                                    aria-hidden
-                                />
+                                <span className="font-mono text-[12px] text-canvas/70">
+                                    {location.latitude}, {location.longitude}
+                                </span>
                             </div>
 
-                            <ZonePolygonPreview area={zone.area} color={zone.color} height="h-[24rem]" />
+                            <LocationPinPreview location={location} height="h-[24rem]" />
                         </div>
 
                         <div className="rounded-2xl border border-line bg-surface p-6 shadow-sm sm:p-8">
                             <div className="flex flex-wrap items-start justify-between gap-4 pb-4">
                                 <p className="max-w-[60ch] text-sm text-ink-muted">
-                                    {zone.description ?? "Sin descripción."}
+                                    {location.description ?? "Sin descripción."}
                                 </p>
 
-                                <ZoneStatus status={zone.status} />
+                                <LocationStatus status={location.status} />
                             </div>
 
                             <dl className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
-                                <Field label="Vértices del área">
-                                    <span className="font-mono text-[13px]">{zone.area.length}</span>
-                                </Field>
-
-                                <Field label="Color en el mapa">
-                                    <ZoneColorTag color={zone.color} />
-                                </Field>
-
-                                <Field label="Primer punto (lat, lng)">
-                                    <span className="font-mono text-[13px]">
-                                        {zone.area.length > 0 ? formatLatLng(zone.area[0]) : '—'}
-                                    </span>
-                                </Field>
-
                                 <Field label="Registró">
-                                    {zone.registeredByName ?? '—'}
+                                    {location.registeredByName ?? '—'}
                                 </Field>
 
                                 <Field label="Fecha de registro">
-                                    <ZoneMoment value={zone.createdAt} withTime />
+                                    <LocationMoment value={location.createdAt} withTime />
                                 </Field>
 
                                 <Field label="Última actualización">
-                                    <ZoneMoment value={zone.updatedAt} withTime />
+                                    <LocationMoment value={location.updatedAt} withTime />
                                 </Field>
                             </dl>
                         </div>
                     </div>
                 </FadeInUp>
+            )}
+
+            {location && (
+                <FreightRatesModal
+                    locationId={location.id}
+                    locationName={location.name}
+                    locationActive={location.status}
+                    canWrite={canWrite}
+                    modal={ratesModal}
+                    closeModal={() => setRatesModal(false)}
+                />
             )}
         </div>
     );

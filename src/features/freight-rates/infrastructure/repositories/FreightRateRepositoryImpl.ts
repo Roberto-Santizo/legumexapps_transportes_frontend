@@ -10,8 +10,8 @@ export class FreightRateRepositoryImpl extends FreightRateRepository {
         return this.datasource.createFreightRate(payload);
     }
 
-    getFreightRates(zoneId?: string): Promise<FreightRate[]> {
-        return this.datasource.getFreightRates(zoneId);
+    getFreightRates(locationId?: string): Promise<FreightRate[]> {
+        return this.datasource.getFreightRates(locationId);
     }
 
     getFreightRateById(id: string): Promise<FreightRate> {

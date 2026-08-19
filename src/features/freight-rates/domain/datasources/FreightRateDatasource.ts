@@ -2,8 +2,8 @@ import type { FreightQuote, FreightQuoteForm, FreightRate, FreightRateForm } fro
 
 export abstract class FreightRateDatasource {
     abstract createFreightRate(payload: FreightRateForm): Promise<string>;
-    /** Sin paginación. `zoneId` es el único filtro que existe. */
-    abstract getFreightRates(zoneId?: string): Promise<FreightRate[]>;
+    /** Sin paginación. `locationId` es el único filtro que existe. */
+    abstract getFreightRates(locationId?: string): Promise<FreightRate[]>;
     abstract getFreightRateById(id: string): Promise<FreightRate>;
     abstract updateFreightRateById(id: string, payload: FreightRateForm): Promise<string>;
     abstract deleteFreightRateById(id: string): Promise<string>;
