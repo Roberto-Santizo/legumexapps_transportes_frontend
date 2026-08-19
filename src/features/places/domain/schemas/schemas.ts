@@ -19,3 +19,16 @@ export const PlaceSchema = z.object({
     latitude: z.number(),
     longitude: z.number(),
 });
+
+/**
+ * La ruta por carretera hacia un destino registrado. `polyline` y `points` son
+ * la misma línea en dos formatos: se consume una, no las dos.
+ */
+export const DirectionsSchema = z.object({
+    locationId: z.number(),
+    locationName: z.string(),
+    distanceKilometers: z.number(),
+    durationHours: z.number(),
+    polyline: z.string(),
+    points: z.array(z.tuple([z.number(), z.number()])),
+});
