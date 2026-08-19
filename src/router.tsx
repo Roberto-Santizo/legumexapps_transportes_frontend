@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { CompleteProfile } from "@/features/carriers/carriers";
 import { ConfirmAccount, Login, Register } from "@/features/auth/auth";
 import { CreateFuelPrice, IndexFuelPrices, ShowFuelPrice, UpdateFuelPrice } from "@/features/fuel-prices/fuel-prices";
+import { CreateLocation, IndexLocations, ShowLocation, UpdateLocation } from "@/features/locations/locations";
 import { CreateProduct, IndexProducts, ShowProduct, UpdateProduct } from "@/features/products/products";
 import { CreateVehicle, IndexVehicles, ShowVehicle, UpdateVehicle } from "@/features/vehicles/vehicles";
 import { CreateZone, IndexZones, ShowZone, UpdateZone } from "@/features/zones/zones";
@@ -53,6 +54,13 @@ export default function AppRouter() {
                     <Route path="/zonas/crear" element={<CreateZone />} />
                     <Route path="/zonas/:id" element={<ShowZone />} />
                     <Route path="/zonas/:id/editar" element={<UpdateZone />} />
+                </Route>
+
+                <Route element={<ProtectedLayout />}>
+                    <Route path="/ubicaciones" element={<IndexLocations />} />
+                    <Route path="/ubicaciones/crear" element={<CreateLocation />} />
+                    <Route path="/ubicaciones/:id" element={<ShowLocation />} />
+                    <Route path="/ubicaciones/:id/editar" element={<UpdateLocation />} />
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
