@@ -1,11 +1,12 @@
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { LocationMoment, LocationName, LocationPinPreview, LocationStatus, locationProvider } from "@/features/locations/locations";
-import { Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { Coins, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { FreightRatesModal } from "@/features/freight-rates/freight-rates";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { LocationPageHeader } from "@/features/locations/locations";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { RootState } from "@/config/store/store";
 
 type FieldProps = {
@@ -29,6 +30,8 @@ export function ShowLocation() {
     const navigate = useNavigate();
     const notification = useNotification();
     const queryClient = useQueryClient();
+
+    const [ratesModal, setRatesModal] = useState(false);
 
     const role = useSelector((state: RootState) => state.auth.user?.role);
     const canWrite = role === 'administrator';
@@ -82,16 +85,27 @@ export function ShowLocation() {
                 title="Detalle del destino"
                 subtitle="A qué lugar apunta, dónde cae su pin y quién lo registró."
             >
-                {location && canWrite && (
+                {location && (
                     <div className="flex flex-wrap items-center gap-2">
-                        <CustomFilledButton
-                            label="Editar"
+                        <button
                             type="button"
-                            icon={<Pencil size={16} />}
-                            onClick={() => navigate(`/ubicaciones/${location.id}/editar`)}
-                        />
+                            onClick={() => setRatesModal(true)}
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
+                        >
+                            <Coins size={16} />
+                            Tarifas de flete
+                        </button>
 
-                        {location.status ? (
+                        {canWrite && (
+                            <CustomFilledButton
+                                label="Editar"
+                                type="button"
+                                icon={<Pencil size={16} />}
+                                onClick={() => navigate(`/ubicaciones/${location.id}/editar`)}
+                            />
+                        )}
+
+                        {canWrite && (location.status ? (
                             <button
                                 type="button"
                                 onClick={askToDeactivate}
@@ -109,7 +123,7 @@ export function ShowLocation() {
                                 <RotateCcw size={16} />
                                 Reactivar
                             </button>
-                        )}
+                        ))}
                     </div>
                 )}
             </LocationPageHeader>
@@ -162,6 +176,17 @@ export function ShowLocation() {
                         </div>
                     </div>
                 </FadeInUp>
+            )}
+
+            {location && (
+                <FreightRatesModal
+                    locationId={location.id}
+                    locationName={location.name}
+                    locationActive={location.status}
+                    canWrite={canWrite}
+                    modal={ratesModal}
+                    closeModal={() => setRatesModal(false)}
+                />
             )}
         </div>
     );

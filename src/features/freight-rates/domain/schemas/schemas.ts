@@ -8,8 +8,8 @@ import { z } from "zod";
  */
 export const FreightRateSchema = z.object({
     id: z.number(),
-    zoneId: z.number(),
-    zoneName: z.string().nullable(),
+    locationId: z.number(),
+    locationName: z.string().nullable(),
     productId: z.number(),
     productName: z.string().nullable(),
     fuelType: z.string(),
@@ -24,7 +24,7 @@ export const FreightRateSchema = z.object({
 });
 
 /**
- * Este listado NO pagina: es la lista de precios completa de la zona, no un
+ * Este listado NO pagina: es la lista de precios completa del destino, no un
  * histórico que se navegue. Por eso extiende el sobre simple y no el paginado.
  */
 export const FreightRatesSchema = ApiResponseSchema.extend({
@@ -37,8 +37,8 @@ export const FreightRatesSchema = ApiResponseSchema.extend({
  */
 export const FreightQuoteSchema = z.object({
     freightRateId: z.number(),
-    zoneId: z.number(),
-    zoneName: z.string().nullable(),
+    locationId: z.number(),
+    locationName: z.string().nullable(),
     productId: z.number(),
     productName: z.string().nullable(),
     fuelType: z.string(),

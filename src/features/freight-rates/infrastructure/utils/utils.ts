@@ -74,7 +74,7 @@ export const calculateFreightTotal = (pounds: number, pricePerPound: string): nu
 
 /** El backend rechaza las cadenas del formulario: los cinco campos viajan numéricos. */
 export const buildFreightRatePayload = (form: FreightRateForm): FreightRateForm => ({
-    zoneId: Number(form.zoneId),
+    locationId: Number(form.locationId),
     productId: Number(form.productId),
     fuelType: form.fuelType,
     fuelMin: Number(form.fuelMin),

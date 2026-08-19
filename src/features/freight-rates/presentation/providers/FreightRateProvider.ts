@@ -9,8 +9,8 @@ export class FreightRateProvider {
         return this.repository.createFreightRate(payload);
     }
 
-    getFreightRates(zoneId?: string) {
-        return this.repository.getFreightRates(zoneId);
+    getFreightRates(locationId?: string) {
+        return this.repository.getFreightRates(locationId);
     }
 
     getFreightRateById(id: string) {

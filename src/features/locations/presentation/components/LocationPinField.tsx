@@ -12,7 +12,7 @@
 
 import type { Place } from "@/features/places/places";
 import { PlaceSearchField } from "@/features/places/places";
-import { LOCATION_MAP_PIN_ZOOM, LocationMapCanvas, LocationPlaceTag, roundCoordinate, toMapsPosition } from "@/features/locations/locations";
+import { LOCATION_MAP_PIN_ZOOM, LocationMapCanvas, roundCoordinate, toMapsPosition } from "@/features/locations/locations";
 import { Marker, useMap, type MapMouseEvent } from "@vis.gl/react-google-maps";
 import { useEffect } from "react";
 

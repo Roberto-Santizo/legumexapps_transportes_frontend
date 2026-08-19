@@ -1,6 +1,6 @@
 import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
 import { Eye, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
-import { LocationCoordinates, LocationMoment, LocationName, LocationPinGlyph, LocationStatus, locationProvider } from "@/features/locations/locations";
+import { LocationMoment, LocationName, LocationPinGlyph, LocationStatus, locationProvider } from "@/features/locations/locations";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";

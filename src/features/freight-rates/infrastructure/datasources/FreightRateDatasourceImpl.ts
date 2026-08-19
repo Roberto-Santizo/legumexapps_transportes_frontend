@@ -33,12 +33,12 @@ export class FreightRateDatasourceImpl extends FreightRateDatasource {
 
     /**
      * El listado no pagina: `data` es la tabla de precios completa. Sin
-     * `zoneId` la respuesta crece con zonas × productos × combustibles ×
-     * bandas, así que se filtra siempre que la vista sea la de una zona.
+     * `locationId` la respuesta crece con destinos × productos × combustibles ×
+     * bandas, así que se filtra siempre que la vista sea la de un destino.
      */
-    async getFreightRates(zoneId?: string): Promise<FreightRate[]> {
+    async getFreightRates(locationId?: string): Promise<FreightRate[]> {
         try {
-            const query = zoneId ? `?zoneId=${zoneId}` : '';
+            const query = locationId ? `?locationId=${locationId}` : '';
             const { data } = await this.api.get(`${this.url}${query}`);
             const response = FreightRatesSchema.safeParse(data);
 
@@ -117,15 +117,15 @@ export class FreightRateDatasourceImpl extends FreightRateDatasource {
     }
 
     /**
-     * La zona sale del punto y el precio del combustible sale del servidor:
-     * mandar un precio en la query no tiene ningún efecto. Sin `pounds` la
-     * respuesta llega igual, con `pounds` y `total` en `null`.
+     * El destino va por `id` y el precio del combustible sale del servidor:
+     * mandar un precio en la query no tiene ningún efecto, y `lat`/`lng` ya no
+     * se leen. Sin `pounds` la respuesta llega igual, con `pounds` y `total`
+     * en `null`.
      */
     async getFreightQuote(payload: FreightQuoteForm): Promise<FreightQuote> {
         try {
             const query = new URLSearchParams({
-                lat: payload.lat.toString(),
-                lng: payload.lng.toString(),
+                locationId: payload.locationId.toString(),
                 productId: payload.productId.toString(),
                 fuelType: payload.fuelType
             });

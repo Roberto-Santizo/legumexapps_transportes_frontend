@@ -10,12 +10,11 @@ import {
     zoneProvider
 } from "@/features/zones/zones";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
-import { FreightRatesModal } from "@/features/freight-rates/freight-rates";
-import { Coins, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 type FieldProps = {
     label: string;
@@ -38,8 +37,6 @@ export function ShowZone() {
     const navigate = useNavigate();
     const notification = useNotification();
     const queryClient = useQueryClient();
-
-    const [ratesModal, setRatesModal] = useState(false);
 
     const role = useSelector((state: RootState) => state.auth.user?.role);
     const canWrite = role === 'administrator';
@@ -95,15 +92,6 @@ export function ShowZone() {
             >
                 {zone && (
                     <div className="flex flex-wrap items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setRatesModal(true)}
-                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
-                        >
-                            <Coins size={16} />
-                            Tarifas de flete
-                        </button>
-
                         {canWrite && (
                             <CustomFilledButton
                                 label="Editar"
@@ -204,17 +192,6 @@ export function ShowZone() {
                         </div>
                     </div>
                 </FadeInUp>
-            )}
-
-            {zone && (
-                <FreightRatesModal
-                    zoneId={zone.id}
-                    zoneName={zone.name}
-                    zoneActive={zone.status}
-                    canWrite={canWrite}
-                    modal={ratesModal}
-                    closeModal={() => setRatesModal(false)}
-                />
             )}
         </div>
     );
