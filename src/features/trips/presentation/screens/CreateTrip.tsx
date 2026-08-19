@@ -1,7 +1,8 @@
 import type { TripFormValues } from "@/features/trips/trips";
-import { TripFormComponent } from "@/features/trips/trips";
+import { TripFormComponent, buildTripPayload, tripProvider } from "@/features/trips/trips";
 import { CustomFilledButton, CustomForm, FadeInUp, Title, useNotification } from "@/features/shared/shared";
 import { useForm } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
 
 export function CreateTrip() {
     const notification = useNotification();
@@ -21,8 +22,18 @@ export function CreateTrip() {
         }
     });
 
-    // TODO(paso 9): la mutación sobre `tripProvider.createTrip` entra aquí.
-    const onSubmit = (data: TripFormValues) => console.log(data);
+    /**
+     * `POST /trips` todavía no existe: el datasource lanza `No implementado` y
+     * el toast lo muestra. Por eso el botón no se deshabilita —la cadena
+     * completa se ejercita hasta el datasource y el error dice dónde se corta—.
+     */
+    const { mutate } = useMutation({
+        mutationFn: (values: TripFormValues) => tripProvider.createTrip(buildTripPayload(values)),
+        onSuccess: (message) => notification.success(message),
+        onError: (err) => notification.error(err.message)
+    });
+
+    const onSubmit = (values: TripFormValues) => mutate(values);
 
     return (
         <div className="flex flex-col gap-8">

@@ -126,14 +126,28 @@ export function TripFormComponent({ control, errors, setValue, onError }: Props)
                 />
             </div>
 
-            <TripRouteSummary
-                hasOrigin={hasOrigin}
-                hasDestination={hasDestination}
-                directions={directions}
-                isFetching={isFetching}
-                error={error}
-                onRetry={() => void refetch()}
-            />
+            <div className="flex flex-col gap-2">
+                <TripRouteSummary
+                    hasOrigin={hasOrigin}
+                    hasDestination={hasDestination}
+                    directions={directions}
+                    isFetching={isFetching}
+                    error={error}
+                    onRetry={() => void refetch()}
+                />
+
+                {/* La polilínea no se teclea: la escribe el `useEffect` de arriba. */}
+                <Controller
+                    control={control}
+                    name="polyline"
+                    rules={{ required: "Calcula la ruta antes de guardar el viaje" }}
+                    render={({ field }) => <input type="hidden" {...field} />}
+                />
+
+                {errors.polyline?.message && (
+                    <p className="text-xs text-danger">{errors.polyline.message}</p>
+                )}
+            </div>
         </div>
     );
 }
