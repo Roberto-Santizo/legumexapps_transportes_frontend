@@ -6,6 +6,7 @@ import { CreateLocation, IndexLocations, ShowLocation, UpdateLocation } from "@/
 import { CreateProduct, IndexProducts, ShowProduct, UpdateProduct } from "@/features/products/products";
 import { CreateVehicle, IndexVehicles, ShowVehicle, UpdateVehicle } from "@/features/vehicles/vehicles";
 import { CreateZone, IndexZones, ShowZone, UpdateZone } from "@/features/zones/zones";
+import { CreateTrip } from "@/features/trips/trips";
 import { IndexPilots } from "@/features/pilots/pilots";
 import { Dashboard } from "@/features/dashboard/dashboard";
 import { Profile, ProtectedLayout, PublicLayout } from "@/features/shared/shared";
@@ -65,6 +66,10 @@ export default function AppRouter() {
 
                 <Route element={<ProtectedLayout />}>
                     <Route path="/pilotos" element={<IndexPilots />} />
+                </Route>
+
+                <Route element={<ProtectedLayout />}>
+                    <Route path="/viajes/crear" element={<CreateTrip />} />
                 </Route>
             </Routes>
         </BrowserRouter>
