@@ -5,11 +5,12 @@
  */
 
 import type { TripFormValues } from "@/features/trips/trips";
-import { TripOriginField } from "@/features/trips/trips";
-import { TRIP_DESTINATIONS_LIMIT } from "@/features/trips/trips";
+import { TRIP_DESTINATIONS_LIMIT, TripOriginField, TripRouteSummary } from "@/features/trips/trips";
 import { locationProvider } from "@/features/locations/locations";
+import { placeProvider } from "@/features/places/places";
 import { SelectFormField } from "@/features/shared/shared";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Controller, useWatch, type Control, type FieldErrors, type UseFormSetValue } from "react-hook-form";
 
 type Props = {
@@ -30,8 +31,13 @@ function TripFieldsetLabel({ children }: { children: string }) {
 }
 
 export function TripFormComponent({ control, errors, setValue, onError }: Props) {
+    const originGooglePlaceId = useWatch({ control, name: 'originGooglePlaceId' }) ?? '';
     const originLatitude = useWatch({ control, name: 'originLatitude' }) ?? 0;
     const originLongitude = useWatch({ control, name: 'originLongitude' }) ?? 0;
+    const locationId = useWatch({ control, name: 'locationId' }) ?? null;
+
+    const hasOrigin = originGooglePlaceId.trim().length > 0;
+    const hasDestination = locationId !== null;
 
     /**
      * Los destinos dados de baja se listan igual que los activos. Elegir uno no
@@ -46,6 +52,35 @@ export function TripFormComponent({ control, errors, setValue, onError }: Props)
         value: location.id,
         label: location.name
     }));
+
+    /**
+     * Se dispara sola en cuanto hay origen y destino. `staleTime: Infinity` y
+     * `refetchOnWindowFocus: false` son la defensa de costo —volver a un par ya
+     * consultado sale de caché y no factura— y `retry: false` evita que un 503
+     * se convierta en tres llamadas.
+     */
+    const { data: directions, isFetching, error, refetch } = useQuery({
+        queryKey: ['directions', locationId, originLatitude, originLongitude],
+        queryFn: () => placeProvider.getDirections({
+            locationId: locationId as number,
+            latitude: Number(originLatitude),
+            longitude: Number(originLongitude)
+        }),
+        enabled: hasDestination && hasOrigin,
+        staleTime: Infinity,
+        refetchOnWindowFocus: false,
+        retry: false
+    });
+
+    /** `useQuery` de TanStack v5 no tiene `onSuccess`: la polilínea se copia aquí. */
+    useEffect(() => {
+        if (directions) {
+            setValue('polyline', directions.polyline, { shouldDirty: true, shouldValidate: true });
+            return;
+        }
+
+        if (error) setValue('polyline', '');
+    }, [directions, error, setValue]);
 
     return (
         <div className="flex flex-col gap-8">
@@ -89,6 +124,15 @@ export function TripFormComponent({ control, errors, setValue, onError }: Props)
                     validation={{ required: "Elige el destino del viaje" }}
                 />
             </div>
+
+            <TripRouteSummary
+                hasOrigin={hasOrigin}
+                hasDestination={hasDestination}
+                directions={directions}
+                isFetching={isFetching}
+                error={error}
+                onRetry={() => void refetch()}
+            />
         </div>
     );
 }
