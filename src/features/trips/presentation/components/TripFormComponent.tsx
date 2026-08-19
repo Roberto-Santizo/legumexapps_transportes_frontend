@@ -107,6 +107,7 @@ export function TripFormComponent({ control, errors, setValue, onError }: Props)
                             }}
                             onError={onError}
                             errorMessage={errors.originGooglePlaceId?.message}
+                            routePoints={directions?.points}
                         />
                     )}
                 />

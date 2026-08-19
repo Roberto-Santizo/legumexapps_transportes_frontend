@@ -5,11 +5,14 @@
  * viaja como `lat`/`lng` a `/api/places/directions`.
  */
 
-import type { Place } from "@/features/places/places";
-import { PlaceSearchField } from "@/features/places/places";
+import type { Directions, Place } from "@/features/places/places";
+import { PlaceSearchField, toRoutePath } from "@/features/places/places";
 import { LOCATION_MAP_PIN_ZOOM, LocationMapCanvas, roundCoordinate, toMapsPosition } from "@/features/locations/locations";
 import { Marker, useMap, type MapMouseEvent } from "@vis.gl/react-google-maps";
 import { useEffect } from "react";
+
+/** El `--color-ink` de `index.css`: la API de Google no lee tokens de Tailwind. */
+const ROUTE_STROKE_COLOR = '#12241c';
 
 type LayerProps = {
     position: google.maps.LatLngLiteral;
@@ -44,6 +47,33 @@ function TripOriginPinLayer({ position, anchor, onMove }: LayerProps) {
     );
 }
 
+/**
+ * La línea de la ruta. `@vis.gl/react-google-maps` no exporta un componente
+ * `Polyline`, así que se instancia la de Google sobre el mapa del contexto y se
+ * suelta con `setMap(null)` al desmontar o al cambiar de ruta.
+ *
+ * Se dibuja `points`, no `polyline`: son la misma línea en dos formatos.
+ */
+function TripRouteLayer({ points }: { points: Directions['points'] }) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!map || points.length === 0) return;
+
+        const line = new google.maps.Polyline({
+            path: toRoutePath(points),
+            map,
+            strokeColor: ROUTE_STROKE_COLOR,
+            strokeOpacity: 0.85,
+            strokeWeight: 4,
+        });
+
+        return () => line.setMap(null);
+    }, [map, points]);
+
+    return null;
+}
+
 type Props = {
     googlePlaceId: string;
     latitude: number;
@@ -52,6 +82,8 @@ type Props = {
     onPinMoved: (latitude: number, longitude: number) => void;
     onError?: (message: string) => void;
     errorMessage?: string;
+    /** Los pares de la ruta calculada. Sin ruta, el mapa solo muestra el origen. */
+    routePoints?: Directions['points'];
 };
 
 export function TripOriginField({
@@ -61,11 +93,16 @@ export function TripOriginField({
     onPlaceSelected,
     onPinMoved,
     onError,
-    errorMessage
+    errorMessage,
+    routePoints
 }: Props) {
     const anchor = googlePlaceId.trim();
     const hasOrigin = anchor.length > 0;
     const position = toMapsPosition(latitude, longitude);
+
+    /** El último par de la ruta es el destino: ahí va el marcador fijo. */
+    const lastPoint = routePoints?.at(-1);
+    const destination = lastPoint ? toMapsPosition(lastPoint[0], lastPoint[1]) : null;
 
     const handleMapClick = (event: MapMouseEvent) => {
         const point = event.detail.latLng;
@@ -96,6 +133,12 @@ export function TripOriginField({
                             onMove={onPinMoved}
                         />
                     )}
+
+                    {routePoints && routePoints.length > 0 && (
+                        <TripRouteLayer points={routePoints} />
+                    )}
+
+                    {destination && <Marker position={destination} />}
                 </LocationMapCanvas>
 
                 <p className="text-xs text-ink-muted">
