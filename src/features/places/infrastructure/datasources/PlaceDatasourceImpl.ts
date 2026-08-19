@@ -1,5 +1,5 @@
-import type { Place, PlacePrediction } from "@/features/places/places";
-import { PlaceDatasource, PlacePredictionSchema, PlaceSchema } from "@/features/places/places";
+import type { Directions, DirectionsQuery, Place, PlacePrediction } from "@/features/places/places";
+import { DirectionsError, DirectionsSchema, PlaceDatasource, PlacePredictionSchema, PlaceSchema } from "@/features/places/places";
 import { isAxiosError, type AxiosInstance } from "axios";
 import { z } from "zod";
 
@@ -43,6 +43,39 @@ export class PlaceDatasourceImpl extends PlaceDatasource {
             throw new Error("Información no válida");
         } catch (error) {
             if (isAxiosError(error)) throw new Error(error.response?.data.message, { cause: error });
+
+            throw new Error("Error no controlado.", { cause: error });
+        }
+    }
+
+    /**
+     * La ruta por carretera desde un par de coordenadas sueltas hasta un destino
+     * de `locations`. Los tres parámetros son obligatorios y no tienen defaults.
+     *
+     * Su `catch` no es el de los otros dos métodos: es el único endpoint que
+     * puede responder 400, y su 422 llega en el formato de Laravel
+     * (`{ message, errors }`), sin el sobre `{ statusCode, message, data }`.
+     */
+    async getDirections({ locationId, latitude, longitude }: DirectionsQuery): Promise<Directions> {
+        try {
+            const { data } = await this.api.get(`${this.url}/directions?locationId=${locationId}&lat=${latitude}&lng=${longitude}`);
+            const response = DirectionsSchema.safeParse(data['data']);
+
+            if (response.success) {
+                return response.data;
+            }
+
+            throw new Error("Información no válida");
+        } catch (error) {
+            if (isAxiosError(error)) {
+                const body = error.response?.data;
+                const fieldMessages = Object.values(body?.errors ?? {}).flat().join(' · ');
+
+                throw new DirectionsError(
+                    fieldMessages || body?.message || "No se pudo calcular la ruta.",
+                    error.response?.status ?? 0,
+                );
+            }
 
             throw new Error("Error no controlado.", { cause: error });
         }
