@@ -9,7 +9,8 @@ import type { Directions, Place } from "@/features/places/places";
 import { PlaceSearchField, toRoutePath } from "@/features/places/places";
 import { LOCATION_MAP_PIN_ZOOM, LocationMapCanvas, roundCoordinate, toMapsPosition } from "@/features/locations/locations";
 import { Marker, useMap, type MapMouseEvent } from "@vis.gl/react-google-maps";
-import { useEffect } from "react";
+import { MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
 
 /** El `--color-ink` de `index.css`: la API de Google no lee tokens de Tailwind. */
 const ROUTE_STROKE_COLOR = '#12241c';
@@ -96,6 +97,13 @@ export function TripOriginField({
     errorMessage,
     routePoints
 }: Props) {
+    /**
+     * La dirección que devolvió el detalle del lugar, no el texto que se tecleó.
+     * Vive aquí y no en el formulario: no viaja al servidor y arrastrar el pin
+     * no la cambia, porque el lugar de Google sigue siendo el mismo.
+     */
+    const [address, setAddress] = useState('');
+
     const anchor = googlePlaceId.trim();
     const hasOrigin = anchor.length > 0;
     const position = toMapsPosition(latitude, longitude);
@@ -117,9 +125,19 @@ export function TripOriginField({
             <PlaceSearchField
                 label="Buscar el punto de partida"
                 placeholder="Planta Legumex, Chimaltenango"
-                onSelect={onPlaceSelected}
+                onSelect={(place) => {
+                    setAddress(place.formattedAddress);
+                    onPlaceSelected(place);
+                }}
                 onError={onError}
             />
+
+            {hasOrigin && address && (
+                <p className="flex items-start gap-2 rounded-xl border border-line bg-canvas px-4 py-3 text-sm text-ink">
+                    <MapPin size={15} className="mt-0.5 shrink-0 text-ink-subtle" />
+                    {address}
+                </p>
+            )}
 
             <div className="flex flex-col gap-2">
                 <LocationMapCanvas
