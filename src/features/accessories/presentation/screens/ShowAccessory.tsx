@@ -11,6 +11,7 @@ import {
     formatDepreciation,
     formatQuetzales
 } from "@/features/accessories/accessories";
+import { AccessoryCharacteristicsPanel } from "@/features/accessory-characteristics/accessory-characteristics";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { Pencil, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -179,6 +180,19 @@ export function ShowAccessory() {
                         </div>
                     </div>
                 </FadeInUp>
+            )}
+
+            {/*
+              * Las características no tienen pantalla propia: la API exige
+              * `accessoryId` en el listado y no se puede buscar accesorios por
+              * característica, así que se administran aquí, junto a la ficha.
+              * Son una segunda llamada a propósito: `GET /accessories` no las trae.
+              */}
+            {!isLoading && accessory && (
+                <AccessoryCharacteristicsPanel
+                    accessoryId={accessory.id.toString()}
+                    code={accessory.code}
+                />
             )}
         </div>
     );
