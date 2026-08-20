@@ -1,5 +1,5 @@
 import type { NavItem } from "@/features/shared/shared";
-import { Apple, Car, Fuel, IdCard, LayoutDashboard, MapPin, Route } from "lucide-react";
+import { Apple, Car, Fuel, IdCard, LayoutDashboard, MapPin, Route, Wrench } from "lucide-react";
 
 export const NAVIGATION: NavItem[] = [
     { to: "/dashboard", text: "Dashboard", icon: <LayoutDashboard /> },
@@ -8,6 +8,7 @@ export const NAVIGATION: NavItem[] = [
     { to: "/productos", text: "Productos", icon: <Apple />, disabled: false, roles: ['administrator'] },
     // { to: "/zonas", text: "Zonas", icon: <MapPinned />, disabled: false, roles: ['administrator'] },
     { to: "/ubicaciones", text: "Ubicaciones", icon: <MapPin />, disabled: false, roles: ['administrator'] },
+    { to: "/accesorios", text: "Accesorios", icon: <Wrench />, disabled: false, roles: ['administrator', 'carrier', 'manager'] },
     { to: "/pilotos", text: "Pilotos", icon: <IdCard />, disabled: false, roles: ['administrator', 'carrier', 'manager'] },
     { to: "/viajes", text: "Viajes", icon: <Route />, disabled: false, roles: ['administrator', 'carrier', 'manager'] },
 ];
