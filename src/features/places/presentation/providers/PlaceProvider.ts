@@ -1,4 +1,4 @@
-import type { PlaceRepository } from "@/features/places/places";
+import type { DirectionsQuery, PlaceRepository } from "@/features/places/places";
 import { PlaceDatasourceImpl, PlaceRepositoryImpl } from "@/features/places/infrastructure/infrastructure";
 import api from "@/config/http/axios";
 
@@ -11,6 +11,10 @@ export class PlaceProvider {
 
     getPlaceById(placeId: string) {
         return this.repository.getPlaceById(placeId);
+    }
+
+    getDirections(query: DirectionsQuery) {
+        return this.repository.getDirections(query);
     }
 }
 

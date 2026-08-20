@@ -1,4 +1,4 @@
-import type { Place, PlaceDatasource, PlacePrediction } from "@/features/places/places";
+import type { Directions, DirectionsQuery, Place, PlaceDatasource, PlacePrediction } from "@/features/places/places";
 import { PlaceRepository } from "@/features/places/places";
 
 export class PlaceRepositoryImpl extends PlaceRepository {
@@ -12,5 +12,9 @@ export class PlaceRepositoryImpl extends PlaceRepository {
 
     getPlaceById(placeId: string): Promise<Place> {
         return this.datasource.getPlaceById(placeId);
+    }
+
+    getDirections(query: DirectionsQuery): Promise<Directions> {
+        return this.datasource.getDirections(query);
     }
 }
