@@ -1,5 +1,5 @@
 /**
- * Los cuatro filtros del historial. Viven en el estado del panel y no en la
+ * Los cinco filtros del historial. Viven en el estado del panel y no en la
  * URL: el detalle del vehículo ya usa la ruta para identificar la unidad, y el
  * historial es una lectura dentro de esa ficha, no una pantalla propia.
  *
@@ -10,8 +10,10 @@
 
 import type { VehicleExpenseFilters } from "@/features/vehicle-expenses/vehicle-expenses";
 import {
+    hasVehicleExpenseFilters,
     todayAsInputValue,
     VEHICLE_EXPENSE_CATEGORIES,
+    VEHICLE_EXPENSE_INVOICE_FILTERS,
     VEHICLE_EXPENSE_NATURES
 } from "@/features/vehicle-expenses/vehicle-expenses";
 import { X } from "lucide-react";
@@ -25,7 +27,7 @@ export function VehicleExpenseFiltersBar({ filters, onChange }: Props) {
     const applyFilter = (key: keyof VehicleExpenseFilters, value: string) =>
         onChange({ ...filters, [key]: value });
 
-    const hasFilters = Boolean(filters.category || filters.nature || filters.dateFrom || filters.dateTo);
+    const hasFilters = hasVehicleExpenseFilters(filters);
 
     return (
         <div className="flex flex-wrap items-end gap-4 rounded-xl border border-line bg-canvas/40 p-4">
@@ -44,6 +46,15 @@ export function VehicleExpenseFiltersBar({ filters, onChange }: Props) {
                 emptyLabel="Preventivos y correctivos"
                 options={VEHICLE_EXPENSE_NATURES.map((option) => ({ value: String(option.value), label: option.label }))}
                 onChange={(value) => applyFilter('nature', value)}
+            />
+
+            {/* El único filtro que además cambia el acumulado: con él, el total es solo el de lo facturado. */}
+            <FilterSelect
+                label="Facturación"
+                value={filters.isInvoiced ?? ''}
+                emptyLabel="Con y sin factura"
+                options={VEHICLE_EXPENSE_INVOICE_FILTERS.map((option) => ({ value: String(option.value), label: option.label }))}
+                onChange={(value) => applyFilter('isInvoiced', value)}
             />
 
             <FilterDate
