@@ -28,6 +28,7 @@ export const FREIGHT_FUEL_TYPE_LABELS: Record<string, string> = Object.fromEntri
 /** Límites que valida el backend. Se replican para no gastar un 422. */
 export const FUEL_MIN_RANGE = { min: 0.01, max: 999999.99 };
 export const PRICE_PER_POUND_RANGE = { min: 0.000001, max: 999999.999999 };
+export const POUNDS_RANGE = { min: 0.01, max: 99999999.99 };
 
 /**
  * Un `fuelMin` de un dígito casi siempre es un `30` al que le falta el cero: el
@@ -52,6 +53,23 @@ export const formatQuetzales = (value: string | null, decimals = FUEL_MIN_DECIMA
     `Q${toAmount(value).toFixed(decimals)}`;
 
 /**
+ * Como `formatQuetzales`, pero agrupando los miles: el total de un flete pasa
+ * de las cinco cifras y sin separador se lee mal de un vistazo.
+ */
+export const formatQuetzalesGrouped = (value: string | null, decimals = FUEL_MIN_DECIMALS): string =>
+    `Q${toAmount(value).toLocaleString('es-GT', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+    })}`;
+
+/** Libras con dos decimales y separador de miles. Solo para mostrar. */
+export const formatPounds = (value: string | null): string =>
+    toAmount(value).toLocaleString('es-GT', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
+/**
  * Parte la tarifa por libra en los dos decimales que se leen y los cuatro que
  * hacen la diferencia al multiplicar. Se pintan juntos para que la precisión
  * quede a la vista sin que la cifra deje de leerse de un vistazo.
@@ -71,6 +89,41 @@ export const splitPricePerPound = (value: string): { head: string; tail: string 
  */
 export const calculateFreightTotal = (pounds: number, pricePerPound: string): number =>
     Number((pounds * toAmount(pricePerPound)).toFixed(2));
+
+/**
+ * Cuánto puede alejarse el combustible vigente de la banda que se aplicó antes
+ * de que la tarifa deba mirarse con desconfianza. Un veinte por ciento por
+ * encima ya es un flete cobrado bastante por debajo del costo real.
+ */
+export const STALE_FUEL_BAND_RATIO = 1.2;
+
+/**
+ * La banda aplicada se quedó vieja. Es el riesgo caro del dominio y la API no
+ * lo señala de ninguna forma: responde 200 con una cifra que parece válida. La
+ * distancia entre el precio vigente y el `fuelMin` de la banda es la única
+ * señal que llega al front, así que se interpreta aquí.
+ */
+export const isStaleFreightBand = (currentFuelPrice: string, appliedFuelMin: string): boolean => {
+    const applied = toAmount(appliedFuelMin);
+
+    if (applied <= 0) return false;
+
+    return toAmount(currentFuelPrice) > applied * STALE_FUEL_BAND_RATIO;
+};
+
+/**
+ * Reparto del riel de banda: qué fracción del tramo dibujado ocupa el precio
+ * vigente por encima de la banda aplicada. Se satura en 1 para que una tarifa
+ * muy vieja no desborde la barra.
+ */
+export const freightBandGapRatio = (currentFuelPrice: string, appliedFuelMin: string): number => {
+    const applied = toAmount(appliedFuelMin);
+    const current = toAmount(currentFuelPrice);
+
+    if (applied <= 0 || current <= applied) return 0;
+
+    return Math.min((current - applied) / applied, 1);
+};
 
 /** El backend rechaza las cadenas del formulario: los cinco campos viajan numéricos. */
 export const buildFreightRatePayload = (form: FreightRateForm): FreightRateForm => ({

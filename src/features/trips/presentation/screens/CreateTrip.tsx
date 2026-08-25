@@ -1,7 +1,12 @@
 import type { TripFormValues } from "@/features/trips/trips";
-import { TripFormComponent, buildTripPayload, tripProvider } from "@/features/trips/trips";
+import {
+    TripFormComponent,
+    TripFreightQuoteSection,
+    buildTripPayload,
+    tripProvider
+} from "@/features/trips/trips";
 import { CustomFilledButton, CustomForm, FadeInUp, Title, useNotification } from "@/features/shared/shared";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 
 export function CreateTrip() {
@@ -22,6 +27,9 @@ export function CreateTrip() {
         }
     });
 
+    /** El costeo cotiza contra el mismo destino que ya eligió el viaje. */
+    const locationId = useWatch({ control, name: 'locationId' }) ?? null;
+
     /**
      * `POST /trips` todavía no existe: el datasource lanza `No implementado` y
      * el toast lo muestra. Por eso el botón no se deshabilita —la cadena
@@ -39,7 +47,7 @@ export function CreateTrip() {
         <div className="flex flex-col gap-8">
             <Title
                 title="Registrar viaje"
-                subtitle="Elige de dónde sale y a qué destino registrado va."
+                subtitle="Elige de dónde sale, a qué destino registrado va y cuánto cuesta el flete."
             />
 
             <FadeInUp>
@@ -51,6 +59,12 @@ export function CreateTrip() {
                             setValue={setValue}
                             onError={(message) => notification.error(message)}
                         />
+
+                        {/*
+                          * El costeo es informativo: no viaja en el payload ni bloquea el
+                          * guardado. Por eso lleva su propio formulario y su propio botón.
+                          */}
+                        <TripFreightQuoteSection locationId={locationId} />
 
                         <CustomFilledButton
                             label="Guardar viaje"
