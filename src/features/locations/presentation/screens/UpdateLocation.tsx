@@ -28,6 +28,7 @@ function UpdateLocationForm({ location, isPending, onSubmit, onError }: FormProp
         defaultValues: {
             name: location.name,
             description: location.description ?? '',
+            type: location.type,
             googlePlaceId: location.googlePlaceId,
             latitude: Number(location.latitude),
             longitude: Number(location.longitude)
@@ -87,7 +88,7 @@ export function UpdateLocation() {
         <div className="flex flex-col gap-8">
             <LocationPageHeader
                 title="Editar destino"
-                subtitle="Buscar otra dirección reapunta el destino sin perder su historial: conserva el id y las tarifas ya cotizadas."
+                subtitle="Buscar otra dirección reapunta el destino sin perder su historial: conserva el id y las tarifas ya cotizadas. Cambiar el tipo tampoco las toca."
             >
                 {location && <LocationStatus status={location.status} />}
             </LocationPageHeader>

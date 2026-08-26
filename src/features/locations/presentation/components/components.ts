@@ -4,3 +4,4 @@ export * from './LocationMapCanvas';
 export * from './LocationPageHeader';
 export * from './LocationPinField';
 export * from './LocationPinPreview';
+export * from './LocationTypeField';

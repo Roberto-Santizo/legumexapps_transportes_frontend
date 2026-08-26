@@ -17,6 +17,8 @@ export function CreateLocation() {
         handleSubmit,
         formState: { errors },
     } = useForm<LocationForm>({
+        // `type` se queda sin valor por defecto: la API lo exige en el alta para
+        // que el tipo se elija, no se herede de un preseleccionado.
         defaultValues: {
             name: '',
             description: '',

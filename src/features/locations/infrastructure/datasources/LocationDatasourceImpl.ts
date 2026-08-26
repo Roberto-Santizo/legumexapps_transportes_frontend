@@ -1,4 +1,4 @@
-import type { Location, LocationForm, PaginatedLocations } from "@/features/locations/locations";
+import type { Location, LocationForm, LocationType, PaginatedLocations } from "@/features/locations/locations";
 import { LocationDatasource, LocationSchema, PaginatedLocationsSchema, getLocationErrorMessage } from "@/features/locations/locations";
 import { ApiResponseSchema } from "@/features/shared/shared";
 import { isAxiosError, type AxiosInstance } from "axios";
@@ -26,9 +26,18 @@ export class LocationDatasourceImpl extends LocationDatasource {
         }
     }
 
-    async getLocations(limit: string, page: string): Promise<PaginatedLocations> {
+    /**
+     * El filtro `type` solo se manda si es un valor del enum: la API ignora en
+     * silencio cualquier otra cosa y devuelve el catálogo entero, así que un
+     * valor mal escrito no vaciaría la lista, la dejaría completa.
+     */
+    async getLocations(limit: string, page: string, type?: LocationType): Promise<PaginatedLocations> {
         try {
-            const { data } = await this.api.get(`${this.url}?limit=${limit}&page=${page}`);
+            const params = new URLSearchParams({ limit, page });
+
+            if (type) params.set('type', type);
+
+            const { data } = await this.api.get(`${this.url}?${params.toString()}`);
             const response = PaginatedLocationsSchema.safeParse(data);
 
             if (response.success) {

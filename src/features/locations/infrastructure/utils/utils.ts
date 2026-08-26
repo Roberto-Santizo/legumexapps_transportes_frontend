@@ -5,7 +5,7 @@
  * archivo, está mal.
  */
 
-import type { Location, LocationForm } from "@/features/locations/locations";
+import type { Location, LocationForm, LocationType } from "@/features/locations/locations";
 import { isAxiosError } from "axios";
 
 /**
@@ -16,6 +16,25 @@ export const LOCATION_STATUS_LABELS: Record<'true' | 'false', string> = {
     true: "Activo",
     false: "Dado de baja",
 };
+
+/**
+ * La API habla en inglés y no traduce: `"port"` y `"destination"` llegan y se
+ * envían crudos, y el español solo existe en pantalla.
+ */
+export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
+    port: "Puerto",
+    destination: "Destino",
+};
+
+/** El orden del selector: el caso raro primero para que no pase inadvertido. */
+export const LOCATION_TYPES: LocationType[] = ['port', 'destination'];
+
+/**
+ * El filtro del listado no valida nada: un `?type=` fuera del enum no vacía la
+ * lista, la devuelve entera. Por eso el valor se comprueba aquí antes de salir.
+ */
+export const isLocationType = (value: unknown): value is LocationType =>
+    value === 'port' || value === 'destination';
 
 /** Encuadre inicial cuando todavía no hay pin que centrar. */
 export const LOCATION_MAP_DEFAULT_CENTER: google.maps.LatLngLiteral = { lat: 15.5, lng: -90.25 };
@@ -54,6 +73,7 @@ export const buildLocationPayload = (form: LocationForm): LocationForm => {
     return {
         name: form.name.trim(),
         description: description.length > 0 ? description : null,
+        type: form.type,
         googlePlaceId: form.googlePlaceId.trim(),
         latitude: roundCoordinate(Number(form.latitude)),
         longitude: roundCoordinate(Number(form.longitude)),

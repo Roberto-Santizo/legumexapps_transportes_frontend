@@ -1,5 +1,5 @@
 import type { LocationForm } from "@/features/locations/locations";
-import { LocationPinField } from "@/features/locations/locations";
+import { LocationPinField, LocationTypeField } from "@/features/locations/locations";
 import { TextAreaFormField, TextFormField } from "@/features/shared/shared";
 import { Controller, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
 
@@ -33,6 +33,19 @@ export function LocationFormComponent({ register, control, errors, setValue, onE
                         message: "El nombre del destino no puede superar los 255 caracteres"
                     }
                 }}
+            />
+
+            <Controller
+                control={control}
+                name="type"
+                rules={{ required: "El tipo de destino es obligatorio" }}
+                render={({ field }) => (
+                    <LocationTypeField
+                        value={field.value}
+                        onChange={field.onChange}
+                        errorMessage={errors.type?.message}
+                    />
+                )}
             />
 
             <TextAreaFormField<LocationForm>

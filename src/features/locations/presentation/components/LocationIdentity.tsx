@@ -5,8 +5,9 @@
  * son el dato que se compara de un vistazo en una tabla larga.
  */
 
-import { LOCATION_STATUS_LABELS, formatCoordinates } from "@/features/locations/locations";
-import { MapPin } from "lucide-react";
+import type { LocationType } from "@/features/locations/locations";
+import { LOCATION_STATUS_LABELS, LOCATION_TYPE_LABELS, formatCoordinates } from "@/features/locations/locations";
+import { Anchor, MapPin } from "lucide-react";
 
 type NameSize = "sm" | "lg";
 
@@ -42,6 +43,25 @@ export function LocationPinGlyph({ active = true, size = 30 }: PinProps) {
             aria-hidden
         >
             <MapPin size={Math.round(size * 0.5)} />
+        </span>
+    );
+}
+
+type TypeProps = {
+    type: LocationType;
+}
+
+/**
+ * El puerto es el caso raro del catálogo —hasta que se reclasifiquen a mano no
+ * hay ninguno—, así que se marca y el destino ordinario se queda en voz baja.
+ */
+export function LocationTypeTag({ type }: TypeProps) {
+    const isPort = type === 'port';
+
+    return (
+        <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] ${isPort ? "border-ink-deep bg-ink-deep text-canvas" : "border-line text-ink-muted"}`}>
+            {isPort ? <Anchor size={11} /> : <MapPin size={11} />}
+            {LOCATION_TYPE_LABELS[type]}
         </span>
     );
 }
