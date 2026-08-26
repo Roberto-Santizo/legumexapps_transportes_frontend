@@ -1,4 +1,9 @@
-import type { VehicleExpenseFilters, VehicleExpenseForm, VehicleExpenseRepository } from "@/features/vehicle-expenses/vehicle-expenses";
+import type {
+    VehicleExpenseFilters,
+    VehicleExpenseForm,
+    VehicleExpenseRepository,
+    VehicleExpenseUpdateForm
+} from "@/features/vehicle-expenses/vehicle-expenses";
 import { VehicleExpenseDatasourceImpl, VehicleExpenseRepositoryImpl } from "@/features/vehicle-expenses/infrastructure/infrastructure";
 import api from "@/config/http/axios";
 
@@ -17,7 +22,7 @@ export class VehicleExpenseProvider {
         return this.repository.getVehicleExpenseById(id);
     }
 
-    updateVehicleExpenseById(id: string, payload: VehicleExpenseForm) {
+    updateVehicleExpenseById(id: string, payload: VehicleExpenseUpdateForm) {
         return this.repository.updateVehicleExpenseById(id, payload);
     }
 

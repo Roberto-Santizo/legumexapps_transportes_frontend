@@ -12,10 +12,11 @@
 
 import {
     formatExpenseQuetzales,
+    isInvoiceImage,
     VEHICLE_EXPENSE_CATEGORY_LABELS,
     VEHICLE_EXPENSE_NATURE_LABELS
 } from "@/features/vehicle-expenses/vehicle-expenses";
-import { ShieldCheck, TriangleAlert } from "lucide-react";
+import { FileText, Image, ShieldCheck, TriangleAlert } from "lucide-react";
 
 type CategoryProps = {
     category: string;
@@ -81,6 +82,46 @@ export function VehicleExpenseDate({ expenseDate }: DateProps) {
         <span className="font-mono text-sm tabular-nums whitespace-nowrap text-ink">
             {expenseDate}
         </span>
+    );
+}
+
+type InvoiceProps = {
+    isInvoiced: boolean;
+    invoiceUrl: string | null;
+    /** `jpg`, `png` o `pdf`. Decide qué se abre; la extensión de la URL no. */
+    invoiceType: string | null;
+}
+
+/**
+ * La factura no es un estado del gasto, es un documento: o está adjunta y se
+ * puede abrir, o no existe. Por eso el facturado se pinta como un enlace y el
+ * no facturado como un hueco, sin insignia ni color —el color de esta tabla se
+ * gasta entero en la naturaleza—.
+ *
+ * El archivo se abre en otra pestaña y nunca se descarga a la fuerza: la URL es
+ * pública, viene del bucket y no la sirve esta API.
+ */
+export function VehicleExpenseInvoiceLink({ isInvoiced, invoiceUrl, invoiceType }: InvoiceProps) {
+    if (!isInvoiced || !invoiceUrl) {
+        return (
+            <span className="font-mono text-[11px] tracking-[0.16em] text-ink-subtle">
+                —<span className="sr-only">Sin factura</span>
+            </span>
+        );
+    }
+
+    return (
+        <a
+            href={invoiceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-md border border-line bg-canvas px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] whitespace-nowrap text-ink-muted transition-colors hover:border-ink-subtle hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
+        >
+            {isInvoiceImage(invoiceType)
+                ? <Image size={12} aria-hidden />
+                : <FileText size={12} aria-hidden />}
+            Ver factura
+        </a>
     );
 }
 

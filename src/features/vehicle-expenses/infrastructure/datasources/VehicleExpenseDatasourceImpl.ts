@@ -1,12 +1,16 @@
 import type {
+    CreatedVehicleExpense,
     PaginatedVehicleExpenses,
     VehicleExpense,
     VehicleExpenseFilters,
-    VehicleExpenseForm
+    VehicleExpenseForm,
+    VehicleExpenseUpdateForm
 } from "@/features/vehicle-expenses/vehicle-expenses";
 import {
     buildVehicleExpensePayload,
     buildVehicleExpenseQuery,
+    buildVehicleExpenseUpdatePayload,
+    CreatedVehicleExpenseSchema,
     getVehicleExpenseErrorMessage,
     PaginatedVehicleExpensesSchema,
     VehicleExpenseDatasource,
@@ -21,20 +25,27 @@ export class VehicleExpenseDatasourceImpl extends VehicleExpenseDatasource {
     }
 
     /**
-     * Alta con los seis campos obligatorios. El vehículo decide el ámbito: un
-     * `carrier` que registra sobre una unidad de otra empresa recibe 403, y una
-     * unidad inexistente es 404, no 422.
+     * Alta con los **siete** campos obligatorios: `is_invoiced` no tiene valor
+     * por omisión y omitirlo es 422, no un gasto sin factura.
      *
-     * Un vehículo `inactive` acepta gastos igual que uno `active`: el
+     * Con factura el cuerpo sale como `FormData` —axios pone el boundary— y sin
+     * ella como JSON. Se devuelve el gasto creado y no solo el mensaje: con el
+     * interruptor apagado el backend descarta el archivo en silencio y responde
+     * 201 igual, así que la única forma de confirmar la factura es leer el
+     * `isInvoiced` que volvió.
+     *
+     * El vehículo decide el ámbito: un `carrier` que registra sobre una unidad
+     * de otra empresa recibe 403, y una unidad inexistente es 404, no 422. Un
+     * vehículo `inactive` acepta gastos igual que uno `active`: el
      * mantenimiento pudo ocurrir antes de la baja.
      */
-    async createVehicleExpense(vehicleId: string, payload: VehicleExpenseForm): Promise<string> {
+    async createVehicleExpense(vehicleId: string, payload: VehicleExpenseForm): Promise<CreatedVehicleExpense> {
         try {
             const { data } = await this.api.post(this.url, buildVehicleExpensePayload(payload, vehicleId));
-            const response = ApiResponseSchema.safeParse(data);
+            const response = CreatedVehicleExpenseSchema.safeParse(data);
 
             if (response.success) {
-                return response.data.message;
+                return response.data;
             }
 
             throw new Error("Información no válida");
@@ -91,13 +102,14 @@ export class VehicleExpenseDatasourceImpl extends VehicleExpenseDatasource {
 
     /**
      * Actualización **parcial**: omitir un campo lo deja intacto, pero ninguno
-     * acepta `null` una vez enviado. El `vehicle_id` no viaja —el backend lo
-     * ignoraría— y `registeredBy` sigue mostrando a quien creó el gasto aunque
-     * lo edite un administrador.
+     * acepta `null` una vez enviado. Fuera del cuerpo quedan `vehicle_id`,
+     * `is_invoiced` e `invoice` —el backend los ignora respondiendo 200 sin
+     * guardar nada—, y `registeredBy` sigue mostrando a quien creó el gasto
+     * aunque lo edite un administrador.
      */
-    async updateVehicleExpenseById(id: string, payload: VehicleExpenseForm): Promise<string> {
+    async updateVehicleExpenseById(id: string, payload: VehicleExpenseUpdateForm): Promise<string> {
         try {
-            const { data } = await this.api.patch(`${this.url}/${id}`, buildVehicleExpensePayload(payload));
+            const { data } = await this.api.patch(`${this.url}/${id}`, buildVehicleExpenseUpdatePayload(payload));
             const response = ApiResponseSchema.safeParse(data);
 
             if (response.success) {
@@ -113,7 +125,12 @@ export class VehicleExpenseDatasourceImpl extends VehicleExpenseDatasource {
     /**
      * Borrado real: la fila desaparece de la base de datos, el `totalAmount`
      * deja de incluirla y un segundo intento responde 404. No hay papelera ni
-     * bitácora, así que recuperar el gasto es volver a capturar los seis campos.
+     * bitácora, así que recuperar el gasto es volver a capturar los siete
+     * campos.
+     *
+     * **El archivo de la factura se borra con el gasto**: es el único endpoint
+     * del proyecto que también vacía el almacenamiento y después la URL deja de
+     * resolver. Si el usuario la necesita, tiene que descargarla antes.
      */
     async deleteVehicleExpenseById(id: string): Promise<string> {
         try {

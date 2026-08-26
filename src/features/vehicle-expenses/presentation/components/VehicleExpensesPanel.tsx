@@ -10,12 +10,14 @@ import {
     canWriteVehicleExpenses,
     CARRIER_MISSING_MESSAGE,
     formatExpenseQuetzales,
+    hasVehicleExpenseFilters,
     VehicleExpenseAmount,
     VehicleExpenseAuthor,
     VehicleExpenseCategoryTag,
     VehicleExpenseDate,
     VehicleExpenseFiltersBar,
     VehicleExpenseFormModal,
+    VehicleExpenseInvoiceLink,
     VehicleExpenseNatureTag,
     VehicleExpenseTotal,
     VEHICLE_EXPENSE_CATEGORY_LABELS,
@@ -36,7 +38,7 @@ import {
     useNotification
 } from "@/features/shared/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/config/store/store";
@@ -99,21 +101,34 @@ export function VehicleExpensesPanel({ vehicleId, plate }: Props) {
     /**
      * El borrado es real: la fila desaparece, el acumulado deja de incluirla y
      * no hay papelera. Se dice cuánto y de qué día se está borrando, porque
-     * recuperarlo es volver a capturar los cinco campos.
+     * recuperarlo es volver a capturar los siete campos.
+     *
+     * Con factura se avisa aparte: es el único borrado del sistema que además
+     * vacía el almacenamiento, así que el archivo se pierde con el gasto y la
+     * URL deja de resolver. Por eso la acción de abrirla va antes en el menú.
      */
     const askToDelete = (expense: VehicleExpense) => {
+        const detail = `${VEHICLE_EXPENSE_CATEGORY_LABELS[expense.category] ?? expense.category} del ${expense.expenseDate}. Se borra del historial de ${plate} y del acumulado, y no se puede deshacer.`;
+
         notification.question(
             `Eliminar el gasto de ${formatExpenseQuetzales(expense.amount)}`,
             "Eliminar",
-            `${VEHICLE_EXPENSE_CATEGORY_LABELS[expense.category] ?? expense.category} del ${expense.expenseDate}. Se borra del historial de ${plate} y del acumulado, y no se puede deshacer.`,
+            expense.isInvoiced
+                ? `${detail} La factura adjunta se borra con él: descárgala antes si la necesitas.`
+                : detail,
             () => mutate(expense.id.toString())
         );
+    };
+
+    /** La factura vive en el bucket, no en esta API: se abre, no se descarga a la fuerza. */
+    const openInvoice = (expense: VehicleExpense) => {
+        if (expense.invoiceUrl) window.open(expense.invoiceUrl, '_blank', 'noopener,noreferrer');
     };
 
     const expenses = data?.data ?? [];
     const lastPage = data?.lastPage ?? 1;
     const count = data?.total ?? expenses.length;
-    const hasFilters = Boolean(filters.category || filters.nature || filters.dateFrom || filters.dateTo);
+    const hasFilters = hasVehicleExpenseFilters(filters);
 
     /**
      * Un transportista sin empresa registrada recibe 403 en los cinco
@@ -198,6 +213,7 @@ export function VehicleExpensesPanel({ vehicleId, plate }: Props) {
                                 <Th text="Naturaleza" />
                                 <Th text="Descripción" />
                                 <Th text="Monto" />
+                                <Th text="Factura" />
                                 <Th text="Registró" />
                                 <Th text="" />
                             </Thead>
@@ -229,6 +245,14 @@ export function VehicleExpensesPanel({ vehicleId, plate }: Props) {
                                         </Td>
 
                                         <Td>
+                                            <VehicleExpenseInvoiceLink
+                                                isInvoiced={expense.isInvoiced}
+                                                invoiceUrl={expense.invoiceUrl}
+                                                invoiceType={expense.invoiceType}
+                                            />
+                                        </Td>
+
+                                        <Td>
                                             <VehicleExpenseAuthor
                                                 registeredBy={expense.registeredBy}
                                                 createdAt={expense.createdAt}
@@ -239,6 +263,11 @@ export function VehicleExpensesPanel({ vehicleId, plate }: Props) {
                                             {canWrite && (
                                                 <ActionsMenu
                                                     items={[
+                                                        ...(expense.invoiceUrl ? [{
+                                                            label: "Abrir factura",
+                                                            icon: <ExternalLink />,
+                                                            onClick: () => openInvoice(expense)
+                                                        }] : []),
                                                         {
                                                             label: "Editar",
                                                             icon: <Pencil />,

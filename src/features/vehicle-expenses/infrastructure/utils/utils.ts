@@ -12,7 +12,7 @@
  */
 
 import type { Option } from "@/features/shared/shared";
-import type { VehicleExpenseFilters, VehicleExpenseForm } from "@/features/vehicle-expenses/vehicle-expenses";
+import type { VehicleExpenseFilters, VehicleExpenseForm, VehicleExpenseUpdateForm } from "@/features/vehicle-expenses/vehicle-expenses";
 import { isAxiosError } from "axios";
 
 /**
@@ -129,15 +129,91 @@ export const toExpenseDateInputValue = (expenseDate: string): string => {
     return `${year}-${month}-${day}`;
 };
 
+
 /**
- * El cuerpo va en `snake_case` aunque la respuesta salga en `camelCase`: no es
- * simétrico y no hay conversión automática.
+ * Extensiones que acepta el backend y su tipo MIME, en el formato que espera
+ * dropzone. El `jpeg` entra pero **no sale**: la API guarda todo JPEG como
+ * `jpg`, así que `invoiceType` nunca vale `"jpeg"`.
+ */
+export const VEHICLE_EXPENSE_INVOICE_ACCEPT: Record<string, string[]> = {
+    "image/jpeg": [".jpg", ".jpeg"],
+    "image/png": [".png"],
+    "application/pdf": [".pdf"]
+};
+
+/** 3 MB (3072 KB) e **inclusive**: el archivo de exactamente 3 MB se acepta. */
+export const VEHICLE_EXPENSE_INVOICE_MAX_SIZE = 3 * 1024 * 1024;
+
+/**
+ * El backend deduce el tipo del **contenido**, no del nombre, así que esto no
+ * es la validación buena: solo evita gastar una subida que ya se sabe perdida.
+ */
+export const isValidInvoiceFile = (file: File): boolean =>
+    Object.keys(VEHICLE_EXPENSE_INVOICE_ACCEPT).includes(file.type);
+
+/**
+ * Qué pintar se decide por `invoiceType`, **no** por la extensión de la URL:
+ * la URL sale del bucket y puede cambiar de dominio sin que cambie el gasto.
+ */
+export const isInvoiceImage = (invoiceType: string | null): boolean =>
+    invoiceType === 'jpg' || invoiceType === 'png';
+
+/** Etiquetas del filtro de facturación. Vacío = facturados y sin factura. */
+export const VEHICLE_EXPENSE_INVOICE_FILTERS: Option[] = [
+    { value: "true", label: "Solo facturados" },
+    { value: "false", label: "Solo sin factura" }
+];
+
+/**
+ * Alta. El cuerpo va en `snake_case` aunque la respuesta salga en `camelCase`:
+ * no es simétrico y no hay conversión automática.
  *
- * `vehicle_id` solo viaja en el alta —en la edición el backend lo ignora— y
+ * Con factura viaja como `multipart/form-data` —un archivo no cabe en un JSON—
+ * y sin ella como objeto plano. El `Content-Type` no se fija a mano: el
+ * navegador añade el boundary y ponerlo lo rompería.
+ *
+ * `is_invoiced` es obligatorio y sin valor por omisión —omitirlo es 422— y
  * `registered_by` no se manda nunca: sale del usuario autenticado.
  */
-export const buildVehicleExpensePayload = (payload: VehicleExpenseForm, vehicleId?: string) => ({
-    ...(vehicleId ? { vehicle_id: Number(vehicleId) } : {}),
+export const buildVehicleExpensePayload = (payload: VehicleExpenseForm, vehicleId: string): FormData | Record<string, unknown> => {
+    /** Con el interruptor apagado el archivo se descarta en silencio: no se manda. */
+    const invoice = payload.isInvoiced && payload.invoice instanceof File ? payload.invoice : null;
+
+    if (!invoice) {
+        return {
+            vehicle_id: Number(vehicleId),
+            ...buildVehicleExpenseFields(payload),
+            is_invoiced: payload.isInvoiced
+        };
+    }
+
+    const formData = new FormData();
+
+    formData.append('vehicle_id', vehicleId);
+
+    Object.entries(buildVehicleExpenseFields(payload)).forEach(([key, value]) => {
+        formData.append(key, value.toString());
+    });
+
+    /** En multipart el booleano viaja como `"1"` / `"0"`, que es lo que el backend espera. */
+    formData.append('is_invoiced', '1');
+    formData.append('invoice', invoice);
+
+    return formData;
+};
+
+/**
+ * Edición. Actualización **parcial**: omitir un campo lo deja intacto, pero
+ * ninguno acepta `null` una vez enviado.
+ *
+ * No lleva `vehicle_id`, `is_invoiced` ni `invoice`: los tres son inmutables y
+ * el backend los ignora respondiendo 200 sin guardar nada ni avisar.
+ */
+export const buildVehicleExpenseUpdatePayload = (payload: VehicleExpenseUpdateForm) =>
+    buildVehicleExpenseFields(payload);
+
+/** Los cinco campos comunes al alta y a la edición, ya en `snake_case`. */
+const buildVehicleExpenseFields = (payload: VehicleExpenseUpdateForm) => ({
     category: payload.category,
     nature: payload.nature,
     amount: payload.amount,
@@ -148,6 +224,10 @@ export const buildVehicleExpensePayload = (payload: VehicleExpenseForm, vehicleI
 /**
  * Los filtros vacíos no se mandan: el backend los ignora y ensucian la URL.
  * `vehicleId` sí viaja siempre —es el único filtro obligatorio de la API—.
+ *
+ * `isInvoiced` es el único filtro que además cambia el acumulado: con
+ * `isInvoiced=true` el `totalAmount` es el de lo facturado, y ese desglose no
+ * llega de ninguna otra forma.
  *
  * La página entra contada desde 0, como la cuenta el resto del front, y sale
  * contada desde 1, como la cuenta el paginador de Laravel: sin la suma, la
@@ -169,6 +249,7 @@ export const buildVehicleExpenseQuery = (
     if (filters?.nature) query.set('nature', filters.nature);
     if (filters?.dateFrom) query.set('dateFrom', filters.dateFrom);
     if (filters?.dateTo) query.set('dateTo', filters.dateTo);
+    if (filters?.isInvoiced) query.set('isInvoiced', filters.isInvoiced);
 
     return query.toString();
 };
@@ -201,3 +282,11 @@ export const getVehicleExpenseErrorMessage = (error: unknown): string => {
 
     return "Error no controlado.";
 };
+
+/**
+ * Si el historial se está mirando entero o recortado. Cambia lo que dice el
+ * acumulado —el de la unidad o el del recorte— y lo que dice el vacío: «sin
+ * gastos» y «sin coincidencias» son dos pantallas distintas.
+ */
+export const hasVehicleExpenseFilters = (filters: VehicleExpenseFilters): boolean =>
+    Boolean(filters.category || filters.nature || filters.dateFrom || filters.dateTo || filters.isInvoiced);

@@ -2,6 +2,7 @@ import { DateFormField, SelectFormField, TextAreaFormField, TextFormField } from
 import type { VehicleExpenseForm } from "@/features/vehicle-expenses/vehicle-expenses";
 import {
     todayAsInputValue,
+    VehicleExpenseInvoiceField,
     VEHICLE_EXPENSE_AMOUNT_MAX,
     VEHICLE_EXPENSE_AMOUNT_MIN,
     VEHICLE_EXPENSE_CATEGORIES,
@@ -14,14 +15,16 @@ type Props = {
     register: UseFormRegister<VehicleExpenseForm>;
     control: Control<VehicleExpenseForm>;
     errors: FieldErrors<VehicleExpenseForm>;
+    /** Solo en el alta: la facturación es inmutable y el PATCH la ignora. */
+    showInvoicing: boolean;
 }
 
 /**
- * Cinco campos y ninguno para el vehículo: en el alta lo pone el panel donde se
- * captura el gasto y en la edición es inmutable. Si la unidad quedó mal, el
- * gasto se borra y se vuelve a registrar.
+ * Cinco campos comunes más la facturación, y ninguno para el vehículo: en el
+ * alta lo pone el panel donde se captura el gasto y en la edición es inmutable.
+ * Si la unidad quedó mal, el gasto se borra y se vuelve a registrar.
  */
-export function VehicleExpenseFormComponent({ register, control, errors }: Props) {
+export function VehicleExpenseFormComponent({ register, control, errors, showInvoicing }: Props) {
     return (
         <>
             <div className="grid gap-6 sm:grid-cols-2">
@@ -88,7 +91,7 @@ export function VehicleExpenseFormComponent({ register, control, errors }: Props
                 />
             </div>
 
-            {/* Hoy no hay campos de taller, factura ni pieza: todo eso vive aquí. */}
+            {/* No hay campos de taller, número de factura ni pieza: todo eso vive aquí. */}
             <TextAreaFormField<VehicleExpenseForm>
                 label="Descripción"
                 name="description"
@@ -104,6 +107,8 @@ export function VehicleExpenseFormComponent({ register, control, errors }: Props
                     }
                 }}
             />
+
+            {showInvoicing && <VehicleExpenseInvoiceField control={control} />}
         </>
     );
 }
