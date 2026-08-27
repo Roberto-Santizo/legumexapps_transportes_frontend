@@ -1,4 +1,4 @@
-import type { LocationForm, LocationRepository } from "@/features/locations/locations";
+import type { LocationForm, LocationRepository, LocationType } from "@/features/locations/locations";
 import { LocationDatasourceImpl, LocationRepositoryImpl } from "@/features/locations/infrastructure/infrastructure";
 import api from "@/config/http/axios";
 
@@ -9,8 +9,8 @@ export class LocationProvider {
         return this.repository.createLocation(payload);
     }
 
-    getLocations(limit: string, page: string) {
-        return this.repository.getLocations(limit, page);
+    getLocations(limit: string, page: string, type?: LocationType) {
+        return this.repository.getLocations(limit, page, type);
     }
 
     getLocationById(id: string) {

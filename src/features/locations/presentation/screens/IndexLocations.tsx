@@ -1,11 +1,32 @@
 import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
 import { Eye, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
-import { LocationMoment, LocationName, LocationPinGlyph, LocationStatus, locationProvider } from "@/features/locations/locations";
+import { LOCATION_TYPES, LOCATION_TYPE_LABELS, LocationMoment, LocationName, LocationPinGlyph, LocationStatus, LocationTypeTag, isLocationType, locationProvider } from "@/features/locations/locations";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
-import type { Location } from "@/features/locations/locations";
+import type { Location, LocationType } from "@/features/locations/locations";
 import type { RootState } from "@/config/store/store";
+
+type ChipProps = {
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}
+
+function FilterChip({ label, active, onClick }: ChipProps) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-pressed={active}
+            className={`cursor-pointer rounded-lg border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20 ${active
+                ? "border-ink-deep bg-ink-deep text-canvas"
+                : "border-line bg-surface text-ink-muted hover:border-line-strong"}`}
+        >
+            {label}
+        </button>
+    );
+}
 
 export function IndexLocations() {
     const navigate = useNavigate();
@@ -17,9 +38,28 @@ export function IndexLocations() {
     const role = useSelector((state: RootState) => state.auth.user?.role);
     const canWrite = role === 'administrator';
 
+    // Un `type` fuera del enum no vacía la lista: la API lo ignora y devuelve el
+    // catálogo entero. Se descarta aquí para que la tabla y el filtro coincidan.
+    const typeParam = searchParams.get('type');
+    const type = isLocationType(typeParam) ? typeParam : undefined;
+
+    const filterByType = (next?: LocationType) => {
+        setSearchParams((params) => {
+            if (next) {
+                params.set('type', next);
+            } else {
+                params.delete('type');
+            }
+
+            params.delete('page');
+
+            return params;
+        });
+    };
+
     const { data, isLoading, isError, error } = useQuery({
-        queryKey: ['getLocations', page, rowsPerPage],
-        queryFn: () => locationProvider.getLocations(rowsPerPage.toString(), page.toString())
+        queryKey: ['getLocations', page, rowsPerPage, type],
+        queryFn: () => locationProvider.getLocations(rowsPerPage.toString(), page.toString(), type)
     });
 
     const { mutate: removeLocation } = useMutation({
@@ -100,6 +140,23 @@ export function IndexLocations() {
                 )}
             </div>
 
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-subtle">
+                    Tipo
+                </span>
+
+                <FilterChip label="Todos" active={!type} onClick={() => filterByType()} />
+
+                {LOCATION_TYPES.map((option) => (
+                    <FilterChip
+                        key={option}
+                        label={LOCATION_TYPE_LABELS[option]}
+                        active={type === option}
+                        onClick={() => filterByType(option)}
+                    />
+                ))}
+            </div>
+
             {isLoading && (
                 <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-subtle">
                     Cargando ubicaciones
@@ -114,14 +171,20 @@ export function IndexLocations() {
                         </p>
 
                         <p className="mx-auto mt-3 max-w-[34ch] font-display text-xl font-semibold tracking-tight text-ink">
-                            Todavía no hay destinos dados de alta.
+                            {type
+                                ? `Ningún destino está clasificado como ${LOCATION_TYPE_LABELS[type].toLowerCase()}.`
+                                : "Todavía no hay destinos dados de alta."}
                         </p>
 
                         <p className="mx-auto mt-2 max-w-[46ch] text-sm text-ink-muted">
-                            Registra el primero para poder cotizarle una tarifa de flete.
+                            {type === 'port'
+                                ? "Los destinos registrados antes de que existiera el tipo quedaron todos como destino. Edita cada puerto para reclasificarlo."
+                                : type === 'destination'
+                                    ? "Cambia el filtro para ver el resto del catálogo."
+                                    : "Registra el primero para poder cotizarle una tarifa de flete."}
                         </p>
 
-                        {canWrite && (
+                        {canWrite && !type && (
                             <div className="mt-6 flex justify-center">
                                 <CustomFilledButton
                                     label="Registrar destino"
@@ -140,6 +203,7 @@ export function IndexLocations() {
                     <Table>
                         <Thead>
                             <Th text="Destino" />
+                            <Th text="Tipo" />
                             <Th text="Estado" />
                             <Th text="Registró" />
                             <Th text="Fecha" />
@@ -163,6 +227,10 @@ export function IndexLocations() {
                                                 )}
                                             </div>
                                         </div>
+                                    </Td>
+
+                                    <Td>
+                                        <LocationTypeTag type={location.type} />
                                     </Td>
 
                                     <Td>

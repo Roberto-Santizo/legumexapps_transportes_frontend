@@ -1,4 +1,4 @@
-import type { Location, LocationDatasource, LocationForm, PaginatedLocations } from "@/features/locations/locations";
+import type { Location, LocationDatasource, LocationForm, LocationType, PaginatedLocations } from "@/features/locations/locations";
 import { LocationRepository } from "@/features/locations/locations";
 
 export class LocationRepositoryImpl extends LocationRepository {
@@ -10,8 +10,8 @@ export class LocationRepositoryImpl extends LocationRepository {
         return this.datasource.createLocation(payload);
     }
 
-    getLocations(limit: string, page: string): Promise<PaginatedLocations> {
-        return this.datasource.getLocations(limit, page);
+    getLocations(limit: string, page: string, type?: LocationType): Promise<PaginatedLocations> {
+        return this.datasource.getLocations(limit, page, type);
     }
 
     getLocationById(id: string): Promise<Location> {

@@ -1,5 +1,5 @@
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
-import { LocationMoment, LocationName, LocationPinPreview, LocationStatus, locationProvider } from "@/features/locations/locations";
+import { LocationMoment, LocationName, LocationPinPreview, LocationStatus, LocationTypeTag, locationProvider } from "@/features/locations/locations";
 import { Coins, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { FreightRatesModal } from "@/features/freight-rates/freight-rates";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -157,7 +157,10 @@ export function ShowLocation() {
                                     {location.description ?? "Sin descripción."}
                                 </p>
 
-                                <LocationStatus status={location.status} />
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <LocationTypeTag type={location.type} />
+                                    <LocationStatus status={location.status} />
+                                </div>
                             </div>
 
                             <dl className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
