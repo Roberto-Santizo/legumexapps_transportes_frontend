@@ -13,5 +13,5 @@ export const NAVIGATION: NavItem[] = [
     { to: "/clientes", text: "Clientes", icon: <Building2 />, disabled: false, roles: ['administrator', 'carrier', 'pilot', 'manager'] },
     { to: "/navieras", text: "Navieras", icon: <Ship />, disabled: false, roles: ['administrator', 'carrier', 'pilot', 'manager'] },
     { to: "/pilotos", text: "Pilotos", icon: <IdCard />, disabled: false, roles: ['administrator', 'carrier', 'manager'] },
-    { to: "/viajes", text: "Viajes", icon: <Route />, disabled: false, roles: ['administrator', 'carrier', 'manager'] },
+    { to: "/viajes", text: "Viajes", icon: <Route />, disabled: false, roles: ['administrator', 'carrier', 'pilot', 'manager'] },
 ];
