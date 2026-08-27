@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { CompleteProfile } from "@/features/carriers/carriers";
 import { CreateAccessory, IndexAccessories, ShowAccessory, UpdateAccessory } from "@/features/accessories/accessories";
 import { ConfirmAccount, Login, Register } from "@/features/auth/auth";
+import { CreateClient, IndexClients, ShowClient, UpdateClient } from "@/features/clients/clients";
 import { CreateDeparturePoint, IndexDeparturePoints, ShowDeparturePoint, UpdateDeparturePoint } from "@/features/departure-points/departure-points";
 import { CreateFuelPrice, IndexFuelPrices, ShowFuelPrice, UpdateFuelPrice } from "@/features/fuel-prices/fuel-prices";
 import { CreateLocation, IndexLocations, ShowLocation, UpdateLocation } from "@/features/locations/locations";
@@ -78,6 +79,13 @@ export default function AppRouter() {
                     <Route path="/accesorios/crear" element={<CreateAccessory />} />
                     <Route path="/accesorios/:id" element={<ShowAccessory />} />
                     <Route path="/accesorios/:id/editar" element={<UpdateAccessory />} />
+                </Route>
+
+                <Route element={<ProtectedLayout />}>
+                    <Route path="/clientes" element={<IndexClients />} />
+                    <Route path="/clientes/crear" element={<CreateClient />} />
+                    <Route path="/clientes/:id" element={<ShowClient />} />
+                    <Route path="/clientes/:id/editar" element={<UpdateClient />} />
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
