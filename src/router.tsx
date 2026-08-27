@@ -7,6 +7,7 @@ import { CreateDeparturePoint, IndexDeparturePoints, ShowDeparturePoint, UpdateD
 import { CreateFuelPrice, IndexFuelPrices, ShowFuelPrice, UpdateFuelPrice } from "@/features/fuel-prices/fuel-prices";
 import { CreateLocation, IndexLocations, ShowLocation, UpdateLocation } from "@/features/locations/locations";
 import { CreateProduct, IndexProducts, ShowProduct, UpdateProduct } from "@/features/products/products";
+import { CreateShippingLine, IndexShippingLines, ShowShippingLine, UpdateShippingLine } from "@/features/shipping-lines/shipping-lines";
 import { CreateVehicle, IndexVehicles, ShowVehicle, UpdateVehicle } from "@/features/vehicles/vehicles";
 import { CreateZone, IndexZones, ShowZone, UpdateZone } from "@/features/zones/zones";
 import { CreateTrip, IndexTrips } from "@/features/trips/trips";
@@ -86,6 +87,13 @@ export default function AppRouter() {
                     <Route path="/clientes/crear" element={<CreateClient />} />
                     <Route path="/clientes/:id" element={<ShowClient />} />
                     <Route path="/clientes/:id/editar" element={<UpdateClient />} />
+                </Route>
+
+                <Route element={<ProtectedLayout />}>
+                    <Route path="/navieras" element={<IndexShippingLines />} />
+                    <Route path="/navieras/crear" element={<CreateShippingLine />} />
+                    <Route path="/navieras/:id" element={<ShowShippingLine />} />
+                    <Route path="/navieras/:id/editar" element={<UpdateShippingLine />} />
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
