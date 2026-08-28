@@ -33,7 +33,7 @@ import {
     canWriteTrips,
     isTripInBag,
     tripProvider,
-    type Trip
+    type TripListItem
 } from "@/features/trips/trips";
 import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
 import { CircleCheckBig, Eye, Pencil, Play, Plus, Trash2, Truck } from "lucide-react";
@@ -71,9 +71,9 @@ export function IndexTrips() {
     const dateTo = searchParams.get('dateTo') ?? '';
 
     /** El viaje pendiente de confirmar el borrado, o `null` sin diálogo abierto. */
-    const [tripToDelete, setTripToDelete] = useState<Trip | null>(null);
+    const [tripToDelete, setTripToDelete] = useState<TripListItem | null>(null);
     /** El viaje que se está tomando, o `null` con el diálogo cerrado. */
-    const [tripToAssign, setTripToAssign] = useState<Trip | null>(null);
+    const [tripToAssign, setTripToAssign] = useState<TripListItem | null>(null);
 
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ['getTrips', page, rowsPerPage, search, status, dateFrom, dateTo],
@@ -139,7 +139,7 @@ export function IndexTrips() {
     const bag = canAssign ? trips.filter(isTripInBag) : [];
     const assigned = canAssign ? trips.filter((trip) => !isTripInBag(trip)) : trips;
 
-    const buildActions = (trip: Trip) => [
+    const buildActions = (trip: TripListItem) => [
         {
             label: "Ver detalle",
             icon: <Eye />,
@@ -175,7 +175,7 @@ export function IndexTrips() {
         ] : [])
     ];
 
-    const renderTable = (rows: Trip[]) => (
+    const renderTable = (rows: TripListItem[]) => (
         <Table>
             <Thead>
                 <Th text="Orden" />
@@ -202,14 +202,14 @@ export function IndexTrips() {
 
                         <Td>
                             <div className="flex flex-col gap-1">
+                                {/* Sin el destino final: el listado no lo trae, solo el detalle. */}
                                 <TripRouteLine
                                     departurePointName={trip.departurePointName}
                                     locationName={trip.locationName}
-                                    destination={trip.destination}
                                 />
 
                                 <span className="text-xs text-ink-subtle">
-                                    {trip.clientName ?? "Cliente no disponible"}
+                                    {trip.shippingLineName ?? "Naviera no disponible"}
                                 </span>
                             </div>
                         </Td>

@@ -107,7 +107,12 @@ export function TripMoment({ value, withTime = false, fallback = "Sin registro" 
 type RouteProps = {
     departurePointName: string | null;
     locationName: string | null;
-    destination: string;
+    /**
+     * El destino final. **Solo lo devuelve el detalle**: en el listado no
+     * llega, y entonces el trayecto se corta en el puerto en vez de inventar
+     * un tramo marítimo que no se sabe.
+     */
+    destination?: string | null;
 }
 
 /**
@@ -125,9 +130,13 @@ export function TripRouteLine({ departurePointName, locationName, destination }:
 
             <span className="text-ink">{locationName ?? "Puerto no disponible"}</span>
 
-            <span aria-hidden className="h-px w-5 border-t border-dashed border-line-strong" />
+            {destination && (
+                <>
+                    <span aria-hidden className="h-px w-5 border-t border-dashed border-line-strong" />
 
-            <span className="text-ink-muted">{destination}</span>
+                    <span className="text-ink-muted">{destination}</span>
+                </>
+            )}
         </span>
     );
 }

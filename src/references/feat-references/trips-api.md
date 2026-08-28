@@ -91,7 +91,7 @@ Tres consecuencias que se ven en pantalla:
 
 ## 4. El objeto `Trip`
 
-Es lo que devuelve `data` en los ocho endpoints (o cada elemento de `data` en el listado). **31 claves**, siempre en camelCase y siempre en este orden:
+Es lo que devuelve `data` en el **detalle** y en las acciones. **31 claves**, siempre en camelCase y siempre en este orden. ⚠️ **El listado no lo devuelve entero**: cada elemento de su `data` trae solo 15 claves (§6.1).
 
 ```json
 {
@@ -314,6 +314,39 @@ Cualquier autenticado. Devuelve lo que el ámbito del rol permita (§3).
 - Sin coincidencias es **200 con `data: []`**, no 404.
 
 **200** · `Viajes obtenidos correctamente`
+
+#### ⚠️ La fila del listado no es el objeto `Trip`
+
+Cada elemento de `data` trae **15 claves**, no las 31 del detalle:
+
+```json
+{
+  "id": 1,
+  "order": "ORD-2026-0148",
+  "status": "pending",
+  "shippingLineName": "MAERSK LINE",
+  "departurePointName": "PLANTA SAN JUAN",
+  "locationName": "PUERTO QUETZAL",
+  "container": "MSKU 483920 1",
+  "recolectionDate": "02-09-2026 06:00:00 AM",
+  "shipDate": "04-09-2026 11:30:00 PM",
+  "startDate": "02-09-2026 06:12:44 AM",
+  "endDate": "05-09-2026 02:30:10 PM",
+  "observations": "Carga refrigerada a -2 °C.",
+  "pilotName": "Carlos Ramírez",
+  "vehiclePlate": "P-1234ABC",
+  "registeredByName": "Roberto Santizo"
+}
+```
+
+**No llegan** —y no es que vengan en `null`, es que la clave no existe—: `clientId`/`clientName`, los tres ids de catálogo (`shippingLineId`, `departurePointId`, `locationId`), `destination`, `transport`, `polyline` y `points`, `pilotId`, `vehicleId`, `assignedById`/`assignedByName`, `createdAt`, `updatedAt` y `deletedAt`.
+
+Dos consecuencias para el front:
+
+- **La bolsa ya no se reconoce por `assignedById`.** Lo que distingue un viaje sin dueño es que no tenga tripulación: `/assignment` exige piloto y vehículo juntos, así que `pilotName === null` equivale a «no lo tomó nadie».
+- **Reasignar desde la tabla no puede precargar la tripulación actual**: los dos ids solo están en el detalle, hay que pedirlo.
+
+Los filtros siguen aceptando `clientId`, `pilotId` y `vehicleId` aunque esos ids ya no salgan en la respuesta.
 
 ### 6.2 `POST /api/trips` — publicar
 

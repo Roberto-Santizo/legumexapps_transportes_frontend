@@ -16,7 +16,7 @@
  * empresa.
  */
 
-import type { Trip, TripAssignmentForm } from "@/features/trips/trips";
+import type { TripAssignmentForm, TripSummary } from "@/features/trips/trips";
 import {
     TRIP_CREW_LIMIT,
     TRIP_NOT_PENDING_MESSAGE,
@@ -36,8 +36,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IdCard } from "lucide-react";
 
 type Props = {
-    /** El viaje que se va a tomar, o `null` con el diálogo cerrado. */
-    trip: Trip | null;
+    /**
+     * El viaje que se va a tomar, o `null` con el diálogo cerrado. Se abre
+     * desde el listado y desde la ficha, así que puede llegar recortado.
+     */
+    trip: TripSummary | null;
     onClose: () => void;
 }
 
@@ -56,7 +59,7 @@ export function TripAssignmentModal({ trip, onClose }: Props) {
 }
 
 type FormProps = {
-    trip: Trip;
+    trip: TripSummary;
     onClose: () => void;
 }
 
@@ -64,18 +67,37 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
     const notification = useNotification();
     const queryClient = useQueryClient();
 
+    /**
+     * Reasignar parte de la tripulación actual, y esos dos ids **solo están en
+     * el detalle**: el listado manda el nombre del piloto y la placa, no las
+     * claves. Cuando el viaje llega de la tabla y ya tiene tripulación se pide
+     * la ficha solo para precargar las tarjetas; tomarlo por primera vez no
+     * necesita nada y no dispara ninguna petición.
+     */
+    const needsCrewIds = trip.pilotId === undefined && trip.pilotName !== null;
+
+    const { data: detail } = useQuery({
+        queryKey: ['getTripById', trip.id.toString()],
+        queryFn: () => tripProvider.getTripById(trip.id.toString()),
+        enabled: needsCrewIds
+    });
+
+    const crew = needsCrewIds ? detail : trip;
+
+    /**
+     * `values` y no `defaultValues`: la tripulación actual puede llegar después
+     * del primer render, y mientras no se sepa el formulario arranca vacío.
+     */
+    const currentCrew = crew && crew.pilotId != null && crew.vehicleId != null
+        ? { pilotId: crew.pilotId, vehicleId: crew.vehicleId }
+        : undefined;
+
     const {
         control,
         handleSubmit,
         setError,
         formState: { errors },
-    } = useForm<TripAssignmentForm>({
-        /** Reasignar parte de la tripulación actual; tomarlo por primera vez, de nada. */
-        defaultValues: {
-            pilotId: trip.pilotId ?? undefined,
-            vehicleId: trip.vehicleId ?? undefined,
-        }
-    });
+    } = useForm<TripAssignmentForm>({ values: currentCrew });
 
     const { data: pilots, isLoading: isLoadingPilots } = useQuery({
         queryKey: ['getPilots', TRIP_CREW_LIMIT, '0'],
@@ -201,7 +223,7 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                     disabled={isPending || isLoadingCrew}
                     className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-ink-deep px-4 py-2 text-sm font-semibold text-canvas shadow-sm transition-all duration-200 hover:bg-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-ink-subtle disabled:shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
                 >
-                    {isPending ? <SpinnerComponent /> : trip.pilotId ? "Cambiar la tripulación" : "Tomar el viaje"}
+                    {isPending ? <SpinnerComponent /> : trip.pilotName ? "Cambiar la tripulación" : "Tomar el viaje"}
                 </button>
             </div>
         </CustomForm>

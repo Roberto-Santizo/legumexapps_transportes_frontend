@@ -1,8 +1,20 @@
-import type { PaginatedTripsSchema, TripSchema, TripStatusSchema } from "@/features/trips/trips";
+import type { PaginatedTripsSchema, TripListItemSchema, TripSchema, TripStatusSchema } from "@/features/trips/trips";
 import type { z } from "zod";
 
 export type PaginatedTrips = z.infer<typeof PaginatedTripsSchema>;
+/** El viaje completo. **Solo el detalle lo devuelve.** */
 export type Trip = z.infer<typeof TripSchema>;
+/** La fila del listado: quince de las treinta y una claves del viaje. */
+export type TripListItem = z.infer<typeof TripListItemSchema>;
+
+/**
+ * Lo que sirve para las piezas que se montan **desde las dos pantallas** —el
+ * diálogo de baja y el de asignación—: las quince claves que siempre llegan,
+ * más las del detalle como opcionales. Una fila del listado y un viaje entero
+ * encajan los dos, y quien lee una clave del detalle tiene que contar con que
+ * venga `undefined`.
+ */
+export type TripSummary = TripListItem & Partial<Omit<Trip, keyof TripListItem>>;
 /** Cadena cruda del enum, en inglés: se traduce solo al pintarla. */
 export type TripStatus = z.infer<typeof TripStatusSchema>;
 

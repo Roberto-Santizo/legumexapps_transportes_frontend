@@ -14,14 +14,14 @@
  * de borrarla.
  */
 
-import type { Trip } from "@/features/trips/trips";
+import type { TripSummary } from "@/features/trips/trips";
 import { TripContainer, TripOrder, TripRouteLine } from "@/features/trips/trips";
 import { Modal, SpinnerComponent } from "@/features/shared/shared";
 import { useState } from "react";
 
 type Props = {
-    /** El viaje a borrar, o `null` con el diálogo cerrado. */
-    trip: Trip | null;
+    /** El viaje a borrar, o `null` con el diálogo cerrado. Sirve la fila del listado. */
+    trip: TripSummary | null;
     isPending: boolean;
     onClose: () => void;
     onConfirm: () => void;
@@ -50,7 +50,7 @@ export function TripDeleteDialog({ trip, isPending, onClose, onConfirm }: Props)
 }
 
 type ConfirmationProps = {
-    trip: Trip;
+    trip: TripSummary;
     isPending: boolean;
     onClose: () => void;
     onConfirm: () => void;

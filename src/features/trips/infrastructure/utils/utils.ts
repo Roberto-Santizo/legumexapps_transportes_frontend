@@ -18,7 +18,7 @@
  */
 
 import type { Option } from "@/features/shared/shared";
-import type { Trip, TripAssignmentForm, TripField, TripFilters, TripForm, TripStatus, TripUpdateForm } from "@/features/trips/trips";
+import type { TripAssignmentForm, TripField, TripFilters, TripForm, TripListItem, TripStatus, TripUpdateForm } from "@/features/trips/trips";
 import { isAxiosError, type AxiosError } from "axios";
 
 /** Límite que valida el backend en los cinco campos de texto. */
@@ -62,17 +62,22 @@ export const canRunTrips = (role?: string): boolean => role === 'pilot';
  * La bolsa: el viaje que todavía no tomó nadie. Es lo que separa las dos listas
  * del transportista, porque su ámbito mezcla la bolsa con lo suyo en la misma
  * respuesta y la API no trae ninguna marca para distinguirlas.
+ *
+ * Se mira la **tripulación y no `assignedById`**, que ya no viaja en el
+ * listado: `/assignment` exige piloto y vehículo juntos, así que un viaje sin
+ * piloto es exactamente un viaje que nadie tomó.
  */
-export const isTripInBag = (trip: Trip): boolean => trip.assignedById === null;
+export const isTripInBag = (trip: Pick<TripListItem, 'pilotName'>): boolean => trip.pilotName === null;
 
 /** Reasignar solo mientras siga `pending`: `in_route` o `finished` responden 400. */
-export const canAssignTrip = (trip: Trip): boolean => trip.status === 'pending';
+export const canAssignTrip = (trip: Pick<TripListItem, 'status'>): boolean => trip.status === 'pending';
 
 /** Un segundo `/start` responde 400. */
-export const canStartTrip = (trip: Trip): boolean => trip.startDate === null;
+export const canStartTrip = (trip: Pick<TripListItem, 'startDate'>): boolean => trip.startDate === null;
 
 /** No se cierra un viaje que nunca arrancó: sin `startDate` la API responde 400. */
-export const canFinishTrip = (trip: Trip): boolean => trip.startDate !== null && trip.endDate === null;
+export const canFinishTrip = (trip: Pick<TripListItem, 'startDate' | 'endDate'>): boolean =>
+    trip.startDate !== null && trip.endDate === null;
 
 /* ------------------------------------------------------------------ *
  * Fechas

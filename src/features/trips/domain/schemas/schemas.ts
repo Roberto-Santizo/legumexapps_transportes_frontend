@@ -13,7 +13,8 @@ export const TripStatusSchema = z.enum(['pending', 'in_route', 'finished']);
 /**
  * Un viaje de exportación: la carga que sale de una planta, pasa por un puerto
  * y termina en el extranjero. **Treinta y una claves, siempre las treinta y
- * una**, en camelCase y con las relaciones planas —`clientId` + `clientName`,
+ * una**, y solo en el **detalle** —el listado devuelve una fila recortada, ver
+ * `TripListItemSchema`—, en camelCase y con las relaciones planas —`clientId` + `clientName`,
  * nunca un objeto anidado—.
  *
  * El viaje **no pertenece a ninguna empresa**: no hay `carrierId` en la tabla.
@@ -81,11 +82,54 @@ export const TripSchema = z.object({
 });
 
 /**
+ * La fila del listado, que **ya no es el viaje entero**: `GET /api/trips`
+ * devuelve quince claves —las que se pintan en la tabla— y deja las otras
+ * dieciséis para el detalle. Las que faltan no son opcionales, **no llegan**:
+ * los ids de los catálogos, `destination`, `transport`, la `polyline` con sus
+ * `points`, `pilotId`/`vehicleId`, el par `assignedBy*` y las tres fechas de
+ * auditoría.
+ *
+ * Dos consecuencias para el front:
+ *
+ * - **La bolsa ya no se reconoce por `assignedById`.** Sin él, lo único que
+ *   distingue un viaje sin dueño es que no tiene tripulación, y sirve porque
+ *   `/assignment` exige piloto y vehículo juntos: quien tiene piloto fue
+ *   tomado.
+ * - **Reasignar desde la tabla no puede precargar nada**: los dos ids de la
+ *   tripulación actual solo están en el detalle.
+ *
+ * Las fechas llegan igual que en el detalle, en `d-m-Y h:i:s A`.
+ */
+export const TripListItemSchema = z.object({
+    id: z.number(),
+    /** MAYÚSCULAS con espacios colapsados. **No es único**: dos viajes pueden compartirlo. */
+    order: z.string(),
+    status: TripStatusSchema,
+    shippingLineName: z.string().nullable(),
+    departurePointName: z.string().nullable(),
+    /** El **puerto** de salida al mar. El destino final solo está en el detalle. */
+    locationName: z.string().nullable(),
+    /** MAYÚSCULAS con espacios colapsados, como `order`. **Tampoco es único.** */
+    container: z.string(),
+    /** Lo planificado. Formato `d-m-Y h:i:s A`. */
+    recolectionDate: z.string(),
+    shipDate: z.string(),
+    /** Lo ejecutado. `null` hasta que el piloto llama a `/start` y `/finish`. */
+    startDate: z.string().nullable(),
+    endDate: z.string().nullable(),
+    observations: z.string(),
+    pilotName: z.string().nullable(),
+    /** Aquí el par es id + **placa**, pero el id se queda en el detalle. */
+    vehiclePlate: z.string().nullable(),
+    registeredByName: z.string().nullable(),
+});
+
+/**
  * Los metadatos van **aplanados en la raíz** del sobre, no bajo `meta`, y solo
  * cuando se manda un `limit`: sin él la API devuelve la colección completa y no
  * manda ninguno. `lastPage` es propio de este dominio.
  */
 export const PaginatedTripsSchema = ApiPaginatedResponseSchema.extend({
-    data: z.array(TripSchema),
+    data: z.array(TripListItemSchema),
     lastPage: z.number().optional(),
 });
