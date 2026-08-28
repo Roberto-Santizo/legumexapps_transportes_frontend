@@ -90,6 +90,8 @@ export function CreateTrip() {
                                 control={control}
                                 errors={errors}
                                 setValue={setValue}
+                                enablePackingListLookup
+                                onError={(message) => notification.error(message)}
                             />
 
                             <CustomFilledButton
