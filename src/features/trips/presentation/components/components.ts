@@ -4,6 +4,7 @@ export * from './TripFiltersBar';
 export * from './TripFormComponent';
 export * from './TripIdentity';
 export * from './TripPageHeader';
+export * from './TripPilotDocuments';
 export * from './TripRouteMap';
 export * from './TripRouteSection';
 export * from './TripTimeline';

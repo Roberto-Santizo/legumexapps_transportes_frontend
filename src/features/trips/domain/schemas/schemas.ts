@@ -12,10 +12,11 @@ export const TripStatusSchema = z.enum(['pending', 'in_route', 'finished']);
 
 /**
  * Un viaje de exportación: la carga que sale de una planta, pasa por un puerto
- * y termina en el extranjero. **Treinta y una claves, siempre las treinta y
- * una**, y solo en el **detalle** —el listado devuelve una fila recortada, ver
+ * y termina en el extranjero. **Treinta y tres claves, siempre las treinta y
+ * tres**, y solo en el **detalle** —el listado devuelve una fila recortada, ver
  * `TripListItemSchema`—, en camelCase y con las relaciones planas —`clientId` + `clientName`,
- * nunca un objeto anidado—.
+ * nunca un objeto anidado—. La API manda una más, `vehicleImage`, que aquí no
+ * se modela porque la ficha del viaje no pinta la foto de la unidad.
  *
  * El viaje **no pertenece a ninguna empresa**: no hay `carrierId` en la tabla.
  * Nace sin dueño y la empresa transportista se lo queda al asignarlo. De ahí
@@ -64,6 +65,21 @@ export const TripSchema = z.object({
     observations: z.string(),
     pilotId: z.number().nullable(),
     pilotName: z.string().nullable(),
+    /**
+     * Las dos fotos del piloto —anverso del DPI y de la licencia—, **con
+     * prefijo** porque el detalle mezcla cuatro entidades y un `dpiImage`
+     * suelto no diría de quién es. Son URLs **absolutas y públicas**: se pintan
+     * tal cual como `src`, sin token y sin componer nada. El viaje no guarda
+     * copia, las resuelve desde el piloto.
+     *
+     * **Van siempre juntas**: o las dos con URL, o las dos en `null`. Y `null`
+     * no es un error —hay que mirar `pilotId` para leerlo—: sin `pilotId` el
+     * viaje sigue en la bolsa; con `pilotId` es un piloto que se registró antes
+     * de que el alta pidiera documentos. No se pueden subir después: solo
+     * entran por `POST /api/auth/register` y no hay forma de reemplazarlos.
+     */
+    pilotDpiImage: z.string().nullable(),
+    pilotLicenseImage: z.string().nullable(),
     vehicleId: z.number().nullable(),
     /** Aquí el par es id + **placa**, no id + nombre. */
     vehiclePlate: z.string().nullable(),
@@ -84,10 +100,10 @@ export const TripSchema = z.object({
 /**
  * La fila del listado, que **ya no es el viaje entero**: `GET /api/trips`
  * devuelve quince claves —las que se pintan en la tabla— y deja las otras
- * dieciséis para el detalle. Las que faltan no son opcionales, **no llegan**:
+ * dieciocho para el detalle. Las que faltan no son opcionales, **no llegan**:
  * los ids de los catálogos, `destination`, `transport`, la `polyline` con sus
- * `points`, `pilotId`/`vehicleId`, el par `assignedBy*` y las tres fechas de
- * auditoría.
+ * `points`, `pilotId`/`vehicleId`, los dos documentos del piloto, el par
+ * `assignedBy*` y las tres fechas de auditoría.
  *
  * Dos consecuencias para el front:
  *

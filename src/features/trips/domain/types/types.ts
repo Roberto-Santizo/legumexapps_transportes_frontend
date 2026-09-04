@@ -4,7 +4,7 @@ import type { z } from "zod";
 export type PaginatedTrips = z.infer<typeof PaginatedTripsSchema>;
 /** El viaje completo. **Solo el detalle lo devuelve.** */
 export type Trip = z.infer<typeof TripSchema>;
-/** La fila del listado: quince de las treinta y una claves del viaje. */
+/** La fila del listado: quince de las treinta y tres claves del viaje. */
 export type TripListItem = z.infer<typeof TripListItemSchema>;
 
 /**

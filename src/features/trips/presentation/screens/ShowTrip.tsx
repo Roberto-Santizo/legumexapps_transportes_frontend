@@ -16,6 +16,7 @@ import {
     TripMoment,
     TripOrder,
     TripPageHeader,
+    TripPilotDocuments,
     TripRouteMap,
     TripStatusBadge,
     TripTimeline,
@@ -279,6 +280,9 @@ export function ShowTrip() {
                                             disponible para otras empresas.
                                         </p>
                                     )}
+
+                                    {/* Los papeles se leen junto a quien los lleva, no en una pantalla aparte: la API solo los expone aquí y en el listado de pilotos. */}
+                                    <TripPilotDocuments trip={trip} />
                                 </div>
                             </div>
                         </div>
