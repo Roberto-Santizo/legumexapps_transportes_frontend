@@ -1,4 +1,4 @@
-import type { PaginatedTrips, Trip, TripAssignmentForm, TripFilters, TripForm, TripUpdateForm } from "@/features/trips/trips";
+import type { PaginatedTrips, Trip, TripAssignmentForm, TripFilters, TripForm, TripPosition, TripUpdateForm } from "@/features/trips/trips";
 
 /**
  * Los ocho endpoints del dominio. Los tres últimos no son un CRUD: son las
@@ -14,4 +14,5 @@ export abstract class TripRepository {
     abstract assignTripById(id: string, payload: TripAssignmentForm): Promise<string>;
     abstract startTripById(id: string): Promise<string>;
     abstract finishTripById(id: string): Promise<string>;
+    abstract getTripPositions(id: string): Promise<TripPosition[]>;
 }

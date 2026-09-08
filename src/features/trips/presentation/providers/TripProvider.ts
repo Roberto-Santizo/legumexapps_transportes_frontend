@@ -36,6 +36,10 @@ export class TripProvider {
     finishTripById(id: string) {
         return this.repository.finishTripById(id);
     }
+
+    getTripPositions(id: string) {
+        return this.repository.getTripPositions(id);
+    }
 }
 
 const datasource = new TripDatasourceImpl(api);

@@ -8,3 +8,4 @@ export * from './TripPilotDocuments';
 export * from './TripRouteMap';
 export * from './TripRouteSection';
 export * from './TripTimeline';
+export * from './TripTrackingMap';

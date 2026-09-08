@@ -149,3 +149,52 @@ export const PaginatedTripsSchema = ApiPaginatedResponseSchema.extend({
     data: z.array(TripListItemSchema),
     lastPage: z.number().optional(),
 });
+
+/* ------------------------------------------------------------------ *
+ * Rastro en vivo
+ * ------------------------------------------------------------------ */
+
+/**
+ * Un punto del recorrido **real**, tal como lo devuelve
+ * `GET /api/trips/{trip}/positions`. Cinco claves y ninguna más.
+ *
+ * Dos avisos que el tipo no puede dar por sí solo:
+ *
+ * - **`latitude` y `longitude` son cadenas**, con ocho decimales fijos
+ *   (`"14.62807400"`). Hay que `parseFloat` antes de pintarlas. No se parecen
+ *   a los `points` del viaje, que sí son números.
+ * - **`recordedAt` no es ISO 8601**: llega en el `d-m-Y h:i:s A` del proyecto y
+ *   es la hora del **servidor**, no la del dispositivo del piloto.
+ *
+ * No trae `tripId`: quien pide el rastro ya lo lleva en la URL.
+ */
+export const TripPositionSchema = z.object({
+    /** Sirve para deduplicar frente al `GET`, pero **el websocket no lo manda**. */
+    id: z.number(),
+    latitude: z.string(),
+    longitude: z.string(),
+    recordedAt: z.string().nullable(),
+    /** El usuario que reportó. Sale del token, nunca del cuerpo. */
+    pilotId: z.number(),
+});
+
+/**
+ * Lo que empuja el canal `trips.{tripId}` en el evento `.trip.position.updated`.
+ * **Seis claves: una más y una menos que el recurso HTTP.** Trae `tripId` y
+ * `pilotName`, que el recurso no tiene, y **no trae `id`**, que el recurso sí.
+ *
+ * Esa ausencia es la razón de que la deduplicación no pueda apoyarse en el `id`
+ * como sugiere la documentación: ver `tripPositionKey` en `infrastructure/utils`.
+ *
+ * Se valida igual que una respuesta HTTP porque entra por un canal que no pasa
+ * por el datasource.
+ */
+export const TripPositionEventSchema = z.object({
+    tripId: z.number(),
+    latitude: z.string(),
+    longitude: z.string(),
+    recordedAt: z.string().nullable(),
+    pilotId: z.number(),
+    /** El nombre del piloto **solo llega por aquí**: el `GET` no lo devuelve. */
+    pilotName: z.string(),
+});

@@ -1,4 +1,4 @@
-import type { PaginatedTripsSchema, TripListItemSchema, TripSchema, TripStatusSchema } from "@/features/trips/trips";
+import type { PaginatedTripsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema } from "@/features/trips/trips";
 import type { z } from "zod";
 
 export type PaginatedTrips = z.infer<typeof PaginatedTripsSchema>;
@@ -103,3 +103,23 @@ export type TripFilters = {
     /** `LIKE` sobre `order` **y** `container`. Insensible a mayúsculas. */
     search?: string;
 }
+
+/** Un punto del recorrido real. Ojo: `latitude`/`longitude` son cadenas. */
+export type TripPosition = z.infer<typeof TripPositionSchema>;
+
+/** El payload del websocket: trae `tripId` y `pilotName`, y **no** trae `id`. */
+export type TripPositionEvent = z.infer<typeof TripPositionEventSchema>;
+
+/**
+ * En qué punto está el seguimiento en vivo. No es el estado del viaje: es el
+ * del socket, y hay que distinguirlo porque un mapa quieto puede significar
+ * cuatro cosas muy distintas.
+ *
+ * - `live` — conectado y suscrito: los puntos nuevos llegan solos.
+ * - `connecting` — negociando o reintentando.
+ * - `offline` — Reverb no responde. El rastro cargado sigue siendo válido.
+ * - `unavailable` — faltan las variables `VITE_REVERB_*` o no hay sesión: no se
+ *   llegó ni a intentar.
+ * - `forbidden` — el canal rechazó la suscripción (403 de ámbito o rol).
+ */
+export type TripTrackingStatus = 'live' | 'connecting' | 'offline' | 'unavailable' | 'forbidden';

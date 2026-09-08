@@ -18,7 +18,7 @@
  */
 
 import type { Option } from "@/features/shared/shared";
-import type { TripAssignmentForm, TripField, TripFilters, TripForm, TripListItem, TripStatus, TripUpdateForm } from "@/features/trips/trips";
+import type { LatLng, TripAssignmentForm, TripField, TripFilters, TripForm, TripListItem, TripPosition, TripStatus, TripUpdateForm } from "@/features/trips/trips";
 import { isAxiosError, type AxiosError } from "axios";
 
 /** Límite que valida el backend en los cinco campos de texto. */
@@ -78,6 +78,25 @@ export const canStartTrip = (trip: Pick<TripListItem, 'startDate'>): boolean => 
 /** No se cierra un viaje que nunca arrancó: sin `startDate` la API responde 400. */
 export const canFinishTrip = (trip: Pick<TripListItem, 'startDate' | 'endDate'>): boolean =>
     trip.startDate !== null && trip.endDate === null;
+
+/**
+ * Mirar el rastro es de todos **menos del piloto**, que recibe 403 tanto en el
+ * `GET` como al suscribirse al canal —también sobre su propio viaje: su
+ * aplicación ya conoce su posición—. Es la inversa exacta de `canRunTrips`.
+ *
+ * Esconder la opción es cortesía, no seguridad: el ámbito lo cierra el
+ * servidor, y un `carrier` fuera del suyo recibe 403 aunque llegue a la URL a
+ * mano.
+ */
+export const canTrackTrips = (role?: string): boolean =>
+    role === 'administrator' || role === 'manager' || role === 'carrier';
+
+/**
+ * Solo un viaje en ruta tiene algo que seguir. Uno `pending` no ha reportado
+ * nunca y uno `finished` ya no reportará: sus rastros se pueden leer, pero
+ * ninguno se mueve, y ofrecer «seguimiento en vivo» ahí sería mentir.
+ */
+export const canTrackTrip = (trip: Pick<TripListItem, 'status'>): boolean => trip.status === 'in_route';
 
 /* ------------------------------------------------------------------ *
  * Fechas
@@ -442,3 +461,65 @@ export const getTripAssignmentFieldErrors = (error: unknown): TripAssignmentFiel
 
     return business ? [{ field: business.field, message }] : [];
 };
+
+/* ------------------------------------------------------------------ *
+ * Rastro en vivo
+ * ------------------------------------------------------------------ */
+
+/**
+ * Las coordenadas del rastro llegan como **cadenas** de ocho decimales, no como
+ * números —al revés que los `points` del viaje, que la API ya devuelve
+ * decodificados—. Este es el único sitio donde se convierten.
+ */
+export const toTripLatLng = (position: Pick<TripPosition, 'latitude' | 'longitude'>): LatLng =>
+    [parseFloat(position.latitude), parseFloat(position.longitude)];
+
+/**
+ * La clave con la que se deduplica un punto, y la razón de que no sea el `id`.
+ *
+ * Al abrir el mapa hay una costura: primero se escucha el canal y después se
+ * pide el rastro acumulado, así que el punto que ocurre entre las dos cosas
+ * llega **dos veces**. La documentación dice que se deduplique por `id`, pero
+ * **el payload del websocket no manda `id`** —trae `tripId` y `pilotName` en su
+ * lugar—, así que por ahí no se puede.
+ *
+ * La clave compuesta sí funciona: `recordedAt` la pone el `now()` del servidor
+ * y el piso de quince segundos garantiza que dos puntos distintos del mismo
+ * viaje nunca compartan segundo. Las dos coordenadas entran para no depender de
+ * eso en exclusiva.
+ *
+ * Se comparan como cadenas **a propósito**: las dos vienen del mismo servidor
+ * con el mismo formato. Eso vale para reconocer un duplicado, nunca para
+ * decidir si el camión se movió —un camión parado reporta el mismo punto una y
+ * otra vez, y son puntos legítimos—.
+ */
+export const tripPositionKey = (position: Pick<TripPosition, 'latitude' | 'longitude' | 'recordedAt'>): string =>
+    `${position.recordedAt ?? ''}|${position.latitude}|${position.longitude}`;
+
+/**
+ * Funde el rastro que ya se tenía con lo que acaba de llegar, sea del `GET` o
+ * del canal, descartando lo repetido y conservando el orden ascendente por
+ * `recordedAt` que la API ya garantiza.
+ *
+ * Devuelve **siempre un array nuevo**: el React Compiler no repinta un array
+ * mutado en el sitio y el mapa se quedaría quieto.
+ */
+export const mergeTripPositions = (current: TripPosition[], incoming: TripPosition[]): TripPosition[] => {
+    if (incoming.length === 0) return current;
+
+    const seen = new Set(current.map(tripPositionKey));
+    const added = incoming.filter((position) => {
+        const key = tripPositionKey(position);
+
+        if (seen.has(key)) return false;
+
+        seen.add(key);
+
+        return true;
+    });
+
+    return added.length > 0 ? [...current, ...added] : current;
+};
+
+/** El 403 que responde el canal —y el `GET`— a cualquier piloto. */
+export const TRIP_POSITIONS_FORBIDDEN_MESSAGE = "No tienes permisos para consultar el rastro de un viaje";

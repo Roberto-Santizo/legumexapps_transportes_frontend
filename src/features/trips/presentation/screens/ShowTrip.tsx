@@ -25,11 +25,13 @@ import {
     canFinishTrip,
     canRunTrips,
     canStartTrip,
+    canTrackTrip,
+    canTrackTrips,
     canWriteTrips,
     tripProvider
 } from "@/features/trips/trips";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
-import { CircleCheckBig, Pencil, Play, Trash2, Truck } from "lucide-react";
+import { CircleCheckBig, Pencil, Play, Radar, Trash2, Truck } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -64,6 +66,7 @@ export function ShowTrip() {
     const canWrite = canWriteTrips(role);
     const canAssign = canAssignTrips(role, user?.carrierId);
     const canRun = canRunTrips(role);
+    const canTrack = canTrackTrips(role);
 
     const [isDeleting, setIsDeleting] = useState(false);
     const [isAssigning, setIsAssigning] = useState(false);
@@ -139,6 +142,15 @@ export function ShowTrip() {
             >
                 {trip && (
                     <div className="flex flex-wrap items-center gap-2">
+                        {canTrack && canTrackTrip(trip) && (
+                            <CustomFilledButton
+                                label="Seguimiento en vivo"
+                                type="button"
+                                icon={<Radar size={16} />}
+                                onClick={() => navigate(`/viajes/${trip.id}/seguimiento`)}
+                            />
+                        )}
+
                         {canAssign && canAssignTrip(trip) && (
                             <CustomFilledButton
                                 label={trip.pilotId ? "Cambiar tripulación" : "Tomar el viaje"}
@@ -303,9 +315,20 @@ export function ShowTrip() {
                                     Ruta por carretera
                                 </h2>
 
-                                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-subtle">
-                                    Prevista · sin seguimiento en vivo
-                                </p>
+                                {/* En ruta el rastro real existe, y está a un clic: decirlo aquí evita leer este mapa como si fuera la posición del vehículo. */}
+                                {canTrack && canTrackTrip(trip) ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate(`/viajes/${trip.id}/seguimiento`)}
+                                        className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
+                                    >
+                                        Prevista · ver seguimiento en vivo
+                                    </button>
+                                ) : (
+                                    <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-subtle">
+                                        Prevista · sin seguimiento en vivo
+                                    </p>
+                                )}
                             </div>
 
                             <TripRouteMap points={trip.points} />

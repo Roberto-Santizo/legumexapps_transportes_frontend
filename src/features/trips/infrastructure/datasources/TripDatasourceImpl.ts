@@ -1,7 +1,8 @@
-import type { PaginatedTrips, Trip, TripAssignmentForm, TripFilters, TripForm, TripUpdateForm } from "@/features/trips/trips";
-import { PaginatedTripsSchema, TripDatasource, TripSchema, buildTripQuery, getTripErrorMessage } from "@/features/trips/trips";
+import type { PaginatedTrips, Trip, TripAssignmentForm, TripFilters, TripForm, TripPosition, TripUpdateForm } from "@/features/trips/trips";
+import { PaginatedTripsSchema, TripDatasource, TripPositionSchema, TripSchema, buildTripQuery, getTripErrorMessage } from "@/features/trips/trips";
 import { ApiResponseSchema } from "@/features/shared/shared";
 import { isAxiosError, type AxiosInstance } from "axios";
+import { z } from "zod";
 
 export class TripDatasourceImpl extends TripDatasource {
     constructor(private api: AxiosInstance, private url = '/trips') {
@@ -204,6 +205,42 @@ export class TripDatasourceImpl extends TripDatasource {
 
             if (response.success) {
                 return response.data.message;
+            }
+
+            throw new Error("Información no válida");
+        } catch (error) {
+            if (isAxiosError(error)) throw new Error(getTripErrorMessage(error), { cause: error });
+
+            throw new Error("Error no controlado.", { cause: error });
+        }
+    }
+
+    /**
+     * El recorrido **real** del viaje, que no es la `polyline`: esa es la ruta
+     * prevista y no se recalcula nunca. Aquí están los puntos que fue
+     * reportando el piloto.
+     *
+     * Cuatro particularidades frente al resto del dominio:
+     *
+     * - **Se pide sin `limit`**, así que llega el rastro entero y sin
+     *   metadatos de paginación. Un viaje de seis horas al ritmo del piso de
+     *   quince segundos deja unas mil cuatrocientas filas.
+     * - **El orden es `recordedAt` ascendente**, al revés que todos los demás
+     *   listados: el primer elemento es el principio del viaje, que es
+     *   justamente como se dibuja una línea.
+     * - **Un rastro vacío no es un error.** Un viaje que acaba de arrancar
+     *   responde 200 con `data: []`, nunca 404.
+     * - **Todo `pilot` recibe 403**, incluido el piloto asignado a este viaje:
+     *   su aplicación ya sabe dónde está. Fuera de ámbito también es 403 y no
+     *   404, igual que en el detalle.
+     */
+    async getTripPositions(id: string): Promise<TripPosition[]> {
+        try {
+            const { data } = await this.api.get(`${this.url}/${id}/positions`);
+            const response = z.array(TripPositionSchema).safeParse(data['data']);
+
+            if (response.success) {
+                return response.data;
             }
 
             throw new Error("Información no válida");

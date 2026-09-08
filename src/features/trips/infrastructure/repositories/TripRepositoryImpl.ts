@@ -1,4 +1,4 @@
-import type { PaginatedTrips, Trip, TripAssignmentForm, TripDatasource, TripFilters, TripForm, TripUpdateForm } from "@/features/trips/trips";
+import type { PaginatedTrips, Trip, TripAssignmentForm, TripDatasource, TripFilters, TripForm, TripPosition, TripUpdateForm } from "@/features/trips/trips";
 import { TripRepository } from "@/features/trips/trips";
 
 export class TripRepositoryImpl extends TripRepository {
@@ -36,5 +36,9 @@ export class TripRepositoryImpl extends TripRepository {
 
     finishTripById(id: string): Promise<string> {
         return this.datasource.finishTripById(id);
+    }
+
+    getTripPositions(id: string): Promise<TripPosition[]> {
+        return this.datasource.getTripPositions(id);
     }
 }

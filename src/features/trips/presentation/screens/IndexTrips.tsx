@@ -30,13 +30,15 @@ import {
     canFinishTrip,
     canRunTrips,
     canStartTrip,
+    canTrackTrip,
+    canTrackTrips,
     canWriteTrips,
     isTripInBag,
     tripProvider,
     type TripListItem
 } from "@/features/trips/trips";
 import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
-import { CircleCheckBig, Eye, Pencil, Play, Plus, Trash2, Truck } from "lucide-react";
+import { CircleCheckBig, Eye, Pencil, Play, Plus, Radar, Trash2, Truck } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -64,6 +66,7 @@ export function IndexTrips() {
     const canWrite = canWriteTrips(role);
     const canAssign = canAssignTrips(role, user?.carrierId);
     const canRun = canRunTrips(role);
+    const canTrack = canTrackTrips(role);
 
     const search = searchParams.get('search') ?? '';
     const status = searchParams.get('status') ?? '';
@@ -145,6 +148,11 @@ export function IndexTrips() {
             icon: <Eye />,
             onClick: () => navigate(`/viajes/${trip.id}`)
         },
+        ...(canTrack && canTrackTrip(trip) ? [{
+            label: "Seguimiento en vivo",
+            icon: <Radar />,
+            onClick: () => navigate(`/viajes/${trip.id}/seguimiento`)
+        }] : []),
         ...(canAssign && canAssignTrip(trip) ? [{
             label: isTripInBag(trip) ? "Tomar el viaje" : "Cambiar tripulación",
             icon: <Truck />,
