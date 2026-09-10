@@ -88,6 +88,17 @@ export const TripSchema = z.object({
     assignedByName: z.string().nullable(),
     /** El administrador que publicó el viaje. No hay `registeredById` y el PATCH no lo reescribe. */
     registeredByName: z.string().nullable(),
+    /**
+     * Los galones **confirmados** del viaje, como cadena de dos decimales. La
+     * misma regla que el `totalGallons` del listado de cargas: lo registrado
+     * pero sin confirmar **no suma**, así que un viaje recién asignado trae
+     * `"0.00"` teniendo ya una carga. No es un error, es el estado normal.
+     *
+     * Opcional a propósito: llega en los siete endpoints del detalle, pero un
+     * backend anterior a esta spec no la manda y el viaje entero fallaría el
+     * parse por una clave informativa.
+     */
+    totalFuelGallons: z.string().optional(),
     createdAt: z.string().nullable(),
     updatedAt: z.string().nullable(),
     /**
@@ -197,4 +208,113 @@ export const TripPositionEventSchema = z.object({
     pilotId: z.number(),
     /** El nombre del piloto **solo llega por aquí**: el `GET` no lo devuelve. */
     pilotName: z.string(),
+});
+
+/* ------------------------------------------------------------------ *
+ * Cargas de combustible
+ * ------------------------------------------------------------------ */
+
+/**
+ * El enum crudo del backend, **en inglés y en minúsculas**: `DIESEL` es un 422.
+ * Es el mismo catálogo que el de los precios de combustible, pero aquí no es
+ * una llave foránea —una carga puede declarar un tipo que no tiene precio
+ * vigente— sino una etiqueta.
+ */
+export const FuelTypeSchema = z.enum(['regular', 'premium', 'diesel', 'diesel_premium']);
+
+/**
+ * Una carga de combustible: lo que la empresa transportista le entrega al
+ * viaje. **Ocho claves**, y dos avisos que el tipo no puede dar solo:
+ *
+ * - **`gallons` es una cadena** de dos decimales (`"45.50"`), no un número:
+ *   hay que `parseFloat` antes de sumar o comparar.
+ * - **`loadedAt` no es ISO 8601.** Llega en el `d-m-Y h:i:s A` del proyecto y
+ *   es la hora del **servidor** al confirmar, nunca la del dispositivo.
+ *
+ * La tabla es **append-only**: no existe editar ni borrar una carga, no se
+ * puede desconfirmar y los galones no admiten negativos, así que un error de
+ * tecleo no se puede compensar ni siquiera con otra carga.
+ */
+export const TripFuelSchema = z.object({
+    /** El id de la **carga**, no el del viaje. */
+    id: z.number(),
+    /** Sí viaja, al contrario que en `TripPosition`: la confirmación vive fuera del viaje. */
+    tripId: z.number(),
+    /** ⚠️ Cadena de dos decimales, no número. */
+    gallons: z.string(),
+    fuelType: FuelTypeSchema,
+    /** **Derivado** de `loadedAt`: no hay ninguna columna `status`. */
+    isConfirmed: z.boolean(),
+    /** ⚠️ `d-m-Y h:i:s A`, no ISO 8601. `null` mientras el piloto no confirme. */
+    loadedAt: z.string().nullable(),
+    /** El piloto que confirmó. **No viene su id.** */
+    confirmedByName: z.string().nullable(),
+    /** Quien registró la carga. En la primera del viaje, quien lo tomó. */
+    registeredByName: z.string(),
+});
+
+/**
+ * El sobre entero del listado, y no solo su `data`: `totalGallons` viaja en la
+ * **raíz**, así que aquí se parsea la respuesta completa.
+ *
+ * Ojo con los dos totales, que se parecen y no son lo mismo: `total` es el
+ * conteo de filas que aporta el paginador y solo aparece con `limit`;
+ * `totalGallons` es la **suma de galones confirmados** y viaja siempre.
+ */
+export const TripFuelsSchema = ApiPaginatedResponseSchema.extend({
+    data: z.array(TripFuelSchema),
+    /** ⚠️ Solo las cargas **confirmadas**. Cadena de dos decimales. */
+    totalGallons: z.string(),
+    lastPage: z.number().optional(),
+});
+
+/* ------------------------------------------------------------------ *
+ * Paradas (tiempos muertos)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Un tramo en el que el camión estuvo quieto. **Nueve claves y ninguna más**, y
+ * no las escribe nadie: nacen solas como efecto lateral del `POST` de
+ * posiciones cuando un punto cae a menos de cinco metros del anterior. No hay
+ * alta, ni edición, ni baja —una parada mal detectada es historial— y tampoco
+ * websocket: el único modo de enterarse es volver a pedir este `GET`.
+ *
+ * Cuatro avisos que el tipo no puede dar por sí solo:
+ *
+ * - **`latitude` y `longitude` son cadenas** de ocho decimales, como en
+ *   `TripPosition`. Son las coordenadas del **ancla** —el punto anterior, el
+ *   primero del reposo—, no las del punto que detectó la parada.
+ * - **`startedAt` y `endedAt` no son ISO 8601**: llegan en el `d-m-Y h:i:s A`
+ *   del proyecto y se desarman con `parseTripMoment`.
+ * - **`endedAt` en `null` es la parada abierta.** No hay `status` ni enum: el
+ *   estado lo dice ese `null`, y con él `durationMinutes` también es `null`, a
+ *   propósito —medirlo contra `now()` daría un valor distinto en cada lectura—.
+ * - **`endPositionId` en `null` con `endedAt` puesto significa que la cerró el
+ *   `/finish` del viaje**, no que el camión arrancara. Es la única forma de
+ *   distinguir las dos causas de cierre: no existe ningún `closeReason`.
+ *
+ * No trae `tripId`: quien pide las paradas ya lo lleva en la URL.
+ */
+export const TripTimeoutSchema = z.object({
+    /** Id de la parada. **No es parámetro de ninguna ruta**: no existe `/timeouts/{timeout}`. */
+    id: z.number(),
+    /** ⚠️ Cadena de ocho decimales, no número. La latitud del ancla. */
+    latitude: z.string(),
+    longitude: z.string(),
+    /** El `recordedAt` del ancla. Nunca `null`. Formato `d-m-Y h:i:s A`. */
+    startedAt: z.string(),
+    /** ⚠️ `null` = parada abierta: el camión seguía quieto en su último punto. */
+    endedAt: z.string().nullable(),
+    /**
+     * Minutos con hasta dos decimales, calculados en lectura. **`null` mientras
+     * la parada siga abierta.** Un valor exacto llega **sin** decimales (`1`,
+     * no `1.0`), así que es número y no una cadena ya formateada.
+     */
+    durationMinutes: z.number().nullable(),
+    /** Quién conducía al abrirse la parada. **No viene el nombre**: se cruza con el detalle. */
+    pilotId: z.number(),
+    /** El `trip_position` que ancla la parada. Nunca `null`. */
+    startPositionId: z.number(),
+    /** `null` con `endedAt` puesto = la cerró el fin del viaje. */
+    endPositionId: z.number().nullable(),
 });

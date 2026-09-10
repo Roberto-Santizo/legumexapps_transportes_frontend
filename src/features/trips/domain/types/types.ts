@@ -1,4 +1,4 @@
-import type { PaginatedTripsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema } from "@/features/trips/trips";
+import type { FuelTypeSchema, PaginatedTripsSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
 import type { z } from "zod";
 
 export type PaginatedTrips = z.infer<typeof PaginatedTripsSchema>;
@@ -69,13 +69,36 @@ export type TripFormValues = TripForm & {
 }
 
 /**
- * Los dos campos de `/assignment`, **los dos obligatorios**. `null` en
+ * Los **cuatro** campos de `/assignment`, los cuatro obligatorios. `null` en
  * cualquiera es 422: la desasignación no existe en este dominio. `assignedBy`
  * no se envía —sale del token—.
+ *
+ * Los dos de combustible son un añadido **incompatible y sin periodo de
+ * gracia**: mandar solo la tripulación responde 422 en *todas* las
+ * asignaciones. La primera carga se inserta en la misma transacción que la
+ * asignación, así que ningún viaje queda tomado con cero cargas —y reasignar
+ * **añade otra carga**, no pisa la anterior—.
  */
 export type TripAssignmentForm = {
     pilotId: number;
     vehicleId: number;
+    /** Los galones de la primera carga. `min:0.01`: cero y negativos son 422. */
+    fuelGallons: number;
+    fuelType: FuelType;
+}
+
+/**
+ * El estado del formulario de asignación, que **no es el payload**: la
+ * tripulación puede llegar precargada desde el detalle, pero los dos campos de
+ * combustible nacen vacíos siempre —una carga nueva no se hereda de la
+ * anterior— y por eso son opcionales aquí y obligatorios al enviar. La
+ * validación `required` es lo que garantiza el paso de uno a otro.
+ */
+export type TripAssignmentFormValues = {
+    pilotId: number;
+    vehicleId: number;
+    fuelGallons?: number;
+    fuelType?: FuelType;
 }
 
 /** Los campos del formulario a los que se puede anclar un error del backend. */
@@ -123,3 +146,38 @@ export type TripPositionEvent = z.infer<typeof TripPositionEventSchema>;
  * - `forbidden` — el canal rechazó la suscripción (403 de ámbito o rol).
  */
 export type TripTrackingStatus = 'live' | 'connecting' | 'offline' | 'unavailable' | 'forbidden';
+
+/* ------------------------------------------------------------------ *
+ * Cargas de combustible
+ * ------------------------------------------------------------------ */
+
+/** Cadena cruda del enum, en inglés y en minúsculas: se traduce solo al pintarla. */
+export type FuelType = z.infer<typeof FuelTypeSchema>;
+
+/** Una carga de combustible. Ojo: `gallons` es cadena y `loadedAt` no es ISO. */
+export type TripFuel = z.infer<typeof TripFuelSchema>;
+
+/** El sobre del listado, con `totalGallons` en la raíz. */
+export type TripFuels = z.infer<typeof TripFuelsSchema>;
+
+/**
+ * Los dos campos del alta de una carga, **los dos obligatorios**. Otras cuatro
+ * claves —`tripId`, `loadedAt`, `confirmedBy` y `registeredBy`— se descartan en
+ * silencio: el viaje va en la URL, la fecha la pone el servidor al confirmar y
+ * los dos autores salen de sus tokens.
+ */
+export type TripFuelForm = {
+    /** `min:0.01`: cero y negativos son 422. Viaja como número. */
+    gallons: number;
+    fuelType: FuelType;
+}
+
+/* ------------------------------------------------------------------ *
+ * Paradas (tiempos muertos)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Una parada del viaje. Ojo: `latitude`/`longitude` son cadenas, las dos fechas
+ * no son ISO y `endedAt === null` es la parada todavía abierta.
+ */
+export type TripTimeout = z.infer<typeof TripTimeoutSchema>;

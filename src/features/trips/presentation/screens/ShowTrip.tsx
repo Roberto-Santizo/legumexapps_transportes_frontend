@@ -13,6 +13,7 @@ import {
     TripAssignmentModal,
     TripContainer,
     TripDeleteDialog,
+    TripFuelsModal,
     TripMoment,
     TripOrder,
     TripPageHeader,
@@ -20,18 +21,24 @@ import {
     TripRouteMap,
     TripStatusBadge,
     TripTimeline,
+    TripTimeoutsSection,
     canAssignTrip,
     canAssignTrips,
     canFinishTrip,
+    canReadTripFuels,
+    canReadTripTimeouts,
+    canRegisterTripFuels,
     canRunTrips,
     canStartTrip,
     canTrackTrip,
     canTrackTrips,
     canWriteTrips,
+    formatGallons,
+    parseGallons,
     tripProvider
 } from "@/features/trips/trips";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
-import { CircleCheckBig, Pencil, Play, Radar, Trash2, Truck } from "lucide-react";
+import { CircleCheckBig, Fuel, Pencil, Play, Radar, Trash2, Truck } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -67,9 +74,15 @@ export function ShowTrip() {
     const canAssign = canAssignTrips(role, user?.carrierId);
     const canRun = canRunTrips(role);
     const canTrack = canTrackTrips(role);
+    /** Leer las cargas lo pueden los cuatro roles; registrarlas, solo la empresa. */
+    const canReadFuels = canReadTripFuels(role);
+    const canRegisterFuels = canRegisterTripFuels(role, user?.carrierId);
+    /** Las paradas las ven los mismos que el rastro: todos menos el piloto. */
+    const canReadTimeouts = canReadTripTimeouts(role);
 
     const [isDeleting, setIsDeleting] = useState(false);
     const [isAssigning, setIsAssigning] = useState(false);
+    const [isLoadingFuel, setIsLoadingFuel] = useState(false);
 
     const { data: trip, isLoading, isError, error } = useQuery({
         queryKey: ['getTripById', id],
@@ -157,6 +170,15 @@ export function ShowTrip() {
                                 type="button"
                                 icon={<Truck size={16} />}
                                 onClick={() => setIsAssigning(true)}
+                            />
+                        )}
+
+                        {canReadFuels && (
+                            <CustomFilledButton
+                                label="Combustible"
+                                type="button"
+                                icon={<Fuel size={16} />}
+                                onClick={() => setIsLoadingFuel(true)}
                             />
                         )}
 
@@ -284,12 +306,32 @@ export function ShowTrip() {
                                         <Field label="Lo publicó">
                                             {trip.registeredByName ?? <span className="text-ink-subtle">Sin registro</span>}
                                         </Field>
+
+                                        {/*
+                                          * Solo suma lo que el piloto confirmó, así que un viaje
+                                          * recién tomado marca 0.00 teniendo ya una carga. El
+                                          * detalle no trae las cargas: el registro está en el
+                                          * diálogo, y ahí el cero se explica solo.
+                                          */}
+                                        <Field label="Combustible confirmado">
+                                            <span className="font-mono text-[13px] tabular-nums">
+                                                {formatGallons(trip.totalFuelGallons ?? "0.00")} gal
+                                            </span>
+                                        </Field>
                                     </dl>
 
                                     {trip.pilotName && (
                                         <p className="mt-4 text-sm text-ink-muted">
                                             La tripulación no se puede quitar: el viaje no vuelve a estar
                                             disponible para otras empresas.
+                                        </p>
+                                    )}
+
+                                    {/* El 400 de `/start` es lo que hace que este cero importe. */}
+                                    {trip.pilotName && trip.startDate === null && parseGallons(trip.totalFuelGallons ?? "0.00") === 0 && (
+                                        <p className="mt-2 text-sm text-ink-muted">
+                                            El viaje no puede iniciar hasta que el piloto confirme al
+                                            menos una carga de combustible.
                                         </p>
                                     )}
 
@@ -340,6 +382,14 @@ export function ShowTrip() {
                             </p>
                         </div>
 
+                        {/*
+                          * Solo desde que el viaje arranca: antes no hay una sola
+                          * posición reportada, así que la sección no diría nada.
+                          */}
+                        {canReadTimeouts && trip.startDate !== null && (
+                            <TripTimeoutsSection trip={trip} />
+                        )}
+
                         <dl className="grid max-w-3xl gap-x-8 sm:grid-cols-2">
                             <Field label="Publicado">
                                 <TripMoment value={trip.createdAt} withTime />
@@ -363,6 +413,12 @@ export function ShowTrip() {
             <TripAssignmentModal
                 trip={isAssigning ? trip ?? null : null}
                 onClose={() => setIsAssigning(false)}
+            />
+
+            <TripFuelsModal
+                trip={isLoadingFuel ? trip ?? null : null}
+                canRegister={canRegisterFuels}
+                onClose={() => setIsLoadingFuel(false)}
             />
         </div>
     );

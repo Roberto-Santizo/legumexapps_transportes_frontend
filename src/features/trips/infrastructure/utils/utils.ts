@@ -18,7 +18,8 @@
  */
 
 import type { Option } from "@/features/shared/shared";
-import type { LatLng, TripAssignmentForm, TripField, TripFilters, TripForm, TripListItem, TripPosition, TripStatus, TripUpdateForm } from "@/features/trips/trips";
+import type { LatLng, TripAssignmentForm, TripAssignmentFormValues, TripField, TripFilters, TripForm, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
+import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
 import { isAxiosError, type AxiosError } from "axios";
 
 /** Límite que valida el backend en los cinco campos de texto. */
@@ -139,6 +140,16 @@ export const formatTripMoment = (value: string, withTime = false): string => {
     return withTime
         ? `${dateFormatter.format(date)} · ${timeFormatter.format(date)}`
         : dateFormatter.format(date);
+};
+
+/**
+ * Solo la hora del momento. Sirve donde la fecha ya la dijo la línea de al lado
+ * —el cierre de una parada frente a su inicio— y repetirla solo estorbaría.
+ */
+export const formatTripClock = (value: string): string => {
+    const date = parseTripMoment(value);
+
+    return date ? timeFormatter.format(date) : value;
 };
 
 const pad = (value: number): string => value.toString().padStart(2, '0');
@@ -284,10 +295,25 @@ export const buildTripUpdatePayload = (form: TripForm & { status?: TripStatus })
     ...(form.status ? { status: form.status } : {}),
 });
 
-/** Los dos ids de `/assignment`, como números: una cadena es 422. */
-export const buildTripAssignmentPayload = (form: TripAssignmentForm): TripAssignmentForm => ({
+/**
+ * Los **cuatro** campos de `/assignment`, con los tres numéricos como números:
+ * una cadena en los ids es 422.
+ *
+ * Los galones sí admiten decimales —el input los da como cadena— y van con
+ * `Number`, no con `parseInt`: `45.5` es una carga legítima.
+ */
+export const buildTripAssignmentPayload = (form: TripAssignmentFormValues): TripAssignmentForm => ({
     pilotId: Number(form.pilotId),
     vehicleId: Number(form.vehicleId),
+    fuelGallons: Number(form.fuelGallons),
+    /** Vacío no llega aquí: el `required` del select lo para antes. */
+    fuelType: form.fuelType!,
+});
+
+/** Los dos campos del alta de una carga. `gallons` viaja como número. */
+export const buildTripFuelPayload = (form: TripFuelForm): TripFuelForm => ({
+    gallons: Number(form.gallons),
+    fuelType: form.fuelType,
 });
 
 /* ------------------------------------------------------------------ *
@@ -443,7 +469,7 @@ const ASSIGNMENT_FIELD_MESSAGES: TripAssignmentFieldError[] = [
     { field: 'vehicleId', message: "El piloto y el vehículo deben pertenecer a la misma empresa transportista" },
 ];
 
-/** Mismo reparto que en el formulario del viaje, para los dos campos de la asignación. */
+/** Mismo reparto que en el formulario del viaje, para los cuatro campos de la asignación. */
 export const getTripAssignmentFieldErrors = (error: unknown): TripAssignmentFieldError[] => {
     const data = toAxiosError(error)?.response?.data;
 
@@ -451,7 +477,7 @@ export const getTripAssignmentFieldErrors = (error: unknown): TripAssignmentFiel
 
     const { errors, message } = data as { errors?: unknown; message?: unknown };
 
-    const collected = collectFieldErrors(errors, ['pilotId', 'vehicleId'] as const);
+    const collected = collectFieldErrors(errors, ['pilotId', 'vehicleId', 'fuelGallons', 'fuelType'] as const);
 
     if (collected.length > 0) return collected;
 
@@ -523,3 +549,212 @@ export const mergeTripPositions = (current: TripPosition[], incoming: TripPositi
 
 /** El 403 que responde el canal —y el `GET`— a cualquier piloto. */
 export const TRIP_POSITIONS_FORBIDDEN_MESSAGE = "No tienes permisos para consultar el rastro de un viaje";
+
+/* ------------------------------------------------------------------ *
+ * Cargas de combustible
+ * ------------------------------------------------------------------ */
+
+/**
+ * El catálogo sale de `fuel-prices` porque es **el mismo enum del backend** y
+ * tenerlo dos veces garantiza que un día se separen. Aquí no es una llave
+ * foránea: una carga puede declarar un tipo que no tiene precio vigente, y este
+ * dominio no guarda ningún precio ni da ninguna cifra en quetzales.
+ */
+export const TRIP_FUEL_TYPES: Option[] = FUEL_TYPES;
+
+/** El enum crudo traducido. La API lo devuelve en inglés y sin traducir. */
+export const TRIP_FUEL_TYPE_LABELS: Record<string, string> = FUEL_TYPE_LABELS;
+
+/**
+ * Registrar cargas es solo de `carrier`, y con empresa registrada: sin ella el
+ * service responde 403 «No perteneces a ninguna empresa transportista». **Ni el
+ * administrador ni el `manager` pueden cargar por ninguna ruta.**
+ */
+export const canRegisterTripFuels = (role?: string, carrierId?: number | null): boolean =>
+    role === 'carrier' && typeof carrierId === 'number';
+
+/**
+ * Leer las cargas lo pueden los cuatro roles, **incluido el piloto asignado**
+ * —al revés que el rastro, que a todo piloto le responde 403—: el dato es sobre
+ * él y lo necesita para confirmarlo desde su aplicación.
+ */
+export const canReadTripFuels = (role?: string): boolean => Boolean(role);
+
+/**
+ * Sobre qué viaje se puede cargar. Dos condiciones, y las dos son del servidor:
+ *
+ * - **Tiene que estar tomado.** Sobre la bolsa libre el `POST` responde 403
+ *   aunque el listado sí se lea: una carga que ningún piloto puede confirmar
+ *   nacería atascada. Sin `pilotId` en el listado, la tripulación es lo que
+ *   delata que el viaje ya tiene dueño.
+ * - **No puede estar finalizado.** `pending` e `in_route` sí —una recarga en
+ *   carretera es el caso real—; `finished` responde 400.
+ */
+export const canRegisterTripFuel = (trip: Pick<TripListItem, 'status' | 'pilotName'>): boolean =>
+    trip.pilotName !== null && trip.status !== 'finished';
+
+/**
+ * Los galones llegan como **cadena** de dos decimales, nunca como número. Este
+ * es el único sitio donde se convierten, y se hace con `parseFloat` porque
+ * `Number("")` es `0` y disimularía una respuesta rota.
+ */
+export const parseGallons = (gallons: string): number => {
+    const value = parseFloat(gallons);
+
+    return Number.isNaN(value) ? 0 : value;
+};
+
+const gallonsFormatter = new Intl.NumberFormat('es-GT', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
+
+/** Los galones ya agrupados por millares, para pintarlos. Sin unidad: esa la pone la UI. */
+export const formatGallons = (gallons: string | number): string =>
+    gallonsFormatter.format(typeof gallons === 'string' ? parseGallons(gallons) : gallons);
+
+/** Suma los galones de las cargas que **todavía no confirmó** el piloto. */
+export const sumPendingGallons = (fuels: TripFuel[]): number =>
+    fuels.reduce((total, fuel) => fuel.isConfirmed ? total : total + parseGallons(fuel.gallons), 0);
+
+/** El 403 del `POST` sobre un viaje ajeno o sobre la bolsa libre. */
+export const TRIP_FUEL_FOREIGN_MESSAGE = "No puedes registrar combustible en un viaje que no tomó tu empresa transportista";
+
+/** El 403 del transportista que aún no registró su empresa. */
+export const TRIP_FUEL_NO_CARRIER_MESSAGE = "No perteneces a ninguna empresa transportista";
+
+/** El 400 de cargar sobre un viaje ya cerrado. */
+export const TRIP_FINISHED_MESSAGE = "El viaje ya fue finalizado";
+
+/**
+ * El 400 que `/start` gana con esta spec, y que **no es un fallo del piloto**:
+ * es la empresa la que tiene que registrar la carga y él quien la confirma. Una
+ * carga registrada pero sin confirmar no sirve.
+ */
+export const TRIP_FUEL_UNCONFIRMED_MESSAGE = "Debes confirmar al menos una carga de combustible antes de iniciar el viaje";
+
+export type TripFuelFieldError = {
+    field: keyof TripFuelForm;
+    message: string;
+}
+
+/**
+ * Reparte el 422 del alta entre sus dos campos. El resto —403 de empresa
+ * ajena, 400 de viaje finalizado, 404— no pertenece a ningún campo y se muestra
+ * como notificación.
+ */
+export const getTripFuelFieldErrors = (error: unknown): TripFuelFieldError[] => {
+    const data = toAxiosError(error)?.response?.data;
+
+    if (!data || typeof data !== 'object') return [];
+
+    return collectFieldErrors((data as { errors?: unknown }).errors, ['gallons', 'fuelType'] as const);
+};
+
+/* ------------------------------------------------------------------ *
+ * Paradas (tiempos muertos)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Quién puede mirar las paradas: los mismos que el rastro, es decir **todos
+ * menos el piloto** —también sobre su propio viaje—. Esconder la opción es
+ * cortesía, no seguridad: el ámbito lo cierra el servidor con un 403.
+ */
+export const canReadTripTimeouts = (role?: string): boolean => canTrackTrips(role);
+
+/**
+ * La parada sigue abierta: el camión seguía quieto en su último punto
+ * reportado. No hay `status` que mirar, el estado es ese `null` —y con él
+ * `durationMinutes` también es `null`—.
+ *
+ * Ojo: una parada abierta **no significa que el camión siga parado ahora**. Si
+ * el piloto dejó de reportar y nadie finalizó el viaje, se queda abierta
+ * indefinidamente: no hay job de cierre por inactividad.
+ */
+export const isTripTimeoutOpen = (timeout: Pick<TripTimeout, 'endedAt'>): boolean => timeout.endedAt === null;
+
+/**
+ * La cerró el `/finish` del viaje y no un punto en movimiento. Es la **única**
+ * forma de distinguir las dos causas de cierre —no existe ningún `closeReason`—
+ * y no se puede leer de la hora.
+ */
+export const isTripTimeoutClosedByFinish = (timeout: Pick<TripTimeout, 'endedAt' | 'endPositionId'>): boolean =>
+    timeout.endedAt !== null && timeout.endPositionId === null;
+
+/**
+ * Lo que lleva parada una parada abierta, contra el reloj **del navegador**. Es
+ * una estimación —la hora de la API es la del servidor— y por eso no sustituye
+ * a `durationMinutes`: solo sirve para pintar una parada en curso.
+ */
+export const elapsedTimeoutMinutes = (timeout: Pick<TripTimeout, 'startedAt'>): number | null => {
+    const start = parseTripMoment(timeout.startedAt);
+
+    if (!start) return null;
+
+    return Math.max(0, (Date.now() - start.getTime()) / 60_000);
+};
+
+/**
+ * Los umbrales del filtro de la ficha. **No son del backend**: no hay ningún
+ * query param de duración mínima y el servidor registra toda parada, semáforos
+ * incluidos. Filtrar el ruido es del front, y por eso el umbral se enseña como
+ * un control y no se aplica a escondidas.
+ */
+export const TRIP_TIMEOUT_THRESHOLDS: { value: number; label: string }[] = [
+    { value: 0, label: "Todas" },
+    { value: 1, label: "1 min" },
+    { value: 5, label: "5 min" },
+    { value: 15, label: "15 min" },
+];
+
+/**
+ * Quita las paradas por debajo del umbral. **Las abiertas nunca se filtran**:
+ * su `durationMinutes` es `null` porque sigue corriendo, no porque sea corta, y
+ * esconder la parada en curso sería esconder justo el estado actual.
+ */
+export const filterTripTimeouts = (timeouts: TripTimeout[], minMinutes: number): TripTimeout[] => {
+    if (minMinutes <= 0) return timeouts;
+
+    return timeouts.filter((timeout) => isTripTimeoutOpen(timeout) || (timeout.durationMinutes ?? 0) >= minMinutes);
+};
+
+/**
+ * El tiempo parado del viaje. Lo suma el front: **la API no da ningún total**.
+ * Solo entra lo cerrado —una parada abierta no tiene duración— así que el
+ * número se queda corto mientras el camión siga quieto.
+ */
+export const sumTimeoutMinutes = (timeouts: TripTimeout[]): number =>
+    timeouts.reduce((total, timeout) => total + (timeout.durationMinutes ?? 0), 0);
+
+/** Los minutos de la parada más larga ya cerrada, o `0` si no hay ninguna. */
+export const longestTimeoutMinutes = (timeouts: TripTimeout[]): number =>
+    timeouts.reduce((longest, timeout) => Math.max(longest, timeout.durationMinutes ?? 0), 0);
+
+const minutesFormatter = new Intl.NumberFormat('es-GT', { maximumFractionDigits: 0 });
+
+/**
+ * Los minutos en la unidad con la que se habla de ellos: los segundos para un
+ * semáforo, los minutos para una espera, las horas para una cola de puerto.
+ * Pintar `154.3 min` obligaría a dividir de cabeza justo en el caso que importa.
+ */
+export const formatTimeoutDuration = (minutes: number): string => {
+    if (minutes < 1) return `${Math.round(minutes * 60)} s`;
+
+    if (minutes < 60) return `${minutesFormatter.format(minutes)} min`;
+
+    const hours = Math.floor(minutes / 60);
+    const rest = Math.round(minutes - hours * 60);
+
+    return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+};
+
+/**
+ * El pin de la parada en Google Maps. Las coordenadas llegan como **cadenas**
+ * de ocho decimales y aquí se mandan tal cual: el enlace no las interpreta, y
+ * convertirlas solo podría perder precisión.
+ */
+export const timeoutMapUrl = (timeout: Pick<TripTimeout, 'latitude' | 'longitude'>): string =>
+    `https://www.google.com/maps?q=${timeout.latitude},${timeout.longitude}`;
+
+/** El 403 que responde el `GET` a cualquier piloto, incluido el asignado. */
+export const TRIP_TIMEOUTS_FORBIDDEN_MESSAGE = "No tienes permisos para consultar las paradas de un viaje";

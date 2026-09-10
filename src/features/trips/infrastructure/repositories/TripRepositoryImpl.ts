@@ -1,4 +1,4 @@
-import type { PaginatedTrips, Trip, TripAssignmentForm, TripDatasource, TripFilters, TripForm, TripPosition, TripUpdateForm } from "@/features/trips/trips";
+import type { PaginatedTrips, Trip, TripAssignmentForm, TripDatasource, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
 import { TripRepository } from "@/features/trips/trips";
 
 export class TripRepositoryImpl extends TripRepository {
@@ -40,5 +40,17 @@ export class TripRepositoryImpl extends TripRepository {
 
     getTripPositions(id: string): Promise<TripPosition[]> {
         return this.datasource.getTripPositions(id);
+    }
+
+    getTripFuels(id: string): Promise<TripFuels> {
+        return this.datasource.getTripFuels(id);
+    }
+
+    createTripFuel(id: string, payload: TripFuelForm): Promise<string> {
+        return this.datasource.createTripFuel(id, payload);
+    }
+
+    getTripTimeouts(id: string): Promise<TripTimeout[]> {
+        return this.datasource.getTripTimeouts(id);
     }
 }

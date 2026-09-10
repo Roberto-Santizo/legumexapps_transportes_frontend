@@ -21,6 +21,7 @@ import {
     TripAssignmentModal,
     TripDeleteDialog,
     TripFiltersBar,
+    TripFuelsModal,
     TripMoment,
     TripOrder,
     TripRouteLine,
@@ -28,6 +29,8 @@ import {
     canAssignTrip,
     canAssignTrips,
     canFinishTrip,
+    canReadTripFuels,
+    canRegisterTripFuels,
     canRunTrips,
     canStartTrip,
     canTrackTrip,
@@ -38,7 +41,7 @@ import {
     type TripListItem
 } from "@/features/trips/trips";
 import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
-import { CircleCheckBig, Eye, Pencil, Play, Plus, Radar, Trash2, Truck } from "lucide-react";
+import { CircleCheckBig, Eye, Fuel, Pencil, Play, Plus, Radar, Trash2, Truck } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -67,6 +70,9 @@ export function IndexTrips() {
     const canAssign = canAssignTrips(role, user?.carrierId);
     const canRun = canRunTrips(role);
     const canTrack = canTrackTrips(role);
+    /** Leer las cargas lo pueden los cuatro roles; registrarlas, solo la empresa. */
+    const canReadFuels = canReadTripFuels(role);
+    const canRegisterFuels = canRegisterTripFuels(role, user?.carrierId);
 
     const search = searchParams.get('search') ?? '';
     const status = searchParams.get('status') ?? '';
@@ -77,6 +83,8 @@ export function IndexTrips() {
     const [tripToDelete, setTripToDelete] = useState<TripListItem | null>(null);
     /** El viaje que se está tomando, o `null` con el diálogo cerrado. */
     const [tripToAssign, setTripToAssign] = useState<TripListItem | null>(null);
+    /** El viaje cuyas cargas de combustible se están mirando. */
+    const [tripToFuel, setTripToFuel] = useState<TripListItem | null>(null);
 
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ['getTrips', page, rowsPerPage, search, status, dateFrom, dateTo],
@@ -157,6 +165,11 @@ export function IndexTrips() {
             label: isTripInBag(trip) ? "Tomar el viaje" : "Cambiar tripulación",
             icon: <Truck />,
             onClick: () => setTripToAssign(trip)
+        }] : []),
+        ...(canReadFuels ? [{
+            label: "Combustible",
+            icon: <Fuel />,
+            onClick: () => setTripToFuel(trip)
         }] : []),
         ...(canRun && canStartTrip(trip) ? [{
             label: "Iniciar viaje",
@@ -389,6 +402,12 @@ export function IndexTrips() {
             <TripAssignmentModal
                 trip={tripToAssign}
                 onClose={() => setTripToAssign(null)}
+            />
+
+            <TripFuelsModal
+                trip={tripToFuel}
+                canRegister={canRegisterFuels}
+                onClose={() => setTripToFuel(null)}
             />
         </div>
     );

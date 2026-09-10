@@ -14,11 +14,18 @@
  * Solo se ofrecen vehículos `active`: `inactive` y `under_repair` los rechaza
  * el service con un 400, y el piloto y el vehículo tienen que ser de la misma
  * empresa.
+ *
+ * Desde SPEC 27 el acto es **triple**: junto con la tripulación va la primera
+ * carga de combustible, en la misma transacción. Ningún viaje queda tomado con
+ * cero cargas, y como el viaje no arranca hasta que el piloto confirme alguna,
+ * los galones que se tecleen aquí son lo primero que él tendrá que aceptar.
+ * Reasignar **añade otra carga**, nunca reemplaza la anterior.
  */
 
-import type { TripAssignmentForm, TripSummary } from "@/features/trips/trips";
+import type { TripAssignmentFormValues, TripSummary } from "@/features/trips/trips";
 import {
     TRIP_CREW_LIMIT,
+    TRIP_FUEL_TYPES,
     TRIP_NOT_PENDING_MESSAGE,
     TRIP_TAKEN_MESSAGE,
     TripContainer,
@@ -29,7 +36,7 @@ import {
 } from "@/features/trips/trips";
 import { CardSelectFormField } from "@/features/pilots/pilots";
 import { VEHICLE_TYPE_LABELS, VehicleCardSelectFormField, vehicleProvider } from "@/features/vehicles/vehicles";
-import { CustomForm, Modal, SpinnerComponent, useNotification } from "@/features/shared/shared";
+import { CustomForm, Modal, SelectFormField, SpinnerComponent, TextFormField, useNotification } from "@/features/shared/shared";
 import { pilotProvider } from "@/features/pilots/pilots";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -92,12 +99,26 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
         ? { pilotId: crew.pilotId, vehicleId: crew.vehicleId }
         : undefined;
 
+    /**
+     * Solo la tripulación se precarga. Los galones nacen vacíos siempre: cada
+     * asignación crea **su propia carga** y heredar la cifra de la anterior
+     * invitaría a guardar sin mirar un número que no se puede corregir.
+     *
+     * `keepDirtyValues` protege justo eso. La tripulación llega del detalle y
+     * puede resolverse **después** de que el usuario empiece a teclear; sin él,
+     * ese `values` que aparece tarde reiniciaría el formulario entero y se
+     * llevaría por delante unos galones ya escritos.
+     */
     const {
         control,
+        register,
         handleSubmit,
         setError,
         formState: { errors },
-    } = useForm<TripAssignmentForm>({ values: currentCrew });
+    } = useForm<TripAssignmentFormValues>({
+        values: currentCrew,
+        resetOptions: { keepDirtyValues: true }
+    });
 
     const { data: pilots, isLoading: isLoadingPilots } = useQuery({
         queryKey: ['getPilots', TRIP_CREW_LIMIT, '0'],
@@ -110,12 +131,14 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
     });
 
     const { mutate, isPending } = useMutation({
-        mutationFn: (payload: TripAssignmentForm) =>
-            tripProvider.assignTripById(trip.id.toString(), payload),
+        mutationFn: (values: TripAssignmentFormValues) =>
+            tripProvider.assignTripById(trip.id.toString(), buildTripAssignmentPayload(values)),
         onSuccess: (message) => {
             notification.success(message);
             queryClient.invalidateQueries({ queryKey: ['getTrips'] });
             queryClient.invalidateQueries({ queryKey: ['getTripById', trip.id.toString()] });
+            /** La asignación acaba de crear una carga: el registro cambió. */
+            queryClient.invalidateQueries({ queryKey: ['getTripFuels', trip.id.toString()] });
             onClose();
         },
         /**
@@ -146,7 +169,7 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
         }
     });
 
-    const onSubmit = (data: TripAssignmentForm) => mutate(buildTripAssignmentPayload(data));
+    const onSubmit = (data: TripAssignmentFormValues) => mutate(data);
 
     const pilotOptions = (pilots?.data ?? []).map((pilot) => ({
         value: pilot.id,
@@ -185,7 +208,7 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                 </p>
             )}
 
-            <CardSelectFormField<TripAssignmentForm>
+            <CardSelectFormField<TripAssignmentFormValues>
                 label="Piloto"
                 name="pilotId"
                 description="Quién conduce. Tiene que ser un piloto de tu misma empresa."
@@ -197,7 +220,7 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                 disabled={isPending}
             />
 
-            <VehicleCardSelectFormField<TripAssignmentForm>
+            <VehicleCardSelectFormField<TripAssignmentFormValues>
                 label="Unidad"
                 name="vehicleId"
                 description="Solo aparecen las unidades activas: una inactiva o en taller la rechaza el servidor."
@@ -208,6 +231,53 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                 columns={2}
                 disabled={isPending}
             />
+
+            {/* El combustible viaja con la tripulación: la API los exige en el mismo cuerpo. */}
+            <div className="flex flex-col gap-4 border-t border-line pt-6">
+                <div className="flex flex-col gap-1">
+                    <h3 className="font-display text-base font-semibold tracking-tight text-ink">
+                        Primera carga de combustible
+                    </h3>
+
+                    <p className="text-sm text-ink-muted">
+                        Los galones que le entregas al viaje. Quedan{' '}
+                        <span className="text-ink">pendientes de confirmación</span> del
+                        piloto, y hasta que él confirme una carga{' '}
+                        <span className="text-ink">no puede iniciar el viaje</span>. Si
+                        cambias la tripulación se registra otra carga: se suman, no se
+                        reemplazan.
+                    </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <TextFormField<TripAssignmentFormValues>
+                        label="Galones"
+                        name="fuelGallons"
+                        type="number"
+                        placeholder="45.50"
+                        register={register}
+                        errorMessage={errors.fuelGallons?.message}
+                        validation={{
+                            required: "Los galones de combustible son obligatorios",
+                            valueAsNumber: true,
+                            min: {
+                                value: 0.01,
+                                message: "Los galones de combustible deben ser mayores a 0"
+                            }
+                        }}
+                        disabled={isPending}
+                    />
+
+                    <SelectFormField<TripAssignmentFormValues>
+                        label="Tipo de combustible"
+                        name="fuelType"
+                        options={TRIP_FUEL_TYPES}
+                        control={control}
+                        errorMessage={errors.fuelType?.message}
+                        validation={{ required: "El tipo de combustible es obligatorio" }}
+                    />
+                </div>
+            </div>
 
             <div className="flex flex-wrap justify-end gap-3">
                 <button
