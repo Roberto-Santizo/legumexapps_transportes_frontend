@@ -4,7 +4,7 @@ Guía para Claude Code en este repositorio.
 
 ## Proyecto
 
-Frontend de LegumexApps Transportes: React 19 + TypeScript + Vite 8, Tailwind CSS v4, Redux Toolkit, TanStack Query, React Router 7, react-hook-form, zod, MUI/Headless UI, framer-motion, recharts, lucide-react, react-select, react-dropzone, input-otp, `@vis.gl/react-google-maps` (autocompletado de lugares). React Compiler activo (`babel-plugin-react-compiler` vía `@rolldown/plugin-babel` en `vite.config.ts`).
+Frontend de LegumexApps Transportes: React 19 + TypeScript + Vite 8, Tailwind CSS v4, Redux Toolkit, TanStack Query, React Router 7, react-hook-form, zod, MUI/Headless UI, framer-motion, recharts, lucide-react, react-select, react-dropzone, input-otp, `@vis.gl/react-google-maps` (autocompletado de lugares y mapas), `laravel-echo` + `pusher-js` (websockets Reverb para seguimiento en vivo). React Compiler activo (`babel-plugin-react-compiler` vía `@rolldown/plugin-babel` en `vite.config.ts`).
 
 UI y mensajes de error en **español**.
 
@@ -21,12 +21,12 @@ El servidor de desarrollo ya está corriendo; **no ejecutar `npm run dev`**. Par
 ## Configuración
 
 - Alias `@/*` → `./src/*` (declarado en `vite.config.ts` y `tsconfig.app.json`). Usar siempre imports con `@/`, no rutas relativas largas.
-- `VITE_BASE_URL` en `.env` define el baseURL de axios.
+- Variables de `.env`: `VITE_BASE_URL` (baseURL de axios, termina en `/api`), `VITE_GOOGLE_API_KEY` (Places/Maps), `VITE_PACKING_LIST_BASE_URL` (backend externo de packing lists), `VITE_REVERB_APP_KEY` / `VITE_REVERB_HOST` / `VITE_REVERB_PORT` / `VITE_REVERB_SCHEME` (websockets). Si faltan las de Google o Reverb la app no rompe: la pantalla avisa y degrada.
 - TS estricto de uso: `noUnusedLocals`, `noUnusedParameters`, `verbatimModuleSyntax` (los tipos se importan con `import type`).
 
 ## Arquitectura
 
-`src/config/` — infraestructura de app, con barrel propio (`import { type RootState } from "@/config/config"`): `http/axios.ts` (instancia axios + interceptor que inyecta `AUTH_TOKEN` de localStorage), `store/store.ts` (Redux, exporta `RootState`/`AppDispatch`), `query/queryClient.ts`, `initializer/AppInitializer.tsx` + `initializer/session.ts` (valida sesión con `authProvider.checkStatus()` antes de renderizar).
+`src/config/` — infraestructura de app, con barrel propio (`import { type RootState } from "@/config/config"`): `http/axios.ts` (instancia axios + interceptor que inyecta `AUTH_TOKEN` de localStorage), `http/packingListApi.ts` (segunda instancia axios contra `VITE_PACKING_LIST_BASE_URL`, **sin** interceptor de token: esa API es pública y de otro dominio), `broadcasting/echo.ts` (singleton de Laravel Echo/Reverb: `getEcho()` devuelve `null` sin config o sin sesión, se reconstruye si cambia el token, `getBroadcastState()` para leer el estado sin crear conexión, `isBroadcastingConfigured`), `store/store.ts` (Redux, exporta `RootState`/`AppDispatch`), `query/queryClient.ts`, `initializer/AppInitializer.tsx` + `initializer/session.ts` (valida sesión con `authProvider.checkStatus()` antes de renderizar).
 
 `src/features/<feature>/` — cada feature en capas:
 
@@ -35,12 +35,16 @@ domain/          datasources/ (clases abstractas), repositories/ (abstractas),
                  schemas/ (zod), types/ (z.infer + tipos *Form)
 infrastructure/  datasources/*Impl.ts (axios + zod), repositories/*Impl.ts (delegan),
                  utils/ (payloads, query strings, mapeo de errores del backend, fechas)
-presentation/    screens/, components/, providers/
+presentation/    screens/, components/, providers/, hooks/ (opcional)
 ```
 
-Features con pantallas y rutas: `auth`, `dashboard`, `vehicles`, `fuel-prices`, `products`, `zones`, `locations`, `departure-points`, `accessories`, `clients`, `pilots`, `trips`, `carriers` (de esta última solo `/completar-perfil` está registrada).
+Features con pantallas y rutas: `auth`, `dashboard`, `vehicles`, `fuel-prices`, `products`, `zones`, `locations`, `departure-points`, `accessories`, `clients`, `shipping-lines`, `pilots`, `trips`, `carriers` (de esta última solo `/completar-perfil` está registrada).
 
-Features de soporte, sin pantallas propias: `accessory-characteristics`, `freight-rates`, `places`, `vehicle-expenses` — exponen componentes (modales, campos, secciones) que se montan dentro de otras features.
+Features de soporte, sin pantallas propias: `accessory-characteristics`, `freight-rates`, `places`, `vehicle-expenses`, `packing-lists` — exponen componentes (modales, campos, secciones) que se montan dentro de otras features.
+
+`trips` es la feature más grande: además del CRUD tiene `/viajes/:id/seguimiento` (`TrackingTrip`), asignación de piloto/vehículo (`TripAssignmentModal`), combustibles (`TripFuelsModal`), tiempos muertos (`TripTimeoutsSection`), documentos del piloto (`TripPilotDocuments`), resumen de packing list y mapas de ruta/seguimiento. El hook `presentation/hooks/useTripTracking.ts` cose el historial HTTP (`getTripPositions`) con el canal privado `trips.{tripId}` (evento `.trip.position.updated`, con punto inicial obligatorio); se suscribe al socket **antes** de pedir el `GET` y deduplica con `mergeTripPositions`. El estado del socket se lee con `useSyncExternalStore`, no se copia a `useState`.
+
+`packing-lists` habla con otro backend vía `packingListApi`: el sobre de respuesta es `response` (no `data`) y el 404 se traduce a `null` (la orden sin packing list es un resultado, no un error).
 
 `shared` es transversal (ver más abajo).
 
@@ -85,14 +89,14 @@ Respuestas de API: `ApiResponseSchema` (`statusCode`, `message`), `ApiPaginatedR
 - **animations/**: wrappers de framer-motion (`FadeInUp`, `StaggerContainer`, `StaggerItem`, …).
 - **core/notifications/**: `ToastNotificationProvider` implementa `NotificationAdapter` (`success`/`error`/`warning`/`information`/`question`) como store externo leído con `useSyncExternalStore`. Se consume con el hook `useNotification()`; nunca instanciar toasts a mano.
 - **layouts/**: `PublicLayout`, `ProtectedLayout` (sidebar colapsable persistida en `SIDEBAR_COLLAPSED`).
-- **domain/**: `navigation/navigation.tsx` (`NAVIGATION`, fuente única del menú lateral), `schemas/` (`ApiResponseSchema`, `ApiPaginatedResponseSchema`, …), `types/`, `errors/` (`DomainError`), `interfaces/` (`NotificationAdapter`).
+- **domain/**: `navigation/navigation.tsx` (`NAVIGATION`, fuente única del menú lateral), `schemas/` (`ApiResponseSchema`, `ApiPaginatedResponseSchema`, …), `types/`, `errors/` (`DomainError`), `interfaces/` (`NotificationAdapter`), `validation/` (vacío por ahora).
 - **hooks/**: `usePagination(searchParams)` lee `page` y `limit` de la URL; `useNotification()`.
 - **presentation/**: `Profile`.
 - **utils/**: helpers sueltos (`initials`).
 
 ### Rutas
 
-`src/router.tsx` centraliza las rutas, agrupadas por layout (`PublicLayout` / `ProtectedLayout`), un bloque `<Route element={<ProtectedLayout />}>` por feature. Los paths son en español (`/confirmar-cuenta`, `/vehiculos`, `/clientes`, `/viajes`, `.../crear`, `/:id`, `/:id/editar`). El scaffolding de features **no** registra rutas ni entradas de `NAVIGATION`; hay que agregarlas a mano.
+`src/router.tsx` centraliza las rutas, agrupadas por layout (`PublicLayout` / `ProtectedLayout`), un bloque `<Route element={<ProtectedLayout />}>` por feature. Los paths son en español (`/confirmar-cuenta`, `/vehiculos`, `/gasolina-precios`, `/productos`, `/zonas`, `/ubicaciones`, `/puntos-de-partida`, `/accesorios`, `/clientes`, `/navieras`, `/pilotos`, `/viajes`, `.../crear`, `/:id`, `/:id/editar`, `/viajes/:id/seguimiento`). `/zonas` tiene rutas pero su entrada de `NAVIGATION` está comentada. El scaffolding de features **no** registra rutas ni entradas de `NAVIGATION`; hay que agregarlas a mano.
 
 ## Estilos
 
@@ -102,7 +106,7 @@ Antes de diseñar UI nueva, invocar la skill `frontend-design`.
 
 ## Referencias de API
 
-`src/references/feat-references/*.md` documenta el contrato del backend por dominio (endpoints, validaciones, mensajes de error literales, particularidades). **Leer el archivo correspondiente antes de implementar o tocar una feature**: cada dominio tiene trampas propias (p. ej. `clients-api.md` — el `DELETE` es soft delete real y los duplicados llegan como 400 en `message`, no como 422 en `errors`).
+`src/references/feat-references/*.md` documenta el contrato del backend por dominio (endpoints, validaciones, mensajes de error literales, particularidades). **Leer el archivo correspondiente antes de implementar o tocar una feature**: cada dominio tiene trampas propias (p. ej. `clients-api.md` — el `DELETE` es soft delete real y los duplicados llegan como 400 en `message`, no como 422 en `errors`). Trips se reparte en varios archivos: `trips-api.md`, `trip-fuels-api.md`, `trip-timeouts-api.md`, `trip-positions-api.md` (websockets/seguimiento), `pilot-documents-api.md`, `packing-list-summary-endpoint.md`, `freight-rate-quote-api.md`. Para gastos de vehículo usar `vehicle-expenses-api-updated.md` (el `is_invoiced` obligatorio rompe el alta antigua); `vehicle-expenses-api.md` es la versión previa.
 
 `src/references/[feature-name]/` es el esqueleto de referencia (archivos en su mayoría vacíos) que consume el scaffolding.
 
