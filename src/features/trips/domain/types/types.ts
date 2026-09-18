@@ -1,4 +1,4 @@
-import type { FuelTypeSchema, PaginatedTripsSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
+import type { FuelTypeSchema, PaginatedTripsSchema, TripExpenseSchema, TripExpensesSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
 import type { z } from "zod";
 
 export type PaginatedTrips = z.infer<typeof PaginatedTripsSchema>;
@@ -91,15 +91,20 @@ export type TripFormValues = Omit<TripForm, keyof TripRouteForm> & Partial<TripR
 }
 
 /**
- * Los **cuatro** campos de `/assignment`, los cuatro obligatorios. `null` en
- * cualquiera es 422: la desasignación no existe en este dominio. `assignedBy`
- * no se envía —sale del token—.
+ * Los **cuatro** campos obligatorios de `/assignment` más **dos opcionales**.
+ * `null` en cualquiera de los cuatro es 422: la desasignación no existe en
+ * este dominio. `assignedBy` no se envía —sale del token—.
  *
  * Los dos de combustible son un añadido **incompatible y sin periodo de
  * gracia**: mandar solo la tripulación responde 422 en *todas* las
  * asignaciones. La primera carga se inserta en la misma transacción que la
  * asignación, así que ningún viaje queda tomado con cero cargas —y reasignar
  * **añade otra carga**, no pisa la anterior—.
+ *
+ * Los dos de viáticos (SPEC 31) son **opcionales y no rompen nada**: con
+ * `expenseAmount` la asignación crea el primer viático en la misma
+ * transacción; sin él, nada cambia. `expenseDescription` sin `expenseAmount`
+ * se ignora en silencio. Reasignar con monto **añade otro viático**.
  */
 export type TripAssignmentForm = {
     pilotId: number;
@@ -107,6 +112,10 @@ export type TripAssignmentForm = {
     /** Los galones de la primera carga. `min:0.01`: cero y negativos son 422. */
     fuelGallons: number;
     fuelType: FuelType;
+    /** El dinero del primer viático. `min:0.01` si se manda; ausente = sin viático. */
+    expenseAmount?: number;
+    /** Texto libre, máx 255. Solo viaja junto a `expenseAmount`. */
+    expenseDescription?: string;
 }
 
 /**
@@ -121,6 +130,9 @@ export type TripAssignmentFormValues = {
     vehicleId: number;
     fuelGallons?: number;
     fuelType?: FuelType;
+    /** Vacío o `NaN` significa «sin viático»: el payload lo omite. */
+    expenseAmount?: number;
+    expenseDescription?: string;
 }
 
 /** Los campos del formulario a los que se puede anclar un error del backend. */
@@ -192,6 +204,28 @@ export type TripFuelForm = {
     /** `min:0.01`: cero y negativos son 422. Viaja como número. */
     gallons: number;
     fuelType: FuelType;
+}
+
+/* ------------------------------------------------------------------ *
+ * Viáticos
+ * ------------------------------------------------------------------ */
+
+/** Un viático. Ojo: `amount` es cadena y `receivedAt` no es ISO. */
+export type TripExpense = z.infer<typeof TripExpenseSchema>;
+
+/** El sobre del listado, con `totalAmount` en la raíz. */
+export type TripExpenses = z.infer<typeof TripExpensesSchema>;
+
+/**
+ * El alta de un viático: un monto obligatorio y una descripción opcional.
+ * Otras cuatro claves —`tripId`, `receivedAt`, `confirmedBy` y
+ * `registeredBy`— se descartan en silencio, como en las cargas.
+ */
+export type TripExpenseForm = {
+    /** `min:0.01`, `max:99999999.99`. Viaja como número. GTQ. */
+    amount: number;
+    /** Texto libre, máx 255. Solo `trim`; en blanco se guarda como `null`. */
+    description?: string | null;
 }
 
 /* ------------------------------------------------------------------ *

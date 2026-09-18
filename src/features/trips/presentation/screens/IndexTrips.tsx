@@ -20,6 +20,7 @@ import {
     TRIP_ALREADY_DELETED_MESSAGE,
     TripAssignmentModal,
     TripDeleteDialog,
+    TripExpensesModal,
     TripFiltersBar,
     TripFuelsModal,
     TripMoment,
@@ -29,7 +30,9 @@ import {
     canAssignTrip,
     canAssignTrips,
     canFinishTrip,
+    canReadTripExpenses,
     canReadTripFuels,
+    canRegisterTripExpenses,
     canRegisterTripFuels,
     canRunTrips,
     canStartTrip,
@@ -44,7 +47,7 @@ import {
     type TripListItem
 } from "@/features/trips/trips";
 import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
-import { CircleCheckBig, Eye, Fuel, Pencil, Play, Plus, Radar, Trash2, Truck } from "lucide-react";
+import { CircleCheckBig, Eye, Fuel, Pencil, Play, Plus, Radar, Trash2, Truck, Wallet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -76,6 +79,9 @@ export function IndexTrips() {
     /** Leer las cargas lo pueden los cuatro roles; registrarlas, solo la empresa. */
     const canReadFuels = canReadTripFuels(role);
     const canRegisterFuels = canRegisterTripFuels(role, user?.carrierId);
+    /** Los viáticos siguen la misma regla que las cargas. */
+    const canReadExpenses = canReadTripExpenses(role);
+    const canRegisterExpenses = canRegisterTripExpenses(role, user?.carrierId);
 
     const search = searchParams.get('search') ?? '';
     const status = searchParams.get('status') ?? '';
@@ -88,6 +94,8 @@ export function IndexTrips() {
     const [tripToAssign, setTripToAssign] = useState<TripListItem | null>(null);
     /** El viaje cuyas cargas de combustible se están mirando. */
     const [tripToFuel, setTripToFuel] = useState<TripListItem | null>(null);
+    /** El viaje cuyos viáticos se están mirando. */
+    const [tripToExpense, setTripToExpense] = useState<TripListItem | null>(null);
 
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ['getTrips', page, rowsPerPage, search, status, dateFrom, dateTo],
@@ -173,6 +181,11 @@ export function IndexTrips() {
             label: "Combustible",
             icon: <Fuel />,
             onClick: () => setTripToFuel(trip)
+        }] : []),
+        ...(canReadExpenses ? [{
+            label: "Viáticos",
+            icon: <Wallet />,
+            onClick: () => setTripToExpense(trip)
         }] : []),
         ...(canRun && canStartTrip(trip) ? [{
             label: "Iniciar viaje",
@@ -418,6 +431,12 @@ export function IndexTrips() {
                 trip={tripToFuel}
                 canRegister={canRegisterFuels}
                 onClose={() => setTripToFuel(null)}
+            />
+
+            <TripExpensesModal
+                trip={tripToExpense}
+                canRegister={canRegisterExpenses}
+                onClose={() => setTripToExpense(null)}
             />
         </div>
     );

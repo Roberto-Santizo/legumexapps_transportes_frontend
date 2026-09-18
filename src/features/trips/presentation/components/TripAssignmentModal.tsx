@@ -20,12 +20,18 @@
  * cero cargas, y como el viaje no arranca hasta que el piloto confirme alguna,
  * los galones que se tecleen aquí son lo primero que él tendrá que aceptar.
  * Reasignar **añade otra carga**, nunca reemplaza la anterior.
+ *
+ * Desde SPEC 31 puede llevar, además, el **primer viático**: opcional, en la
+ * misma transacción, y sin condicionar nada —el viaje arranca con o sin
+ * viáticos—. Reasignar con monto añade otro viático, igual que la carga.
  */
 
 import type { TripAssignmentFormValues, TripSummary } from "@/features/trips/trips";
 import {
     TRIP_CREW_LIMIT,
+    TRIP_EXPENSE_MAX_AMOUNT,
     TRIP_FUEL_TYPES,
+    TRIP_TEXT_MAX_LENGTH,
     TRIP_NOT_PENDING_MESSAGE,
     TRIP_TAKEN_MESSAGE,
     TripContainer,
@@ -36,7 +42,7 @@ import {
 } from "@/features/trips/trips";
 import { CardSelectFormField } from "@/features/pilots/pilots";
 import { VEHICLE_TYPE_LABELS, VehicleCardSelectFormField, vehicleProvider } from "@/features/vehicles/vehicles";
-import { CustomForm, Modal, SelectFormField, SpinnerComponent, TextFormField, useNotification } from "@/features/shared/shared";
+import { CustomForm, Modal, SelectFormField, SpinnerComponent, TextAreaFormField, TextFormField, useNotification } from "@/features/shared/shared";
 import { pilotProvider } from "@/features/pilots/pilots";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -137,8 +143,9 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
             notification.success(message);
             queryClient.invalidateQueries({ queryKey: ['getTrips'] });
             queryClient.invalidateQueries({ queryKey: ['getTripById', trip.id.toString()] });
-            /** La asignación acaba de crear una carga: el registro cambió. */
+            /** La asignación acaba de crear una carga —y quizá un viático—: los registros cambiaron. */
             queryClient.invalidateQueries({ queryKey: ['getTripFuels', trip.id.toString()] });
+            queryClient.invalidateQueries({ queryKey: ['getTripExpenses', trip.id.toString()] });
             onClose();
         },
         /**
@@ -275,6 +282,62 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                         control={control}
                         errorMessage={errors.fuelType?.message}
                         validation={{ required: "El tipo de combustible es obligatorio" }}
+                    />
+                </div>
+            </div>
+
+            {/* El viático es opcional: sin monto no se manda nada y la asignación sigue igual. */}
+            <div className="flex flex-col gap-4 border-t border-line pt-6">
+                <div className="flex flex-col gap-1">
+                    <h3 className="font-display text-base font-semibold tracking-tight text-ink">
+                        Primer viático{' '}
+                        <span className="font-sans text-sm font-normal text-ink-subtle">(opcional)</span>
+                    </h3>
+
+                    <p className="text-sm text-ink-muted">
+                        El dinero que le entregas al piloto para el viaje. Si no entregas
+                        nada ahora, déjalo en blanco: puedes registrarlo después. Queda{' '}
+                        <span className="text-ink">pendiente de que el piloto confirme</span>{' '}
+                        haberlo recibido, y no condiciona el inicio del viaje. Si cambias
+                        la tripulación con monto se registra otro viático: se suman, no se
+                        reemplazan.
+                    </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <TextFormField<TripAssignmentFormValues>
+                        label="Monto (Q)"
+                        name="expenseAmount"
+                        type="number"
+                        placeholder="350.00"
+                        register={register}
+                        errorMessage={errors.expenseAmount?.message}
+                        validation={{
+                            valueAsNumber: true,
+                            /** Vacío es `NaN` y se acepta: significa «sin viático». */
+                            validate: (value) => {
+                                if (typeof value !== 'number' || Number.isNaN(value)) return true;
+                                if (value <= 0) return "El monto del viático debe ser mayor a 0";
+                                if (value > TRIP_EXPENSE_MAX_AMOUNT) return `El monto del viático no puede superar ${TRIP_EXPENSE_MAX_AMOUNT}`;
+                                return true;
+                            }
+                        }}
+                        disabled={isPending}
+                    />
+
+                    <TextAreaFormField<TripAssignmentFormValues>
+                        label="Descripción del viático"
+                        name="expenseDescription"
+                        placeholder="Alimentación y peajes"
+                        rows={2}
+                        register={register}
+                        errorMessage={errors.expenseDescription?.message}
+                        validation={{
+                            maxLength: {
+                                value: TRIP_TEXT_MAX_LENGTH,
+                                message: `La descripción del viático no puede superar los ${TRIP_TEXT_MAX_LENGTH} caracteres`
+                            }
+                        }}
                     />
                 </div>
             </div>

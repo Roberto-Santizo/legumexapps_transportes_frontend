@@ -13,6 +13,7 @@ import {
     TripAssignmentModal,
     TripContainer,
     TripDeleteDialog,
+    TripExpensesModal,
     TripFuelsModal,
     TripMoment,
     TripOrder,
@@ -25,14 +26,17 @@ import {
     canAssignTrip,
     canAssignTrips,
     canFinishTrip,
+    canReadTripExpenses,
     canReadTripFuels,
     canReadTripTimeouts,
+    canRegisterTripExpenses,
     canRegisterTripFuels,
     canRunTrips,
     canStartTrip,
     canTrackTrip,
     canTrackTrips,
     canWriteTrips,
+    formatAmount,
     formatGallons,
     formatTripHours,
     formatTripKilometers,
@@ -42,7 +46,7 @@ import {
     tripProvider
 } from "@/features/trips/trips";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
-import { CircleCheckBig, Fuel, Pencil, Play, Radar, Trash2, Truck } from "lucide-react";
+import { CircleCheckBig, Fuel, Pencil, Play, Radar, Trash2, Truck, Wallet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -81,12 +85,16 @@ export function ShowTrip() {
     /** Leer las cargas lo pueden los cuatro roles; registrarlas, solo la empresa. */
     const canReadFuels = canReadTripFuels(role);
     const canRegisterFuels = canRegisterTripFuels(role, user?.carrierId);
+    /** Los viáticos siguen la misma regla que las cargas. */
+    const canReadExpenses = canReadTripExpenses(role);
+    const canRegisterExpenses = canRegisterTripExpenses(role, user?.carrierId);
     /** Las paradas las ven los mismos que el rastro: todos menos el piloto. */
     const canReadTimeouts = canReadTripTimeouts(role);
 
     const [isDeleting, setIsDeleting] = useState(false);
     const [isAssigning, setIsAssigning] = useState(false);
     const [isLoadingFuel, setIsLoadingFuel] = useState(false);
+    const [isViewingExpenses, setIsViewingExpenses] = useState(false);
 
     const { data: trip, isLoading, isError, error } = useQuery({
         queryKey: ['getTripById', id],
@@ -191,6 +199,15 @@ export function ShowTrip() {
                                 type="button"
                                 icon={<Fuel size={16} />}
                                 onClick={() => setIsLoadingFuel(true)}
+                            />
+                        )}
+
+                        {canReadExpenses && (
+                            <CustomFilledButton
+                                label="Viáticos"
+                                type="button"
+                                icon={<Wallet size={16} />}
+                                onClick={() => setIsViewingExpenses(true)}
                             />
                         )}
 
@@ -328,6 +345,13 @@ export function ShowTrip() {
                                         <Field label="Combustible confirmado">
                                             <span className="font-mono text-[13px] tabular-nums">
                                                 {formatGallons(trip.totalFuelGallons ?? "0.00")} gal
+                                            </span>
+                                        </Field>
+
+                                        {/* Misma regla que el combustible: solo lo que el piloto confirmó haber recibido. */}
+                                        <Field label="Viáticos confirmados">
+                                            <span className="font-mono text-[13px] tabular-nums">
+                                                {formatAmount(trip.totalExpensesAmount ?? "0.00")}
                                             </span>
                                         </Field>
                                     </dl>
@@ -475,6 +499,12 @@ export function ShowTrip() {
                 trip={isLoadingFuel ? trip ?? null : null}
                 canRegister={canRegisterFuels}
                 onClose={() => setIsLoadingFuel(false)}
+            />
+
+            <TripExpensesModal
+                trip={isViewingExpenses ? trip ?? null : null}
+                canRegister={canRegisterExpenses}
+                onClose={() => setIsViewingExpenses(false)}
             />
         </div>
     );

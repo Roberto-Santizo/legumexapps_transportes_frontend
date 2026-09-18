@@ -139,6 +139,14 @@ export const TripSchema = z.object({
      * parse por una clave informativa.
      */
     totalFuelGallons: z.string().optional(),
+    /**
+     * El dinero de viáticos **confirmado** por el piloto, como cadena de dos
+     * decimales en quetzales (SPEC 31). Misma regla que `totalFuelGallons`: lo
+     * registrado sin confirmar no suma, así que un viaje recién asignado con
+     * viático trae `"0.00"`. Opcional por el mismo motivo: un backend anterior
+     * no la manda.
+     */
+    totalExpensesAmount: z.string().optional(),
     createdAt: z.string().nullable(),
     updatedAt: z.string().nullable(),
     /**
@@ -312,6 +320,56 @@ export const TripFuelsSchema = ApiPaginatedResponseSchema.extend({
     data: z.array(TripFuelSchema),
     /** ⚠️ Solo las cargas **confirmadas**. Cadena de dos decimales. */
     totalGallons: z.string(),
+    lastPage: z.number().optional(),
+});
+
+/* ------------------------------------------------------------------ *
+ * Viáticos
+ * ------------------------------------------------------------------ */
+
+/**
+ * Un viático: el dinero que la empresa transportista le entrega al piloto de
+ * un viaje. Es el **calco de `TripFuelSchema` con dinero en vez de galones**:
+ * ocho claves y los mismos dos avisos.
+ *
+ * - **`amount` es una cadena** de dos decimales (`"350.00"`), no un número:
+ *   hay que `parseFloat` antes de sumar. Es GTQ por convención —no hay campo
+ *   de moneda—.
+ * - **`receivedAt` no es ISO 8601.** Llega en el `d-m-Y h:i:s A` del proyecto
+ *   y es la hora del **servidor** al confirmar.
+ *
+ * La tabla es **append-only**: no existe editar ni borrar un viático ni
+ * desconfirmarlo. Un `3500` en vez de `350` se queda para siempre.
+ */
+export const TripExpenseSchema = z.object({
+    /** El id del **viático**, no el del viaje. */
+    id: z.number(),
+    /** Sí viaja: la confirmación vive fuera del viaje. */
+    tripId: z.number(),
+    /** ⚠️ Cadena de dos decimales, no número. GTQ. */
+    amount: z.string(),
+    /** Texto libre tal como se tecleó, solo `trim`. `null` si no se mandó o iba en blanco. */
+    description: z.string().nullable(),
+    /** **Derivado** de `receivedAt`: no hay ninguna columna `status`. */
+    isConfirmed: z.boolean(),
+    /** ⚠️ `d-m-Y h:i:s A`, no ISO 8601. `null` mientras el piloto no confirme. */
+    receivedAt: z.string().nullable(),
+    /** El piloto que confirmó. **No viene su id.** */
+    confirmedByName: z.string().nullable(),
+    /** Quien registró el viático. En el primero del viaje, quien lo tomó. */
+    registeredByName: z.string(),
+});
+
+/**
+ * El sobre entero del listado, como en las cargas: `totalAmount` viaja en la
+ * **raíz**, así que se parsea la respuesta completa. `total` es el conteo del
+ * paginador y solo aparece con `limit`; `totalAmount` es la **suma de los
+ * viáticos confirmados** y viaja siempre.
+ */
+export const TripExpensesSchema = ApiPaginatedResponseSchema.extend({
+    data: z.array(TripExpenseSchema),
+    /** ⚠️ Solo los viáticos **confirmados**. Cadena de dos decimales. */
+    totalAmount: z.string(),
     lastPage: z.number().optional(),
 });
 

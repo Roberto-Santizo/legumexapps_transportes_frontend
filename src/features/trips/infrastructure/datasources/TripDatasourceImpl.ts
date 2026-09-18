@@ -1,5 +1,5 @@
-import type { PaginatedTrips, Trip, TripAssignmentForm, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
-import { PaginatedTripsSchema, TripDatasource, TripFuelsSchema, TripPositionSchema, TripSchema, TripTimeoutSchema, buildTripQuery, getTripErrorMessage } from "@/features/trips/trips";
+import type { PaginatedTrips, Trip, TripAssignmentForm, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
+import { PaginatedTripsSchema, TripDatasource, TripExpensesSchema, TripFuelsSchema, TripPositionSchema, TripSchema, TripTimeoutSchema, buildTripQuery, getTripErrorMessage } from "@/features/trips/trips";
 import { ApiResponseSchema } from "@/features/shared/shared";
 import { isAxiosError, type AxiosInstance } from "axios";
 import { z } from "zod";
@@ -314,6 +314,70 @@ export class TripDatasourceImpl extends TripDatasource {
     async createTripFuel(id: string, payload: TripFuelForm): Promise<string> {
         try {
             const { data } = await this.api.post(`${this.url}/${id}/fuels`, payload);
+            const response = ApiResponseSchema.safeParse(data);
+
+            if (response.success) {
+                return response.data.message;
+            }
+
+            throw new Error("Información no válida");
+        } catch (error) {
+            if (isAxiosError(error)) throw new Error(getTripErrorMessage(error), { cause: error });
+
+            throw new Error("Error no controlado.", { cause: error });
+        }
+    }
+
+    /**
+     * Los viáticos del viaje, y **el sobre entero**: `totalAmount` viaja en la
+     * raíz junto a `statusCode` y `message`, como `totalGallons` en las cargas.
+     * De ahí que se parsee `data` completo y no `data['data']`.
+     *
+     * Las mismas cuatro particularidades que las cargas:
+     *
+     * - **Se pide sin `limit`**: un viaje tiene un puñado de viáticos.
+     * - **Lo leen los cuatro roles**, incluido el piloto asignado: el dinero
+     *   es para él y lo necesita para confirmarlo.
+     * - **`totalAmount` solo suma lo confirmado.** Un viaje recién tomado con
+     *   viático responde `"0.00"` teniendo ya uno: no es un error.
+     * - **Un viaje sin viáticos no es un error**: 200 con `data: []`.
+     *
+     * El viaje borrado responde **404** aquí y **400** en el alta.
+     */
+    async getTripExpenses(id: string): Promise<TripExpenses> {
+        try {
+            const { data } = await this.api.get(`${this.url}/${id}/expenses`);
+            const response = TripExpensesSchema.safeParse(data);
+
+            if (response.success) {
+                return response.data;
+            }
+
+            throw new Error("Información no válida");
+        } catch (error) {
+            if (isAxiosError(error)) throw new Error(getTripErrorMessage(error), { cause: error });
+
+            throw new Error("Error no controlado.", { cause: error });
+        }
+    }
+
+    /**
+     * Registrar un viático: el dinero que la empresa le entrega al piloto.
+     * Solo `carrier`, y solo si **su empresa tomó el viaje** —se compara la
+     * empresa de quien asignó, no la persona—. Sobre la bolsa libre responde
+     * 403 aunque el listado sí se lea.
+     *
+     * Se acepta en `pending` y en `in_route`, nunca en `finished`. A diferencia
+     * del combustible, **no bloquea `/start`**: el viaje arranca con o sin
+     * viáticos.
+     *
+     * **Es irreversible y no se serializa**: no hay `PATCH` ni `DELETE`, y dos
+     * pulsaciones seguidas crean **dos filas**. Por eso la pantalla confirma el
+     * monto antes de llamar aquí.
+     */
+    async createTripExpense(id: string, payload: TripExpenseForm): Promise<string> {
+        try {
+            const { data } = await this.api.post(`${this.url}/${id}/expenses`, payload);
             const response = ApiResponseSchema.safeParse(data);
 
             if (response.success) {

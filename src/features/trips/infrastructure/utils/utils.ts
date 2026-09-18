@@ -18,7 +18,7 @@
  */
 
 import type { Option } from "@/features/shared/shared";
-import type { LatLng, Trip, TripAssignmentForm, TripAssignmentFormValues, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
+import type { LatLng, Trip, TripAssignmentForm, TripAssignmentFormValues, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
 import { formatDistanceKilometers, formatDurationHours } from "@/features/places/places";
 import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
 import { isAxiosError, type AxiosError } from "axios";
@@ -377,13 +377,50 @@ export const buildTripUpdatePayload = (form: TripFormValues): TripUpdateForm => 
  * Los galones sí admiten decimales —el input los da como cadena— y van con
  * `Number`, no con `parseInt`: `45.5` es una carga legítima.
  */
-export const buildTripAssignmentPayload = (form: TripAssignmentFormValues): TripAssignmentForm => ({
-    pilotId: Number(form.pilotId),
-    vehicleId: Number(form.vehicleId),
-    fuelGallons: Number(form.fuelGallons),
-    /** Vacío no llega aquí: el `required` del select lo para antes. */
-    fuelType: form.fuelType!,
-});
+export const buildTripAssignmentPayload = (form: TripAssignmentFormValues): TripAssignmentForm => {
+    const expenseDescription = toExpenseDescription(form.expenseDescription);
+
+    return {
+        pilotId: Number(form.pilotId),
+        vehicleId: Number(form.vehicleId),
+        fuelGallons: Number(form.fuelGallons),
+        /** Vacío no llega aquí: el `required` del select lo para antes. */
+        fuelType: form.fuelType!,
+        /**
+         * El viático es opcional y **no se manda si no hay monto**: un input
+         * numérico vacío da `NaN` con `valueAsNumber`, y mandarlo sería 422.
+         * La descripción solo viaja con el monto: sin él la API la ignora.
+         */
+        ...(hasExpenseAmount(form.expenseAmount) ? {
+            expenseAmount: form.expenseAmount,
+            ...(expenseDescription ? { expenseDescription } : {}),
+        } : {}),
+    };
+};
+
+/** Un monto tecleado de verdad: ni vacío, ni `NaN`, ni cero. */
+const hasExpenseAmount = (amount: number | undefined): amount is number =>
+    typeof amount === 'number' && !Number.isNaN(amount) && amount > 0;
+
+/** La descripción recortada, o `undefined` si iba en blanco: en blanco la API la guarda como `null`. */
+const toExpenseDescription = (description: string | null | undefined): string | undefined => {
+    const trimmed = description?.trim();
+
+    return trimmed ? trimmed : undefined;
+};
+
+/**
+ * El alta de un viático. `amount` viaja como número; la descripción en
+ * blanco no se manda —la API la guardaría como `null` igual—.
+ */
+export const buildTripExpensePayload = (form: TripExpenseForm): TripExpenseForm => {
+    const description = toExpenseDescription(form.description);
+
+    return {
+        amount: Number(form.amount),
+        ...(description ? { description } : {}),
+    };
+};
 
 /** Los dos campos del alta de una carga. `gallons` viaja como número. */
 export const buildTripFuelPayload = (form: TripFuelForm): TripFuelForm => ({
@@ -554,7 +591,7 @@ export const getTripAssignmentFieldErrors = (error: unknown): TripAssignmentFiel
 
     const { errors, message } = data as { errors?: unknown; message?: unknown };
 
-    const collected = collectFieldErrors(errors, ['pilotId', 'vehicleId', 'fuelGallons', 'fuelType'] as const);
+    const collected = collectFieldErrors(errors, ['pilotId', 'vehicleId', 'fuelGallons', 'fuelType', 'expenseAmount', 'expenseDescription'] as const);
 
     if (collected.length > 0) return collected;
 
@@ -726,6 +763,80 @@ export const getTripFuelFieldErrors = (error: unknown): TripFuelFieldError[] => 
     if (!data || typeof data !== 'object') return [];
 
     return collectFieldErrors((data as { errors?: unknown }).errors, ['gallons', 'fuelType'] as const);
+};
+
+/* ------------------------------------------------------------------ *
+ * Viáticos
+ * ------------------------------------------------------------------ */
+
+/** Techo que valida el backend en `amount` y `expenseAmount`. */
+export const TRIP_EXPENSE_MAX_AMOUNT = 99999999.99;
+
+/**
+ * Registrar viáticos es solo de `carrier`, y con empresa registrada: la misma
+ * regla que las cargas. **Ni el administrador ni el `manager` pueden
+ * registrar ni confirmar por ninguna ruta.**
+ */
+export const canRegisterTripExpenses = (role?: string, carrierId?: number | null): boolean =>
+    role === 'carrier' && typeof carrierId === 'number';
+
+/** Leer los viáticos lo pueden los cuatro roles, **incluido el piloto asignado**. */
+export const canReadTripExpenses = (role?: string): boolean => Boolean(role);
+
+/**
+ * Sobre qué viaje se puede registrar un viático: las dos mismas condiciones
+ * que el combustible. Tiene que estar tomado —sobre la bolsa el `POST` es
+ * 403— y no puede estar `finished` —400—.
+ */
+export const canRegisterTripExpense = (trip: Pick<TripListItem, 'status' | 'pilotName'>): boolean =>
+    trip.pilotName !== null && trip.status !== 'finished';
+
+/**
+ * El monto llega como **cadena** de dos decimales, nunca como número. Único
+ * sitio donde se convierte; `parseFloat` porque `Number("")` es `0` y
+ * disimularía una respuesta rota.
+ */
+export const parseAmount = (amount: string): number => {
+    const value = parseFloat(amount);
+
+    return Number.isNaN(value) ? 0 : value;
+};
+
+/** GTQ por convención: la API no manda moneda. */
+const amountFormatter = new Intl.NumberFormat('es-GT', {
+    style: 'currency',
+    currency: 'GTQ',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
+
+/** El monto ya con el símbolo de quetzal y agrupado por millares, para pintarlo. */
+export const formatAmount = (amount: string | number): string =>
+    amountFormatter.format(typeof amount === 'string' ? parseAmount(amount) : amount);
+
+/** Suma el dinero de los viáticos que **todavía no confirmó** el piloto. */
+export const sumPendingAmount = (expenses: TripExpense[]): number =>
+    expenses.reduce((total, expense) => expense.isConfirmed ? total : total + parseAmount(expense.amount), 0);
+
+/** El 403 del `POST` sobre un viaje ajeno o sobre la bolsa libre. */
+export const TRIP_EXPENSE_FOREIGN_MESSAGE = "No puedes registrar viáticos en un viaje que no tomó tu empresa transportista";
+
+export type TripExpenseFieldError = {
+    field: keyof TripExpenseForm;
+    message: string;
+}
+
+/**
+ * Reparte el 422 del alta entre sus dos campos. El resto —403 de empresa
+ * ajena, 400 de viaje finalizado, 404— no pertenece a ningún campo y se muestra
+ * como notificación.
+ */
+export const getTripExpenseFieldErrors = (error: unknown): TripExpenseFieldError[] => {
+    const data = toAxiosError(error)?.response?.data;
+
+    if (!data || typeof data !== 'object') return [];
+
+    return collectFieldErrors((data as { errors?: unknown }).errors, ['amount', 'description'] as const);
 };
 
 /* ------------------------------------------------------------------ *
