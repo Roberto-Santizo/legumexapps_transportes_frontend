@@ -9,57 +9,22 @@
  *   un punto marcando dónde está ahora el vehículo. Es lo único de esta
  *   pantalla que se mueve.
  *
- * `@vis.gl/react-google-maps` no exporta `Polyline`, así que las dos se
- * instancian a mano sobre el mapa del contexto, igual que en `TripRouteMap`.
- * La diferencia está en el rastro: como crece con cada evento, se guarda **una
- * sola** polilínea y se le cambia el camino con `setPath`. Recrearla en cada
- * punto la haría parpadear.
+ * La prevista es la capa estática de `TripMapLayers`, compartida con la ficha.
+ * El rastro no puede serlo: como crece con cada evento, se guarda **una sola**
+ * polilínea y se le cambia el camino con `setPath`. Recrearla en cada punto la
+ * haría parpadear.
  */
 
 import type { LatLng } from "@/features/trips/trips";
+import { TRIP_ROUTE_AMBER, TRIP_ROUTE_INK, TripPlannedRouteLayer } from "@/features/trips/trips";
 import { LocationMapCanvas } from "@/features/locations/locations";
 import { toRoutePath } from "@/features/places/places";
 import { Marker, useMap } from "@vis.gl/react-google-maps";
 import { useEffect, useRef } from "react";
 
-/** Los `--color-ink` y `--color-primary` de `index.css`: Google no lee tokens de Tailwind. */
-const PLANNED_STROKE_COLOR = '#12241c';
-const TRACK_STROKE_COLOR = '#e8a33d';
-
-/** Un guion corto repetido: es la forma de dibujar una línea discontinua en Google Maps. */
-const PLANNED_DASH: google.maps.IconSequence = {
-    icon: {
-        path: 'M 0,-1 0,1',
-        strokeColor: PLANNED_STROKE_COLOR,
-        strokeOpacity: 0.45,
-        strokeWeight: 2,
-        scale: 3,
-    },
-    offset: '0',
-    repeat: '14px',
-};
-
-/** La ruta prevista. No cambia en toda la sesión, así que se crea y se olvida. */
-function TripPlannedRouteLayer({ points }: { points: LatLng[] }) {
-    const map = useMap();
-
-    useEffect(() => {
-        if (!map || points.length === 0) return;
-
-        const line = new google.maps.Polyline({
-            path: toRoutePath(points),
-            map,
-            /** Opaca a cero: lo que se ve son los iconos del guion. */
-            strokeOpacity: 0,
-            icons: [PLANNED_DASH],
-            zIndex: 1,
-        });
-
-        return () => line.setMap(null);
-    }, [map, points]);
-
-    return null;
-}
+/** El guion de la prevista y el ámbar del rastro viven en `TripMapLayers`: son los mismos que usa la ficha. */
+const PLANNED_STROKE_COLOR = TRIP_ROUTE_INK;
+const TRACK_STROKE_COLOR = TRIP_ROUTE_AMBER;
 
 /** El recorrido real: una polilínea que vive mientras vive el mapa y solo cambia de camino. */
 function TripTrackLayer({ points }: { points: LatLng[] }) {

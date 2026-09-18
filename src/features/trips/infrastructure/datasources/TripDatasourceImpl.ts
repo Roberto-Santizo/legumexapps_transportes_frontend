@@ -10,12 +10,14 @@ export class TripDatasourceImpl extends TripDatasource {
     }
 
     /**
-     * Doce campos y los doce obligatorios. Otros cinco —`status`, `pilotId`,
-     * `vehicleId`, `assignedBy` y `registeredBy`— se descartan sin error: el
-     * viaje nace `pending`, sin tripulación, y el autor sale del token.
+     * Catorce campos y los catorce obligatorios (doce hasta SPEC 30: un `POST`
+     * de doce es 422). Otros cinco —`status`, `pilotId`, `vehicleId`,
+     * `assignedBy` y `registeredBy`— se descartan sin error: el viaje nace
+     * `pending`, sin tripulación, y el autor sale del token.
      *
-     * `polyline` la resuelve la pantalla con `GET /api/places/directions`
-     * **antes** de llamar aquí: la API no habla con Google y no calcula nada.
+     * `polyline`, `estimatedKilometers` y `estimatedHours` los resuelve la
+     * pantalla con `GET /api/places/directions` **antes** de llamar aquí, los
+     * tres de la misma respuesta: la API no habla con Google y no calcula nada.
      */
     async createTrip(payload: TripForm): Promise<string> {
         try {
@@ -91,12 +93,16 @@ export class TripDatasourceImpl extends TripDatasource {
      * nada, pero opcional **no** es vaciable: una clave en `null` o en blanco
      * es 422.
      *
-     * Dos avisos que la respuesta no da:
+     * Tres avisos que la respuesta no da:
      *
      * - `pilotId` y `vehicleId` se **ignoran en silencio**. Un 200 aquí no
      *   prueba que se haya asignado nada; para eso está `/assignment`.
      * - Los catálogos se revalidan siempre, aunque solo se mueva una fecha: si
      *   el puerto se desactivó desde el alta, esto responde 400.
+     * - La ruta es **todo o nada** (SPEC 30): `polyline`, `estimatedKilometers`
+     *   y `estimatedHours` viajan los tres o ninguno; uno solo o dos es 422
+     *   con un mensaje por cada campo que falta. El tipo del payload ya lo
+     *   impide en compilación.
      */
     async updateTripById(id: string, payload: TripUpdateForm): Promise<string> {
         try {

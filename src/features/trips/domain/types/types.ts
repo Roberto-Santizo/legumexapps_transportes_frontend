@@ -4,15 +4,15 @@ import type { z } from "zod";
 export type PaginatedTrips = z.infer<typeof PaginatedTripsSchema>;
 /** El viaje completo. **Solo el detalle lo devuelve.** */
 export type Trip = z.infer<typeof TripSchema>;
-/** La fila del listado: quince de las treinta y tres claves del viaje. */
+/** La fila del listado: diecisiete de las treinta y nueve claves del viaje. */
 export type TripListItem = z.infer<typeof TripListItemSchema>;
 
 /**
  * Lo que sirve para las piezas que se montan **desde las dos pantallas** —el
- * diálogo de baja y el de asignación—: las quince claves que siempre llegan,
- * más las del detalle como opcionales. Una fila del listado y un viaje entero
- * encajan los dos, y quien lee una clave del detalle tiene que contar con que
- * venga `undefined`.
+ * diálogo de baja y el de asignación—: las diecisiete claves que siempre
+ * llegan, más las del detalle como opcionales. Una fila del listado y un viaje
+ * entero encajan los dos, y quien lee una clave del detalle tiene que contar
+ * con que venga `undefined`.
  */
 export type TripSummary = TripListItem & Partial<Omit<Trip, keyof TripListItem>>;
 /** Cadena cruda del enum, en inglés: se traduce solo al pintarla. */
@@ -22,12 +22,31 @@ export type TripStatus = z.infer<typeof TripStatusSchema>;
 export type LatLng = [number, number];
 
 /**
- * Los doce campos del alta, **los doce obligatorios**. Otras cinco claves
- * —`status`, `pilotId`, `vehicleId`, `assignedBy` y `registeredBy`— se
- * descartan en el servidor sin error: el viaje nace `pending`, sin tripulación
- * y con el autor sacado del token.
+ * La ruta prevista son **tres campos que viajan juntos** (SPEC 30), y los tres
+ * salen de la **misma** respuesta de `GET /api/places/directions` sin convertir
+ * nada: `polyline`, `distanceKilometers` → `estimatedKilometers` y
+ * `durationHours` → `estimatedHours` (horas decimales). La API los guarda tal
+ * cual: no calcula, no recalcula ni coteja los números con la línea.
+ *
+ * En el `PATCH` son **todo o nada**: mandar uno solo o dos de los tres es 422.
  */
-export type TripForm = {
+export type TripRouteForm = {
+    /** La resuelve el front con `GET /api/places/directions`. La API no la calcula. */
+    polyline: string;
+    /** `0 ≤ x ≤ 999999.99`. Viaja como número; vuelve como cadena de dos decimales. */
+    estimatedKilometers: number;
+    /** `0 ≤ x ≤ 9999.99`, en **horas decimales**. Viaja como número. */
+    estimatedHours: number;
+}
+
+/**
+ * Los catorce campos del alta, **los catorce obligatorios** (doce hasta SPEC
+ * 30: un `POST` de doce es 422). Otras cinco claves —`status`, `pilotId`,
+ * `vehicleId`, `assignedBy` y `registeredBy`— se descartan en el servidor sin
+ * error: el viaje nace `pending`, sin tripulación y con el autor sacado del
+ * token.
+ */
+export type TripForm = TripRouteForm & {
     /** Máx 255. El backend lo guarda en MAYÚSCULAS con espacios colapsados. */
     order: string;
     clientId: number;
@@ -43,28 +62,31 @@ export type TripForm = {
     recolectionDate: string;
     /** `Y-m-d H:i:s`. En el alta, futura y >= `recolectionDate`. */
     shipDate: string;
-    /** La resuelve el front con `GET /api/places/directions`. La API no la calcula. */
-    polyline: string;
     observations: string;
 }
 
 /**
- * El cuerpo del `PATCH`: los mismos doce, todos opcionales, **más `status`** y
- * **sin `pilotId` ni `vehicleId`** —mandarlos responde 200 sin cambiar nada—.
+ * El cuerpo del `PATCH`: los mismos catorce, todos opcionales, **más `status`**
+ * y **sin `pilotId` ni `vehicleId`** —mandarlos responde 200 sin cambiar nada—,
+ * con una salvedad que el tipo hace cumplir: la ruta va **entera o no va**. Un
+ * `PATCH` con solo `polyline`, válido hasta SPEC 30, ya no compila y ya no pasa.
  *
  * Opcional no es vaciable: una clave en `null` o en blanco es 422. Un cuerpo
  * vacío responde 200 sin tocar siquiera `updatedAt`.
  */
-export type TripUpdateForm = Partial<TripForm> & {
-    status?: TripStatus;
-}
+export type TripUpdateForm = Partial<Omit<TripForm, keyof TripRouteForm>>
+    & (TripRouteForm | { polyline?: never; estimatedKilometers?: never; estimatedHours?: never })
+    & { status?: TripStatus };
 
 /**
- * El estado del formulario de alta y edición. `status` solo se pinta al
- * editar, y los tres campos de abajo son andamiaje: sirven para resolver la
- * ruta y no viajan al servidor.
+ * El estado del formulario de alta y edición, que **no es el payload**: la
+ * ruta nace vacía y se rellena sola cuando `/directions` responde, así que sus
+ * tres campos son opcionales aquí y obligatorios al enviar. El `required` del
+ * campo oculto de `polyline` es lo que garantiza el paso de uno a otro, y como
+ * los tres se escriben juntos, con la línea llegan también las dos cifras.
+ * `status` solo se pinta al editar.
  */
-export type TripFormValues = TripForm & {
+export type TripFormValues = Omit<TripForm, keyof TripRouteForm> & Partial<TripRouteForm> & {
     status?: TripStatus;
 }
 

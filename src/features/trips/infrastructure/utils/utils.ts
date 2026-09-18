@@ -18,7 +18,8 @@
  */
 
 import type { Option } from "@/features/shared/shared";
-import type { LatLng, TripAssignmentForm, TripAssignmentFormValues, TripField, TripFilters, TripForm, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
+import type { LatLng, Trip, TripAssignmentForm, TripAssignmentFormValues, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
+import { formatDistanceKilometers, formatDurationHours } from "@/features/places/places";
 import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
 import { isAxiosError, type AxiosError } from "axios";
 
@@ -98,6 +99,68 @@ export const canTrackTrips = (role?: string): boolean =>
  * ninguno se mueve, y ofrecer «seguimiento en vivo» ahí sería mentir.
  */
 export const canTrackTrip = (trip: Pick<TripListItem, 'status'>): boolean => trip.status === 'in_route';
+
+/* ------------------------------------------------------------------ *
+ * Ruta prevista y ruta real
+ * ------------------------------------------------------------------ */
+
+/**
+ * Los `--color-ink` y `--color-primary` de `index.css`, para las polilíneas de
+ * Google, que no lee tokens de Tailwind. Viven aquí y no junto a las capas
+ * porque un archivo de componentes no puede exportar constantes sin romper el
+ * fast refresh.
+ */
+export const TRIP_ROUTE_INK = '#12241c';
+export const TRIP_ROUTE_AMBER = '#e8a33d';
+
+/** Identidad estable para «sin puntos»: un `[]` en línea rehaería el encuadre del mapa en cada render. */
+export const NO_TRIP_POINTS: LatLng[] = [];
+
+/**
+ * Las dos estimaciones llegan como **cadena** de dos decimales, igual que los
+ * galones, y `null` significa exactamente «viaje anterior a SPEC 30»: no es un
+ * error y no se rellena solo. Se convierten aquí y solo aquí, con `parseFloat`
+ * porque `Number("")` es `0` y disimularía una respuesta rota.
+ */
+export const parseTripEstimate = (value: string | null): number | null => {
+    if (value === null) return null;
+
+    const parsed = parseFloat(value);
+
+    return Number.isNaN(parsed) ? null : parsed;
+};
+
+/** Un viaje con las dos estimaciones. Las de antes de SPEC 30 no las tienen y no las tendrán sin remandar la ruta. */
+export const hasTripEstimates = (trip: Pick<TripListItem, 'estimatedKilometers' | 'estimatedHours'>): boolean =>
+    trip.estimatedKilometers !== null && trip.estimatedHours !== null;
+
+/** `"104.32"` → `"104.32 km"`. Sin estimación devuelve `null`: qué decir entonces lo decide la UI. */
+export const formatTripKilometers = (value: string | null): string | null => {
+    const kilometers = parseTripEstimate(value);
+
+    return kilometers === null ? null : formatDistanceKilometers(kilometers);
+};
+
+/**
+ * `"1.75"` → `"1 h 45 min"`. Son **horas decimales** y se pintan como reloj,
+ * nunca como «1,75 h». No es un ETA: no mira `startDate` ni el rastro.
+ */
+export const formatTripHours = (value: string | null): string | null => {
+    const hours = parseTripEstimate(value);
+
+    return hours === null ? null : formatDurationHours(hours);
+};
+
+/**
+ * La ruta real existe **solo** cuando `traveledPolyline` no es `null`: se
+ * escribe una única vez, en `/finish`. Se mira la cadena y no `traveledPoints`,
+ * que es `[]` tanto para «sin cerrar» como para «cerrado sin rastro» —dos
+ * cosas que no se distinguen y que en ningún caso son un error—. En un viaje
+ * `in_route` es `null` aunque el piloto lleve horas reportando: el rastro en
+ * vivo va por el websocket.
+ */
+export const hasTraveledRoute = (trip: Pick<Trip, 'traveledPolyline' | 'traveledPoints'>): boolean =>
+    trip.traveledPolyline !== null && trip.traveledPoints.length > 0;
 
 /* ------------------------------------------------------------------ *
  * Fechas
@@ -260,8 +323,14 @@ export const buildTripQuery = (limit: string, page: string, filters?: TripFilter
  * El cuerpo del alta. Los textos solo se recortan: pasarlos a mayúsculas es
  * cosa del backend, y lo que se pinta después es siempre lo que devuelve la
  * respuesta, no lo que se tecleó.
+ *
+ * Los tres campos de la ruta van con `!`: vacíos no llegan aquí, el `required`
+ * del campo oculto de `polyline` lo para antes y los tres se escriben juntos
+ * desde la misma respuesta de `/directions`. Las dos cifras viajan como
+ * **número** y sin convertir —kilómetros y horas decimales, tal como las dio
+ * `/directions`—: la API las guarda con dos decimales y no las coteja.
  */
-export const buildTripPayload = (form: TripForm): TripForm => ({
+export const buildTripPayload = (form: TripFormValues): TripForm => ({
     order: form.order.trim(),
     clientId: Number(form.clientId),
     shippingLineId: Number(form.shippingLineId),
@@ -272,25 +341,31 @@ export const buildTripPayload = (form: TripForm): TripForm => ({
     transport: form.transport.trim(),
     recolectionDate: toApiDateTime(form.recolectionDate),
     shipDate: toApiDateTime(form.shipDate),
-    polyline: form.polyline,
+    polyline: form.polyline!,
+    estimatedKilometers: Number(form.estimatedKilometers),
+    estimatedHours: Number(form.estimatedHours),
     observations: form.observations.trim(),
 });
 
 /**
- * El cuerpo de la edición. Se mandan **los trece campos siempre**, y es
+ * El cuerpo de la edición. Se mandan **los quince campos siempre**, y es
  * deliberado:
  *
- * - La polilínea **no se recalcula sola, nunca**. Si cambia `locationId` o
- *   `departurePointId` y no viaja `polyline` en el **mismo** `PATCH`, la
- *   guardada queda mintiendo y la API no avisa: el mapa dibujaría una ruta que
- *   ya no corresponde.
+ * - La ruta **no se recalcula sola, nunca**. Si cambia `locationId` o
+ *   `departurePointId` y no viajan `polyline`, `estimatedKilometers` y
+ *   `estimatedHours` en el **mismo** `PATCH`, los guardados quedan mintiendo
+ *   **a la vez** y la API no avisa: el mapa dibujaría una ruta que ya no
+ *   corresponde y la tabla mostraría los kilómetros de otro destino.
+ * - Los tres de la ruta son **todo o nada** desde SPEC 30: uno solo o dos es
+ *   422. Mandarlos siempre juntos es la forma más simple de no caer ahí, y de
+ *   paso rellena las estimaciones de un viaje anterior a la spec.
  * - `shipDate` solo se compara contra `recolectionDate` cuando las dos van en
  *   el mismo cuerpo. Mandarlas juntas cierra el hueco.
  *
  * `pilotId` y `vehicleId` no aparecen: el `PATCH` los ignora en silencio y
  * responde 200 sin aplicarlos.
  */
-export const buildTripUpdatePayload = (form: TripForm & { status?: TripStatus }): TripUpdateForm => ({
+export const buildTripUpdatePayload = (form: TripFormValues): TripUpdateForm => ({
     ...buildTripPayload(form),
     ...(form.status ? { status: form.status } : {}),
 });
@@ -405,6 +480,8 @@ const TRIP_FIELDS: readonly TripField[] = [
     'recolectionDate',
     'shipDate',
     'polyline',
+    'estimatedKilometers',
+    'estimatedHours',
     'observations',
     'status',
 ];

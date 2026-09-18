@@ -1,14 +1,17 @@
 /**
  * De dónde sale y por qué puerto embarca. Los dos extremos son catálogos, pero
- * la línea que los une no: **la API no llama a Google y no recalcula la
- * polilínea nunca**. La resuelve el front con `GET /api/places/directions` y la
- * manda como un campo más.
+ * la línea que los une no: **la API no llama a Google y no recalcula la ruta
+ * nunca**. La resuelve el front con `GET /api/places/directions` y la manda
+ * como **tres campos que viajan juntos** (SPEC 30): la polilínea, los
+ * kilómetros y las horas, los tres de la misma respuesta y sin convertir nada.
  *
  * De ahí la regla que gobierna este componente: en cuanto cambia cualquiera de
- * los dos extremos, la polilínea guardada **se borra en el acto** y el
- * formulario queda sin ruta hasta que la nueva llegue. Si se dejara la anterior,
- * el `PATCH` respondería 200 con una ruta que ya no corresponde y el mapa
- * dibujaría el tramo equivocado sin que nadie se enterara.
+ * los dos extremos, la ruta guardada **se borra entera en el acto** y el
+ * formulario queda sin ruta hasta que la nueva llegue. Si se dejara la
+ * anterior, el `PATCH` respondería 200 con una ruta y unas cifras que ya no
+ * corresponden, y el mapa dibujaría el tramo equivocado sin que nadie se
+ * enterara. Y si se dejara solo la línea, sería un 422: la API exige los tres
+ * o ninguno.
  *
  * El campo de la polilínea no se teclea: se registra oculto y solo se ve su
  * error, que es la forma de decir «todavía no hay ruta» en el idioma del
@@ -17,7 +20,7 @@
 
 import type { DeparturePoint } from "@/features/departure-points/departure-points";
 import type { Location } from "@/features/locations/locations";
-import type { TripFormValues } from "@/features/trips/trips";
+import type { TripFormValues, TripRouteForm } from "@/features/trips/trips";
 import { TripRouteMap } from "@/features/trips/trips";
 import { DirectionsError, formatDistanceKilometers, formatDurationHours, placeProvider } from "@/features/places/places";
 import { SelectFormField } from "@/features/shared/shared";
@@ -41,8 +44,11 @@ type Props = {
     control: Control<TripFormValues>;
     departurePoints: DeparturePoint[];
     ports: Location[];
-    /** Escribe la polilínea en el formulario. Recibe `''` cuando no hay ruta válida. */
-    onPolylineChange: (polyline: string) => void;
+    /**
+     * Escribe la ruta entera en el formulario —línea, kilómetros y horas—, o
+     * `null` cuando no hay ruta válida. Nunca una parte: la API los exige juntos.
+     */
+    onRouteChange: (route: TripRouteForm | null) => void;
     /** El error del campo oculto: aparece si se intenta guardar sin ruta. */
     polylineErrorMessage?: string;
     departurePointErrorMessage?: string;
@@ -54,7 +60,7 @@ export function TripRouteSection({
     control,
     departurePoints,
     ports,
-    onPolylineChange,
+    onRouteChange,
     polylineErrorMessage,
     departurePointErrorMessage,
     locationErrorMessage,
@@ -91,19 +97,32 @@ export function TripRouteSection({
      * cada render: se guarda en una `ref` para que el efecto dependa solo de la
      * ruta y no se dispare solo.
      */
-    const onPolylineChangeRef = useRef(onPolylineChange);
+    const onRouteChangeRef = useRef(onRouteChange);
 
     /** Se refresca en un efecto, no durante el render: la `ref` no es estado. */
     useEffect(() => {
-        onPolylineChangeRef.current = onPolylineChange;
+        onRouteChangeRef.current = onRouteChange;
     });
 
-    const resolvedPolyline = hasBothEnds ? directions?.polyline ?? '' : '';
+    /**
+     * Los tres valores se leen por separado —son primitivos— para que el efecto
+     * dependa de su contenido y no de la identidad del objeto de la respuesta.
+     * Mientras se recalcula, `directions` es `undefined` y los tres se vacían a
+     * la vez: nunca hay un instante con la línea vieja y las cifras nuevas.
+     */
+    const resolved = hasBothEnds ? directions : undefined;
+    const resolvedPolyline = resolved?.polyline;
+    const resolvedKilometers = resolved?.distanceKilometers;
+    const resolvedHours = resolved?.durationHours;
 
     /** Corre después del de arriba —los efectos van en orden—, así que llama al último. */
     useEffect(() => {
-        onPolylineChangeRef.current(resolvedPolyline);
-    }, [resolvedPolyline]);
+        onRouteChangeRef.current(
+            resolvedPolyline !== undefined && resolvedKilometers !== undefined && resolvedHours !== undefined
+                ? { polyline: resolvedPolyline, estimatedKilometers: resolvedKilometers, estimatedHours: resolvedHours }
+                : null
+        );
+    }, [resolvedPolyline, resolvedKilometers, resolvedHours]);
 
     const status = error instanceof DirectionsError ? error.status : 0;
     const hint = error ? DIRECTIONS_HINTS[status] : undefined;
@@ -116,9 +135,9 @@ export function TripRouteSection({
                 </h3>
 
                 <p className="text-sm text-ink-muted">
-                    De la planta al puerto. La ruta se calcula al elegir los dos extremos y
-                    se guarda con el viaje: si cambias alguno, se vuelve a calcular antes de
-                    poder guardar.
+                    De la planta al puerto. La ruta, su distancia y su duración se calculan
+                    al elegir los dos extremos y se guardan juntas con el viaje: si cambias
+                    alguno, se vuelven a calcular antes de poder guardar.
                 </p>
             </div>
 
@@ -194,6 +213,7 @@ export function TripRouteSection({
 
                     <p className="text-xs text-ink-muted">
                         Estimación por carretera hasta {directions.locationName}, sin tráfico.
+                        Se guarda tal cual: no es una hora de llegada.
                     </p>
 
                     <TripRouteMap points={directions.points} height="h-[20rem]" />

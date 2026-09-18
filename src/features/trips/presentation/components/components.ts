@@ -5,6 +5,7 @@ export * from './TripFormComponent';
 export * from './TripFuelsModal';
 export * from './TripIdentity';
 export * from './TripPageHeader';
+export * from './TripMapLayers';
 export * from './TripPilotDocuments';
 export * from './TripRouteMap';
 export * from './TripRouteSection';

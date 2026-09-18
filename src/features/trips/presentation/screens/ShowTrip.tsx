@@ -34,6 +34,10 @@ import {
     canTrackTrips,
     canWriteTrips,
     formatGallons,
+    formatTripHours,
+    formatTripKilometers,
+    hasTraveledRoute,
+    hasTripEstimates,
     parseGallons,
     tripProvider
 } from "@/features/trips/trips";
@@ -146,6 +150,14 @@ export function ShowTrip() {
             />
         );
     }
+
+    /**
+     * La ruta real se mira por la cadena y no por `traveledPoints`, que es `[]`
+     * tanto en un viaje en ruta como en uno cerrado sin rastro. Las estimaciones
+     * en `null` son un viaje anterior a la spec, y ninguna de las dos es un error.
+     */
+    const hasTraveled = Boolean(trip && hasTraveledRoute(trip));
+    const hasEstimates = Boolean(trip && hasTripEstimates(trip));
 
     return (
         <div className="flex flex-col gap-8">
@@ -366,6 +378,19 @@ export function ShowTrip() {
                                     >
                                         Prevista · ver seguimiento en vivo
                                     </button>
+                                ) : hasTraveled ? (
+                                    /* La misma leyenda del seguimiento: son dos líneas y significan cosas distintas. */
+                                    <span className="flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-subtle">
+                                        <span className="inline-flex items-center gap-2">
+                                            <span aria-hidden className="h-px w-7 border-t-2 border-dashed border-ink/40" />
+                                            Prevista
+                                        </span>
+
+                                        <span className="inline-flex items-center gap-2">
+                                            <span aria-hidden className="h-[3px] w-7 rounded-full bg-primary" />
+                                            Recorrida
+                                        </span>
+                                    </span>
                                 ) : (
                                     <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-subtle">
                                         Prevista · sin seguimiento en vivo
@@ -373,12 +398,43 @@ export function ShowTrip() {
                                 )}
                             </div>
 
-                            <TripRouteMap points={trip.points} />
+                            {/*
+                              * Las dos cifras se guardaron con la ruta y valen lo que ella:
+                              * si un PATCH cambió el destino sin remandarla, mienten a la vez.
+                              * Sin ellas es un viaje anterior a la spec, no un fallo.
+                              */}
+                            {hasEstimates ? (
+                                <p className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                                    <span className="font-mono text-2xl leading-none text-ink">
+                                        {formatTripKilometers(trip.estimatedKilometers)}
+                                    </span>
+
+                                    <span className="font-mono text-2xl leading-none text-ink-muted">
+                                        ~{formatTripHours(trip.estimatedHours)}
+                                    </span>
+
+                                    <span className="text-xs text-ink-muted">
+                                        estimados por carretera, sin tráfico. No es una hora de llegada.
+                                    </span>
+                                </p>
+                            ) : (
+                                <p className="text-xs text-ink-muted">
+                                    Sin distancia ni duración estimadas: el viaje se publicó antes de
+                                    que se registraran. Se calculan al editarlo.
+                                </p>
+                            )}
+
+                            <TripRouteMap
+                                points={trip.points}
+                                traveledPoints={hasTraveled ? trip.traveledPoints : undefined}
+                            />
 
                             <p className="text-xs text-ink-muted">
-                                Es la ruta que se guardó al publicar el viaje, no la posición del
-                                vehículo. Del puerto en adelante el trayecto es marítimo y no se
-                                dibuja.
+                                {hasTraveled
+                                    ? "En ámbar, el recorrido que quedó registrado al cerrar el viaje; en guion, la ruta que se planificó. Del puerto en adelante el trayecto es marítimo y no se dibuja."
+                                    : trip.status === 'finished'
+                                        ? "Es la ruta que se guardó al publicar el viaje. El cierre no dejó ningún recorrido registrado: el piloto no reportó posiciones, o el viaje se cerró antes de que se guardaran."
+                                        : "Es la ruta que se guardó al publicar el viaje, no la posición del vehículo. Del puerto en adelante el trayecto es marítimo y no se dibuja."}
                             </p>
                         </div>
 

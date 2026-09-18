@@ -5,60 +5,42 @@
  * El mapa solo mira: los dos extremos son catálogos y se eligen en sus selects,
  * así que aquí no hay pin que arrastrar. Lo que se ve es el resultado de la
  * ruta que se va a guardar, no un control para editarla.
+ *
+ * Desde SPEC 28 sabe pintar **dos trazos**: la ruta prevista y, si el viaje ya
+ * cerró con rastro, la real. Cuando conviven, la prevista pasa a segundo plano
+ * —guion apagado— y la real manda en ámbar, con la misma jerarquía que el
+ * mapa de seguimiento: lo que de verdad pasó pesa más que lo que se planificó.
+ * Sin ruta real, la prevista se pinta sola y en tinta: no hay nada con lo que
+ * compararla y ponerla en segundo plano sería un mapa en gris.
  */
 
 import type { LatLng } from "@/features/trips/trips";
+import {
+    NO_TRIP_POINTS,
+    TRIP_ROUTE_AMBER,
+    TripPlannedRouteLayer,
+    TripRouteBounds,
+    TripSolidRouteLayer
+} from "@/features/trips/trips";
 import { LocationMapCanvas } from "@/features/locations/locations";
-import { toRoutePath } from "@/features/places/places";
-import { Marker, useMap } from "@vis.gl/react-google-maps";
-import { useEffect } from "react";
-
-/** El `--color-ink` de `index.css`: la API de Google no lee tokens de Tailwind. */
-const ROUTE_STROKE_COLOR = '#12241c';
-
-/**
- * `@vis.gl/react-google-maps` no exporta un componente `Polyline`, así que se
- * instancia la de Google sobre el mapa del contexto y se suelta con
- * `setMap(null)` al desmontar o al cambiar de ruta.
- *
- * De paso encuadra el tramo entero: una ruta de 300 km no cabe en el zoom con
- * el que abre el mapa.
- */
-function TripRouteLayer({ points }: { points: LatLng[] }) {
-    const map = useMap();
-
-    useEffect(() => {
-        if (!map || points.length === 0) return;
-
-        const path = toRoutePath(points);
-
-        const line = new google.maps.Polyline({
-            path,
-            map,
-            strokeColor: ROUTE_STROKE_COLOR,
-            strokeOpacity: 0.85,
-            strokeWeight: 4,
-        });
-
-        const bounds = new google.maps.LatLngBounds();
-        path.forEach((point) => bounds.extend(point));
-        map.fitBounds(bounds, 48);
-
-        return () => line.setMap(null);
-    }, [map, points]);
-
-    return null;
-}
+import { Marker } from "@vis.gl/react-google-maps";
 
 type Props = {
-    /** Pares `[lat, lng]` del viaje. Vacío mientras no haya ruta resuelta. */
+    /** Pares `[lat, lng]` de la ruta prevista. Vacío mientras no haya ruta resuelta. */
     points: LatLng[];
+    /**
+     * La ruta real, `traveledPoints` del detalle. **Solo se pasa cuando
+     * `traveledPolyline` no es `null`**: `[]` significa «no hay nada que
+     * pintar», no un error, y entonces el mapa se queda con la prevista.
+     */
+    traveledPoints?: LatLng[];
     height?: string;
 }
 
-export function TripRouteMap({ points, height = "h-[22rem]" }: Props) {
+export function TripRouteMap({ points, traveledPoints = NO_TRIP_POINTS, height = "h-[22rem]" }: Props) {
     const origin = points.at(0);
     const destination = points.at(-1);
+    const hasTraveled = traveledPoints.length > 0;
 
     return (
         <LocationMapCanvas
@@ -66,7 +48,15 @@ export function TripRouteMap({ points, height = "h-[22rem]" }: Props) {
             height={height}
             readOnly
         >
-            {points.length > 0 && <TripRouteLayer points={points} />}
+            {points.length > 0 && (
+                hasTraveled
+                    ? <TripPlannedRouteLayer points={points} />
+                    : <TripSolidRouteLayer points={points} />
+            )}
+
+            {hasTraveled && <TripSolidRouteLayer points={traveledPoints} color={TRIP_ROUTE_AMBER} />}
+
+            <TripRouteBounds planned={points} traveled={traveledPoints} />
 
             {origin && <Marker position={{ lat: origin[0], lng: origin[1] }} />}
             {destination && <Marker position={{ lat: destination[0], lng: destination[1] }} />}

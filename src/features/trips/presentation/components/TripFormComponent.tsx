@@ -1,5 +1,5 @@
 /**
- * Los doce campos del viaje, agrupados como se dicta un viaje por teléfono: qué
+ * Los catorce campos del viaje, agrupados como se dicta un viaje por teléfono: qué
  * carga es y de quién, cuándo sale, por dónde va y qué hay que saber al
  * llevarla.
  *
@@ -312,15 +312,29 @@ export function TripFormComponent({
                     control={control}
                     departurePoints={activeDeparturePoints}
                     ports={activePorts}
-                    onPolylineChange={(polyline) =>
-                        setValue('polyline', polyline, { shouldValidate: false })}
-                    polylineErrorMessage={errors.polyline?.message}
+                    /**
+                     * Los tres se escriben en el mismo tick, o se vacían los tres:
+                     * la API los exige juntos y una línea sin cifras sería 422. Las
+                     * dos cifras no se registran como campo —no se teclean ni se
+                     * validan— y viajan igual, porque `setValue` las deja en el
+                     * estado que lee `handleSubmit`.
+                     */
+                    onRouteChange={(route) => {
+                        setValue('polyline', route?.polyline ?? '', { shouldValidate: false });
+                        setValue('estimatedKilometers', route?.estimatedKilometers);
+                        setValue('estimatedHours', route?.estimatedHours);
+                    }}
+                    polylineErrorMessage={
+                        errors.polyline?.message
+                        ?? errors.estimatedKilometers?.message
+                        ?? errors.estimatedHours?.message
+                    }
                     departurePointErrorMessage={errors.departurePointId?.message}
                     locationErrorMessage={errors.locationId?.message}
                     isLoadingCatalogs={isLoadingDeparturePoints || isLoadingPorts}
                 />
 
-                {/* La ruta no se teclea: la resuelve la sección de arriba. */}
+                {/* La ruta no se teclea: la resuelve la sección de arriba. Con la línea llegan las dos cifras. */}
                 <input
                     type="hidden"
                     {...register('polyline', {

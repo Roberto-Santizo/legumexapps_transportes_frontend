@@ -6,6 +6,8 @@ import {
     buildTripUpdatePayload,
     canWriteTrips,
     getTripFieldErrors,
+    hasTripEstimates,
+    parseTripEstimate,
     toInputDateTime,
     tripProvider,
     type TripFormValues
@@ -46,9 +48,13 @@ export function UpdateTrip() {
      * Las dos fechas se traducen antes de tocar el formulario: la API las
      * devuelve en `d-m-Y h:i:s A` y reenviarlas en ese formato es un 422.
      *
-     * `polyline` se precarga con la guardada para no dejar el formulario sin
-     * ruta mientras se recalcula. En cuanto la sección de ruta responde, la
-     * pisa con la recién resuelta.
+     * La ruta guardada se precarga para no dejar el formulario sin ruta
+     * mientras se recalcula —en cuanto la sección de ruta responde, la pisa
+     * con la recién resuelta—, pero **entera o nada**: el `PATCH` exige la
+     * polilínea y las dos estimaciones juntas, y un viaje anterior a SPEC 30
+     * no tiene estimaciones que precargar. Ese viaje solo se puede guardar con
+     * una ruta recién calculada, que es exactamente lo que la spec pide para
+     * rellenarlas.
      */
     useEffect(() => {
         if (!trip) return;
@@ -63,9 +69,17 @@ export function UpdateTrip() {
         setValue('locationId', trip.locationId);
         setValue('recolectionDate', toInputDateTime(trip.recolectionDate));
         setValue('shipDate', toInputDateTime(trip.shipDate));
-        setValue('polyline', trip.polyline);
         setValue('observations', trip.observations);
         setValue('status', trip.status);
+
+        const kilometers = parseTripEstimate(trip.estimatedKilometers);
+        const hours = parseTripEstimate(trip.estimatedHours);
+
+        if (kilometers !== null && hours !== null) {
+            setValue('polyline', trip.polyline);
+            setValue('estimatedKilometers', kilometers);
+            setValue('estimatedHours', hours);
+        }
     }, [trip, setValue]);
 
     const { mutate, isPending } = useMutation({
@@ -108,7 +122,7 @@ export function UpdateTrip() {
         <div className="flex flex-col gap-8">
             <TripPageHeader
                 title="Editar viaje"
-                subtitle="Se reenvía el viaje completo, ruta incluida: la API no recalcula la polilínea y no avisa si deja de corresponder."
+                subtitle="Se reenvía el viaje completo, ruta y estimaciones incluidas: la API no las recalcula y no avisa si dejan de corresponder."
             >
                 {trip && <TripOrder order={trip.order} size="lg" />}
             </TripPageHeader>
@@ -143,6 +157,14 @@ export function UpdateTrip() {
                                 <span className="text-ink">{trip.pilotName}</span>. Editarlo no
                                 cambia la tripulación: el piloto y la unidad solo se mueven desde
                                 la empresa transportista.
+                            </p>
+                        )}
+
+                        {/* Sin backfill en el servidor: la única forma de rellenarlas es guardar con la ruta recién calculada. */}
+                        {!hasTripEstimates(trip) && (
+                            <p className="rounded-xl border border-line bg-canvas px-4 py-3.5 text-sm text-ink-muted">
+                                Este viaje se publicó sin distancia ni duración estimadas. Al
+                                guardar se calculan con la ruta y quedan registradas.
                             </p>
                         )}
 

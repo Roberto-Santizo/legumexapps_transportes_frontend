@@ -36,6 +36,9 @@ import {
     canTrackTrip,
     canTrackTrips,
     canWriteTrips,
+    formatTripHours,
+    formatTripKilometers,
+    hasTripEstimates,
     isTripInBag,
     tripProvider,
     type TripListItem
@@ -232,6 +235,13 @@ export function IndexTrips() {
                                 <span className="text-xs text-ink-subtle">
                                     {trip.shippingLineName ?? "Naviera no disponible"}
                                 </span>
+
+                                {/* Las dos cifras sí vienen en el listado: bastan para la fila sin pedir el detalle. Sin ellas es un viaje anterior a la spec. */}
+                                {hasTripEstimates(trip) && (
+                                    <span className="font-mono text-[11px] tabular-nums text-ink-muted">
+                                        {formatTripKilometers(trip.estimatedKilometers)} · ~{formatTripHours(trip.estimatedHours)}
+                                    </span>
+                                )}
                             </div>
                         </Td>
 

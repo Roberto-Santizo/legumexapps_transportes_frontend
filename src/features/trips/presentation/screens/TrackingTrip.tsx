@@ -122,8 +122,19 @@ export function TrackingTrip() {
         error: trackError
     } = useTripTracking(id, canTrack);
 
-    /** La identidad de este array es lo que decide si el mapa rehace el trazo. */
-    const trackPoints = useMemo(() => positions.map(toTripLatLng), [positions]);
+    /**
+     * La identidad de este array es lo que decide si el mapa rehace el trazo.
+     *
+     * El rastro en vivo manda: son los puntos exactos a ocho decimales. Solo si
+     * no hay ninguno y el viaje ya cerró con ruta real se pinta
+     * `traveledPoints` —la misma línea, a cinco decimales—, para que un viaje
+     * finalizado no se vea vacío mientras el `GET` de posiciones no responde.
+     */
+    const traveledPoints = trip?.traveledPoints;
+    const trackPoints = useMemo(
+        () => positions.length > 0 ? positions.map(toTripLatLng) : traveledPoints ?? [],
+        [positions, traveledPoints]
+    );
 
     if (!canTrack) {
         return (
