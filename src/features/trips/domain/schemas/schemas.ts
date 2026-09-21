@@ -12,15 +12,16 @@ export const TripStatusSchema = z.enum(['pending', 'in_route', 'finished']);
 
 /**
  * Un viaje de exportación: la carga que sale de una planta, pasa por un puerto
- * y termina en el extranjero. **Treinta y ocho claves**, y solo en el
+ * y termina en el extranjero. **Cuarenta claves**, y solo en el
  * **detalle** —el listado devuelve una fila recortada, ver
  * `TripListItemSchema`—, en camelCase y con las relaciones planas —`clientId` + `clientName`,
  * nunca un objeto anidado—. La API manda una más, `vehicleImage`, que aquí no
  * se modela porque la ficha del viaje no pinta la foto de la unidad.
  *
- * Cuatro de las claves llegaron en specs aditivas posteriores al alta del
- * dominio —`traveledPolyline`/`traveledPoints` (SPEC 28) y
- * `estimatedKilometers`/`estimatedHours` (SPEC 30)— y se leen con `default`:
+ * Seis de las claves llegaron en specs aditivas posteriores al alta del
+ * dominio —`traveledPolyline`/`traveledPoints` (SPEC 28),
+ * `estimatedKilometers`/`estimatedHours` (SPEC 30) y
+ * `traveledKilometers`/`traveledHours` (SPEC 32)— y se leen con `default`:
  * un backend anterior no las manda y el viaje entero fallaría el parse por
  * claves informativas. El tipo que sale es el estricto; la tolerancia es solo
  * de entrada.
@@ -101,6 +102,23 @@ export const TripSchema = z.object({
      * a los ocho de `/positions`: el rastro exacto sigue allí.
      */
     traveledPoints: z.array(z.tuple([z.number(), z.number()])).default([]),
+    /**
+     * Las dos cifras de la ruta **real** (SPEC 32), espejo de las estimaciones
+     * y con su mismo formato: kilómetros (`"111.40"`) y **horas decimales**
+     * (`"2.10"` es 2 h 6 min) como cadenas de dos decimales. **Las calcula el
+     * servidor una sola vez, en `/finish`**; ningún body las acepta.
+     *
+     * Son **datos brutos**: la distancia es la suma Haversine de todos los
+     * segmentos del rastro sin filtrar el ruido GPS de un camión parado, y las
+     * horas son `endDate − startDate` sin descontar las paradas. La API no las
+     * compara con nada: el desvío es una resta del front.
+     *
+     * `null` no distingue «no ha terminado» de «terminó antes de la spec» (sin
+     * backfill). En cambio **`"0.00"` es un dato legítimo**: el viaje cerró con
+     * cero o un punto reportado —ahí `traveledPolyline` queda `null`—.
+     */
+    traveledKilometers: z.string().nullable().default(null),
+    traveledHours: z.string().nullable().default(null),
     /** Obligatorio, nunca `null`: el único canal de instrucciones hacia la empresa. */
     observations: z.string(),
     pilotId: z.number().nullable(),
@@ -158,15 +176,17 @@ export const TripSchema = z.object({
 
 /**
  * La fila del listado, que **ya no es el viaje entero**: `GET /api/trips`
- * devuelve diecisiete claves —las que se pintan en la tabla— y deja las otras
- * veintidós para el detalle. Las que faltan no son opcionales, **no llegan**:
+ * devuelve diecinueve claves —las que se pintan en la tabla— y deja las otras
+ * veintitrés para el detalle. Las que faltan no son opcionales, **no llegan**:
  * los ids de los catálogos, `destination`, `transport`, la `polyline` con sus
  * `points`, la ruta real, `pilotId`/`vehicleId`, los dos documentos del piloto,
  * el par `assignedBy*`, el combustible y las tres fechas de auditoría.
  *
  * Las dos estimaciones de SPEC 30 **sí** vienen —al revés que `polyline`—
  * porque son dos escalares baratos que bastan para pintar «104.32 km · 1 h 45
- * min» en cada fila sin pedir el detalle.
+ * min» en cada fila sin pedir el detalle. Las dos cifras reales de SPEC 32
+ * vienen por el mismo motivo: en un viaje `finished` permiten el «estimado vs
+ * real» de la fila; en `pending` e `in_route` son `null`.
  *
  * Dos consecuencias para el front:
  *
@@ -199,6 +219,9 @@ export const TripListItemSchema = z.object({
     /** Las mismas cadenas de dos decimales que en el detalle; `null` en viajes anteriores a SPEC 30. */
     estimatedKilometers: z.string().nullable().default(null),
     estimatedHours: z.string().nullable().default(null),
+    /** Las mismas cadenas que en el detalle; `null` mientras el viaje no cierre o si cerró antes de SPEC 32. */
+    traveledKilometers: z.string().nullable().default(null),
+    traveledHours: z.string().nullable().default(null),
     observations: z.string(),
     pilotName: z.string().nullable(),
     /** Aquí el par es id + **placa**, pero el id se queda en el detalle. */

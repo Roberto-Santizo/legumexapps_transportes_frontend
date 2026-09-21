@@ -4,12 +4,12 @@ import type { z } from "zod";
 export type PaginatedTrips = z.infer<typeof PaginatedTripsSchema>;
 /** El viaje completo. **Solo el detalle lo devuelve.** */
 export type Trip = z.infer<typeof TripSchema>;
-/** La fila del listado: diecisiete de las treinta y nueve claves del viaje. */
+/** La fila del listado: diecinueve de las cuarenta y dos claves del viaje. */
 export type TripListItem = z.infer<typeof TripListItemSchema>;
 
 /**
  * Lo que sirve para las piezas que se montan **desde las dos pantallas** —el
- * diálogo de baja y el de asignación—: las diecisiete claves que siempre
+ * diálogo de baja y el de asignación—: las diecinueve claves que siempre
  * llegan, más las del detalle como opcionales. Una fila del listado y un viaje
  * entero encajan los dos, y quien lee una clave del detalle tiene que contar
  * con que venga `undefined`.

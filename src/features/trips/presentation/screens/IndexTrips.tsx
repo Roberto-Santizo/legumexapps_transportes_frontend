@@ -41,6 +41,7 @@ import {
     canWriteTrips,
     formatTripHours,
     formatTripKilometers,
+    hasTraveledMetrics,
     hasTripEstimates,
     isTripInBag,
     tripProvider,
@@ -249,10 +250,22 @@ export function IndexTrips() {
                                     {trip.shippingLineName ?? "Naviera no disponible"}
                                 </span>
 
-                                {/* Las dos cifras sí vienen en el listado: bastan para la fila sin pedir el detalle. Sin ellas es un viaje anterior a la spec. */}
+                                {/*
+                                  * Las cuatro cifras sí vienen en el listado: bastan para la fila sin
+                                  * pedir el detalle. Sin estimación es un viaje anterior a la spec; las
+                                  * reales solo existen en un viaje cerrado, y `"0.00"` es un cierre sin
+                                  * recorrido medible, no un dato roto.
+                                  */}
                                 {hasTripEstimates(trip) && (
                                     <span className="font-mono text-[11px] tabular-nums text-ink-muted">
                                         {formatTripKilometers(trip.estimatedKilometers)} · ~{formatTripHours(trip.estimatedHours)}
+                                    </span>
+                                )}
+
+                                {hasTraveledMetrics(trip) && (
+                                    <span className="font-mono text-[11px] tabular-nums text-ink">
+                                        {formatTripKilometers(trip.traveledKilometers)} · {formatTripHours(trip.traveledHours)}
+                                        <span className="ml-1.5 text-[10px] uppercase tracking-[0.14em] text-ink-subtle">real</span>
                                     </span>
                                 )}
                             </div>

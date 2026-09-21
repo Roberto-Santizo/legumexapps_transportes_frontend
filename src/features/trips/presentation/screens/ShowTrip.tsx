@@ -38,11 +38,16 @@ import {
     canWriteTrips,
     formatAmount,
     formatGallons,
+    formatSignedHours,
+    formatSignedKilometers,
     formatTripHours,
     formatTripKilometers,
+    hasTraveledMetrics,
     hasTraveledRoute,
     hasTripEstimates,
     parseGallons,
+    parseTripEstimate,
+    tripDeviation,
     tripProvider
 } from "@/features/trips/trips";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
@@ -166,6 +171,10 @@ export function ShowTrip() {
      */
     const hasTraveled = Boolean(trip && hasTraveledRoute(trip));
     const hasEstimates = Boolean(trip && hasTripEstimates(trip));
+    /** Solo en un viaje cerrado después de SPEC 32; `"0.00"` sí cuenta, es un cierre sin recorrido medible. */
+    const hasMetrics = Boolean(trip && hasTraveledMetrics(trip));
+    const kilometersDeviation = trip ? tripDeviation(trip.estimatedKilometers, trip.traveledKilometers) : null;
+    const hoursDeviation = trip ? tripDeviation(trip.estimatedHours, trip.traveledHours) : null;
 
     return (
         <div className="flex flex-col gap-8">
@@ -426,8 +435,78 @@ export function ShowTrip() {
                               * Las dos cifras se guardaron con la ruta y valen lo que ella:
                               * si un PATCH cambió el destino sin remandarla, mienten a la vez.
                               * Sin ellas es un viaje anterior a la spec, no un fallo.
+                              *
+                              * Al cerrar aparecen las dos reales y la comparación es una
+                              * resta del front: la API no calcula desvío ni retraso. Son
+                              * cifras brutas —la distancia suma el ruido GPS de las paradas
+                              * y las horas no descuentan los tiempos muertos—, y se dice.
                               */}
-                            {hasEstimates ? (
+                            {hasMetrics ? (
+                                <div className="flex flex-col gap-3">
+                                    <dl className="grid gap-x-10 gap-y-4 sm:grid-cols-2">
+                                        <div className="flex flex-col gap-2">
+                                            <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-subtle">
+                                                Estimado
+                                            </dt>
+
+                                            <dd className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                                                {hasEstimates ? (
+                                                    <>
+                                                        <span className="font-mono text-2xl leading-none text-ink-muted">
+                                                            {formatTripKilometers(trip.estimatedKilometers)}
+                                                        </span>
+
+                                                        <span className="font-mono text-2xl leading-none text-ink-muted">
+                                                            ~{formatTripHours(trip.estimatedHours)}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-xs text-ink-muted">
+                                                        Sin estimación: el viaje se publicó antes de que se registrara.
+                                                    </span>
+                                                )}
+                                            </dd>
+                                        </div>
+
+                                        <div className="flex flex-col gap-2">
+                                            <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-subtle">
+                                                Real
+                                            </dt>
+
+                                            <dd className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                                                <span className="font-mono text-2xl leading-none text-ink">
+                                                    {formatTripKilometers(trip.traveledKilometers)}
+                                                </span>
+
+                                                <span className="font-mono text-2xl leading-none text-ink">
+                                                    {formatTripHours(trip.traveledHours)}
+                                                </span>
+                                            </dd>
+
+                                            {/* La resta solo tiene sentido con las dos cifras; sin estimación no hay contra qué desviarse. */}
+                                            {kilometersDeviation !== null && hoursDeviation !== null && (
+                                                <p className="font-mono text-xs tabular-nums text-ink-muted">
+                                                    <span className={kilometersDeviation > 0 ? 'text-danger' : 'text-success'}>
+                                                        {formatSignedKilometers(kilometersDeviation)}
+                                                    </span>
+                                                    {' · '}
+                                                    <span className={hoursDeviation > 0 ? 'text-danger' : 'text-success'}>
+                                                        {formatSignedHours(hoursDeviation)}
+                                                    </span>
+                                                    {' '}
+                                                    <span className="font-sans text-ink-subtle">respecto a lo estimado</span>
+                                                </p>
+                                            )}
+                                        </div>
+                                    </dl>
+
+                                    <p className="text-xs text-ink-muted">
+                                        {parseTripEstimate(trip.traveledKilometers) === 0
+                                            ? "El cierre no dejó recorrido medible: el piloto reportó una posición o ninguna. Las horas van de la salida al cierre."
+                                            : "Cifras brutas del cierre. La distancia suma todo el rastro reportado, incluido el ruido del GPS con el camión parado, y las horas van de la salida al cierre sin descontar los tiempos muertos."}
+                                    </p>
+                                </div>
+                            ) : hasEstimates ? (
                                 <p className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
                                     <span className="font-mono text-2xl leading-none text-ink">
                                         {formatTripKilometers(trip.estimatedKilometers)}

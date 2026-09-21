@@ -117,10 +117,11 @@ export const TRIP_ROUTE_AMBER = '#e8a33d';
 export const NO_TRIP_POINTS: LatLng[] = [];
 
 /**
- * Las dos estimaciones llegan como **cadena** de dos decimales, igual que los
- * galones, y `null` significa exactamente «viaje anterior a SPEC 30»: no es un
- * error y no se rellena solo. Se convierten aquí y solo aquí, con `parseFloat`
- * porque `Number("")` es `0` y disimularía una respuesta rota.
+ * Las dos estimaciones —y desde SPEC 32 las dos cifras reales— llegan como
+ * **cadena** de dos decimales, igual que los galones, y `null` significa «sin
+ * dato» —viaje anterior a la spec, o sin cerrar en el caso de las reales—: no
+ * es un error y no se rellena solo. Se convierten aquí y solo aquí, con
+ * `parseFloat` porque `Number("")` es `0` y disimularía una respuesta rota.
  */
 export const parseTripEstimate = (value: string | null): number | null => {
     if (value === null) return null;
@@ -149,6 +150,44 @@ export const formatTripHours = (value: string | null): string | null => {
     const hours = parseTripEstimate(value);
 
     return hours === null ? null : formatDurationHours(hours);
+};
+
+/**
+ * Un viaje con las dos cifras reales (SPEC 32). Solo las tiene un viaje
+ * **cerrado** después de la spec: en `pending` e `in_route` son `null` y no hay
+ * nada que comparar. Se mira `null` y no `"0.00"`, que es un cierre legítimo
+ * con cero o un punto reportado.
+ */
+export const hasTraveledMetrics = (trip: Pick<TripListItem, 'traveledKilometers' | 'traveledHours'>): boolean =>
+    trip.traveledKilometers !== null && trip.traveledHours !== null;
+
+/**
+ * `real − estimado`, la única comparación que existe: la API no calcula
+ * desvío, retraso ni porcentaje. Positivo es «más de lo previsto». `null` si
+ * falta cualquiera de las dos cifras, porque una resta contra `null` no dice
+ * nada.
+ */
+export const tripDeviation = (estimated: string | null, traveled: string | null): number | null => {
+    const expected = parseTripEstimate(estimated);
+    const actual = parseTripEstimate(traveled);
+
+    if (expected === null || actual === null) return null;
+
+    return Math.round((actual - expected) * 100) / 100;
+};
+
+/** `7.08` → `"+7.08 km"`, `-3.1` → `"−3.10 km"`, `0` → `"±0.00 km"`. */
+export const formatSignedKilometers = (delta: number): string => {
+    const sign = delta > 0 ? '+' : delta < 0 ? '−' : '±';
+
+    return `${sign}${formatDistanceKilometers(Math.abs(delta))}`;
+};
+
+/** `0.35` → `"+21 min"`, `-1.5` → `"−1 h 30 min"`, `0` → `"±0 min"`. Horas decimales, como reloj. */
+export const formatSignedHours = (delta: number): string => {
+    const sign = delta > 0 ? '+' : delta < 0 ? '−' : '±';
+
+    return `${sign}${formatDurationHours(Math.abs(delta))}`;
 };
 
 /**
