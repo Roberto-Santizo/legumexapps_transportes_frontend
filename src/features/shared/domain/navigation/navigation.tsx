@@ -1,5 +1,5 @@
 import type { NavItem } from "@/features/shared/shared";
-import { Apple, Building2, Car, Fuel, IdCard, LayoutDashboard, MapPin, Route, Ship, Warehouse, Wrench } from "lucide-react";
+import { Apple, Building2, Car, Fuel, IdCard, LayoutDashboard, MapPin, Route, Ship, Sparkles, Warehouse, Wrench } from "lucide-react";
 
 export const NAVIGATION: NavItem[] = [
     { to: "/dashboard", text: "Dashboard", icon: <LayoutDashboard />, roles: ['administrator', 'manager'] },
@@ -14,4 +14,5 @@ export const NAVIGATION: NavItem[] = [
     { to: "/navieras", text: "Navieras", icon: <Ship />, disabled: false, roles: ['administrator', 'carrier', 'pilot', 'manager'] },
     { to: "/pilotos", text: "Pilotos", icon: <IdCard />, disabled: false, roles: ['administrator', 'carrier', 'manager'] },
     { to: "/viajes", text: "Viajes", icon: <Route />, disabled: false, roles: ['administrator', 'carrier', 'pilot', 'manager'] },
+    { to: "/inteligencia-artificial", text: "Inteligencia Artificial", icon: <Sparkles />, disabled: false, roles: ['administrator', 'carrier', 'manager'] },
 ];

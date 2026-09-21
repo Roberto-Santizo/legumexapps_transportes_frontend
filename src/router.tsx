@@ -13,6 +13,7 @@ import { CreateZone, IndexZones, ShowZone, UpdateZone } from "@/features/zones/z
 import { CreateTrip, IndexTrips, ShowTrip, TrackingTrip, UpdateTrip } from "@/features/trips/trips";
 import { IndexPilots } from "@/features/pilots/pilots";
 import { Dashboard } from "@/features/dashboard/dashboard";
+import { Assistant } from "@/features/assistant/assistant";
 import { Profile, ProtectedLayout, PublicLayout } from "@/features/shared/shared";
 
 export default function AppRouter() {
@@ -106,6 +107,10 @@ export default function AppRouter() {
                     <Route path="/viajes/:id" element={<ShowTrip />} />
                     <Route path="/viajes/:id/seguimiento" element={<TrackingTrip />} />
                     <Route path="/viajes/:id/editar" element={<UpdateTrip />} />
+                </Route>
+
+                <Route element={<ProtectedLayout />}>
+                    <Route path="/inteligencia-artificial" element={<Assistant />} />
                 </Route>
             </Routes>
         </BrowserRouter>

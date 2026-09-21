@@ -117,6 +117,143 @@
         color: var(--color-ink-muted);
         vertical-align: middle;
     }
+
+    /* Asistente: el Markdown de la respuesta, en el mismo cuerpo de texto que el resto de la app */
+    .assistant_markdown {
+        font-size: 0.875rem;
+        line-height: 1.5rem;
+        color: var(--color-ink);
+        overflow-wrap: anywhere;
+    }
+
+    .assistant_markdown > * + * {
+        margin-top: 0.625rem;
+    }
+
+    .assistant_markdown h1,
+    .assistant_markdown h2,
+    .assistant_markdown h3,
+    .assistant_markdown h4 {
+        font-family: var(--font-display);
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--color-ink-deep);
+    }
+
+    .assistant_markdown h1 {
+        font-size: 1.125rem;
+    }
+
+    .assistant_markdown h2 {
+        font-size: 1rem;
+    }
+
+    .assistant_markdown h3,
+    .assistant_markdown h4 {
+        font-size: 0.9375rem;
+    }
+
+    .assistant_markdown strong {
+        font-weight: 600;
+        color: var(--color-ink-deep);
+    }
+
+    .assistant_markdown a {
+        color: var(--color-ink-deep);
+        text-decoration: underline;
+        text-decoration-color: var(--color-primary);
+        text-decoration-thickness: 2px;
+        text-underline-offset: 3px;
+        transition: text-decoration-color 0.15s ease;
+    }
+
+    .assistant_markdown a:hover {
+        text-decoration-color: var(--color-ink-deep);
+    }
+
+    .assistant_markdown ul,
+    .assistant_markdown ol {
+        padding-left: 1.25rem;
+    }
+
+    .assistant_markdown ul {
+        list-style: disc;
+    }
+
+    .assistant_markdown ol {
+        list-style: decimal;
+    }
+
+    .assistant_markdown li + li {
+        margin-top: 0.25rem;
+    }
+
+    .assistant_markdown li::marker {
+        color: var(--color-ink-subtle);
+    }
+
+    .assistant_markdown code {
+        font-family: var(--font-mono);
+        font-size: 0.8125rem;
+        background-color: var(--color-canvas);
+        border-radius: 0.25rem;
+        padding: 0.0625rem 0.3125rem;
+    }
+
+    .assistant_markdown pre {
+        overflow-x: auto;
+        border: 1px solid var(--color-line);
+        border-radius: 0.75rem;
+        background-color: var(--color-canvas);
+        padding: 0.75rem 1rem;
+    }
+
+    .assistant_markdown pre code {
+        background: none;
+        padding: 0;
+    }
+
+    .assistant_markdown blockquote {
+        border-left: 2px solid var(--color-line-strong);
+        padding-left: 0.875rem;
+        color: var(--color-ink-muted);
+    }
+
+    .assistant_markdown hr {
+        border: 0;
+        border-top: 1px solid var(--color-line);
+    }
+
+    .assistant_markdown table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+    }
+
+    .assistant_markdown th,
+    .assistant_markdown td {
+        border: 1px solid var(--color-line);
+        padding: 0.375rem 0.75rem;
+        text-align: left;
+        vertical-align: top;
+        white-space: nowrap;
+    }
+
+    .assistant_markdown th {
+        background-color: var(--color-canvas);
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--color-ink-muted);
+    }
+
+    .assistant_markdown td {
+        font-variant-numeric: tabular-nums;
+    }
 }
 
 /* Firma visual: tramo de ruta finca -> planta -> puerto */
@@ -139,6 +276,53 @@
 
     .otp_caret {
         animation: otp_blink 1s steps(1) infinite;
+    }
+
+    /* Asistente: la ruta del turno (asistente -> herramientas -> respuesta) */
+    .assistant_rail {
+        background-image: linear-gradient(
+            to bottom,
+            var(--color-line-strong) 0 6px,
+            transparent 6px 12px
+        );
+        background-size: 1px 12px;
+        background-repeat: repeat-y;
+    }
+
+    .assistant_rail_live {
+        background-image: linear-gradient(
+            to bottom,
+            var(--color-primary) 0 6px,
+            transparent 6px 12px
+        );
+        animation: assistant_rail_travel 1.2s linear infinite;
+    }
+
+    .assistant_ellipsis::after {
+        content: "";
+        animation: assistant_ellipsis 1.5s steps(4, end) infinite;
+    }
+}
+
+@keyframes assistant_rail_travel {
+    to {
+        background-position-y: 12px;
+    }
+}
+
+@keyframes assistant_ellipsis {
+    0% {
+        content: "";
+    }
+    25% {
+        content: ".";
+    }
+    50% {
+        content: "..";
+    }
+    75%,
+    100% {
+        content: "...";
     }
 }
 

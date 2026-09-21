@@ -4,7 +4,7 @@ Guía para Claude Code en este repositorio.
 
 ## Proyecto
 
-Frontend de LegumexApps Transportes: React 19 + TypeScript + Vite 8, Tailwind CSS v4, Redux Toolkit, TanStack Query, React Router 7, react-hook-form, zod, MUI/Headless UI, framer-motion, recharts, lucide-react, react-select, react-dropzone, input-otp, `@vis.gl/react-google-maps` (autocompletado de lugares y mapas), `laravel-echo` + `pusher-js` (websockets Reverb para seguimiento en vivo). React Compiler activo (`babel-plugin-react-compiler` vía `@rolldown/plugin-babel` en `vite.config.ts`).
+Frontend de LegumexApps Transportes: React 19 + TypeScript + Vite 8, Tailwind CSS v4, Redux Toolkit, TanStack Query, React Router 7, react-hook-form, zod, MUI/Headless UI, framer-motion, recharts, lucide-react, react-select, react-dropzone, input-otp, `@vis.gl/react-google-maps` (autocompletado de lugares y mapas), `laravel-echo` + `pusher-js` (websockets Reverb para seguimiento en vivo), `ai` v5 + `@ai-sdk/react` v2 y `react-markdown` + `remark-gfm` (asistente de IA). React Compiler activo (`babel-plugin-react-compiler` vía `@rolldown/plugin-babel` en `vite.config.ts`).
 
 UI y mensajes de error en **español**.
 
@@ -38,13 +38,15 @@ infrastructure/  datasources/*Impl.ts (axios + zod), repositories/*Impl.ts (dele
 presentation/    screens/, components/, providers/, hooks/ (opcional)
 ```
 
-Features con pantallas y rutas: `auth`, `dashboard`, `vehicles`, `fuel-prices`, `products`, `zones`, `locations`, `departure-points`, `accessories`, `clients`, `shipping-lines`, `pilots`, `trips`, `carriers` (de esta última solo `/completar-perfil` está registrada).
+Features con pantallas y rutas: `auth`, `dashboard`, `vehicles`, `fuel-prices`, `products`, `zones`, `locations`, `departure-points`, `accessories`, `clients`, `shipping-lines`, `pilots`, `trips`, `carriers` (de esta última solo `/completar-perfil` está registrada), `assistant` (`/inteligencia-artificial`, apartado de IA: por ahora solo el asistente del tablero).
 
 Features de soporte, sin pantallas propias: `accessory-characteristics`, `freight-rates`, `places`, `vehicle-expenses`, `packing-lists` — exponen componentes (modales, campos, secciones) que se montan dentro de otras features.
 
 `trips` es la feature más grande: además del CRUD tiene `/viajes/:id/seguimiento` (`TrackingTrip`), asignación de piloto/vehículo (`TripAssignmentModal`), combustibles (`TripFuelsModal`), tiempos muertos (`TripTimeoutsSection`), documentos del piloto (`TripPilotDocuments`), resumen de packing list y mapas de ruta/seguimiento. El hook `presentation/hooks/useTripTracking.ts` cose el historial HTTP (`getTripPositions`) con el canal privado `trips.{tripId}` (evento `.trip.position.updated`, con punto inicial obligatorio); se suscribe al socket **antes** de pedir el `GET` y deduplica con `mergeTripPositions`. El estado del socket se lee con `useSyncExternalStore`, no se copia a `useState`.
 
 `packing-lists` habla con otro backend vía `packingListApi`: el sobre de respuesta es `response` (no `data`) y el 404 se traduce a `null` (la orden sin packing list es un resultado, no un error).
+
+`assistant` no pasa por axios: `POST /assistant/chat` responde un stream SSE (protocolo *UI Message Stream* del Vercel AI SDK) que consume `useChat` de `@ai-sdk/react` v2 (`ai` v5) con el `DefaultChatTransport` de `infrastructure/transport/` como «datasource». La memoria vive en el cliente (`sessionStorage` por usuario, tope 50 mensajes, sin `conversationId`); `infrastructure/utils` aplana los `UIMessage` a `{ role, content }`, interpreta el `output` string de cada herramienta (reportes `.xlsx`, `{"error"}`, texto plano) y clasifica los errores (401 → reemitir sesión y reenviar el mismo turno una vez; part `error` del stream → texto genérico con reintento manual). El Markdown de la respuesta se pinta con `react-markdown` + `remark-gfm` y los estilos `.assistant_markdown` de `index.css`.
 
 `shared` es transversal (ver más abajo).
 
@@ -96,7 +98,7 @@ Respuestas de API: `ApiResponseSchema` (`statusCode`, `message`), `ApiPaginatedR
 
 ### Rutas
 
-`src/router.tsx` centraliza las rutas, agrupadas por layout (`PublicLayout` / `ProtectedLayout`), un bloque `<Route element={<ProtectedLayout />}>` por feature. Los paths son en español (`/confirmar-cuenta`, `/vehiculos`, `/gasolina-precios`, `/productos`, `/zonas`, `/ubicaciones`, `/puntos-de-partida`, `/accesorios`, `/clientes`, `/navieras`, `/pilotos`, `/viajes`, `.../crear`, `/:id`, `/:id/editar`, `/viajes/:id/seguimiento`). `/zonas` tiene rutas pero su entrada de `NAVIGATION` está comentada. El scaffolding de features **no** registra rutas ni entradas de `NAVIGATION`; hay que agregarlas a mano.
+`src/router.tsx` centraliza las rutas, agrupadas por layout (`PublicLayout` / `ProtectedLayout`), un bloque `<Route element={<ProtectedLayout />}>` por feature. Los paths son en español (`/confirmar-cuenta`, `/vehiculos`, `/gasolina-precios`, `/productos`, `/zonas`, `/ubicaciones`, `/puntos-de-partida`, `/accesorios`, `/clientes`, `/navieras`, `/pilotos`, `/viajes`, `.../crear`, `/:id`, `/:id/editar`, `/viajes/:id/seguimiento`, `/inteligencia-artificial`). `/zonas` tiene rutas pero su entrada de `NAVIGATION` está comentada. El scaffolding de features **no** registra rutas ni entradas de `NAVIGATION`; hay que agregarlas a mano.
 
 ## Estilos
 
@@ -106,7 +108,7 @@ Antes de diseñar UI nueva, invocar la skill `frontend-design`.
 
 ## Referencias de API
 
-`src/references/feat-references/*.md` documenta el contrato del backend por dominio (endpoints, validaciones, mensajes de error literales, particularidades). **Leer el archivo correspondiente antes de implementar o tocar una feature**: cada dominio tiene trampas propias (p. ej. `clients-api.md` — el `DELETE` es soft delete real y los duplicados llegan como 400 en `message`, no como 422 en `errors`). Trips se reparte en varios archivos: `trips-api.md`, `trip-fuels-api.md`, `trip-timeouts-api.md`, `trip-positions-api.md` (websockets/seguimiento), `pilot-documents-api.md`, `packing-list-summary-endpoint.md`, `freight-rate-quote-api.md`. Para gastos de vehículo usar `vehicle-expenses-api-updated.md` (el `is_invoiced` obligatorio rompe el alta antigua); `vehicle-expenses-api.md` es la versión previa.
+`src/references/feat-references/*.md` documenta el contrato del backend por dominio (endpoints, validaciones, mensajes de error literales, particularidades). **Leer el archivo correspondiente antes de implementar o tocar una feature**: cada dominio tiene trampas propias (p. ej. `clients-api.md` — el `DELETE` es soft delete real y los duplicados llegan como 400 en `message`, no como 422 en `errors`). Trips se reparte en varios archivos: `trips-api.md`, `trip-fuels-api.md`, `trip-timeouts-api.md`, `trip-positions-api.md` (websockets/seguimiento), `pilot-documents-api.md`, `packing-list-summary-endpoint.md`, `freight-rate-quote-api.md`. El asistente de IA está en `assistant-api.md` (stream SSE, no sobre JSON; leerlo entero antes de tocar `assistant`). Para gastos de vehículo usar `vehicle-expenses-api-updated.md` (el `is_invoiced` obligatorio rompe el alta antigua); `vehicle-expenses-api.md` es la versión previa.
 
 `src/references/[feature-name]/` es el esqueleto de referencia (archivos en su mayoría vacíos) que consume el scaffolding.
 
