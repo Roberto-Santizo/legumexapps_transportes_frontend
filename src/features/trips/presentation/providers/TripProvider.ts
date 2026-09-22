@@ -1,4 +1,4 @@
-import type { TripForm, TripRepository } from "@/features/trips/trips";
+import type { TripAssignmentForm, TripExpenseForm, TripFilters, TripForm, TripFuelForm, TripRepository, TripUpdateForm } from "@/features/trips/trips";
 import { TripDatasourceImpl, TripRepositoryImpl } from "@/features/trips/infrastructure/infrastructure";
 import api from "@/config/http/axios";
 
@@ -9,20 +9,60 @@ export class TripProvider {
         return this.repository.createTrip(payload);
     }
 
-    getTrips(limit: string, page: string) {
-        return this.repository.getTrips(limit, page);
+    getTrips(limit: string, page: string, filters?: TripFilters) {
+        return this.repository.getTrips(limit, page, filters);
     }
 
     getTripById(id: string) {
         return this.repository.getTripById(id);
     }
 
-    updateTripById(id: string, payload: TripForm) {
+    updateTripById(id: string, payload: TripUpdateForm) {
         return this.repository.updateTripById(id, payload);
     }
 
     deleteTripById(id: string) {
         return this.repository.deleteTripById(id);
+    }
+
+    assignTripById(id: string, payload: TripAssignmentForm) {
+        return this.repository.assignTripById(id, payload);
+    }
+
+    startTripById(id: string) {
+        return this.repository.startTripById(id);
+    }
+
+    finishTripById(id: string) {
+        return this.repository.finishTripById(id);
+    }
+
+    getTripPositions(id: string) {
+        return this.repository.getTripPositions(id);
+    }
+
+    getTripFuels(id: string) {
+        return this.repository.getTripFuels(id);
+    }
+
+    createTripFuel(id: string, payload: TripFuelForm) {
+        return this.repository.createTripFuel(id, payload);
+    }
+
+    getTripExpenses(id: string) {
+        return this.repository.getTripExpenses(id);
+    }
+
+    createTripExpense(id: string, payload: TripExpenseForm) {
+        return this.repository.createTripExpense(id, payload);
+    }
+
+    getTripTimeouts(id: string) {
+        return this.repository.getTripTimeouts(id);
+    }
+
+    getTripCost(id: string) {
+        return this.repository.getTripCost(id);
     }
 }
 

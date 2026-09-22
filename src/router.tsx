@@ -10,9 +10,10 @@ import { CreateProduct, IndexProducts, ShowProduct, UpdateProduct } from "@/feat
 import { CreateShippingLine, IndexShippingLines, ShowShippingLine, UpdateShippingLine } from "@/features/shipping-lines/shipping-lines";
 import { CreateVehicle, IndexVehicles, ShowVehicle, UpdateVehicle } from "@/features/vehicles/vehicles";
 import { CreateZone, IndexZones, ShowZone, UpdateZone } from "@/features/zones/zones";
-import { CreateTrip, IndexTrips } from "@/features/trips/trips";
+import { CreateTrip, IndexTrips, ShowTrip, ShowTripCost, TrackingTrip, UpdateTrip } from "@/features/trips/trips";
 import { IndexPilots } from "@/features/pilots/pilots";
 import { Dashboard } from "@/features/dashboard/dashboard";
+import { Assistant } from "@/features/assistant/assistant";
 import { Profile, ProtectedLayout, PublicLayout } from "@/features/shared/shared";
 
 export default function AppRouter() {
@@ -103,6 +104,14 @@ export default function AppRouter() {
                 <Route element={<ProtectedLayout />}>
                     <Route path="/viajes" element={<IndexTrips />} />
                     <Route path="/viajes/crear" element={<CreateTrip />} />
+                    <Route path="/viajes/:id" element={<ShowTrip />} />
+                    <Route path="/viajes/:id/seguimiento" element={<TrackingTrip />} />
+                    <Route path="/viajes/:id/costo" element={<ShowTripCost />} />
+                    <Route path="/viajes/:id/editar" element={<UpdateTrip />} />
+                </Route>
+
+                <Route element={<ProtectedLayout />}>
+                    <Route path="/inteligencia-artificial" element={<Assistant />} />
                 </Route>
             </Routes>
         </BrowserRouter>
