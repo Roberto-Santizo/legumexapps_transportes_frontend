@@ -28,7 +28,7 @@ export function ProtectedLayout() {
     }
 
     return (
-        <div className="flex h-screen overflow-hidden bg-canvas">
+        <div className="relative flex h-dvh overflow-hidden bg-canvas">
             <div className="hidden shrink-0 lg:flex">
                 <AdminSidebar collapsed={collapsed} />
             </div>
@@ -57,7 +57,7 @@ export function ProtectedLayout() {
                     onOpenDrawer={() => setDrawerOpen(true)}
                 />
 
-                <main className="flex-1 overflow-y-auto bg-canvas p-10">
+                <main className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-canvas p-4 sm:p-6 lg:p-10">
                     <Outlet />
                 </main>
             </div>

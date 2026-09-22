@@ -1,5 +1,5 @@
-import type { PaginatedTrips, Trip, TripAssignmentForm, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
-import { PaginatedTripsSchema, TripDatasource, TripExpensesSchema, TripFuelsSchema, TripPositionSchema, TripSchema, TripTimeoutSchema, buildTripQuery, getTripErrorMessage } from "@/features/trips/trips";
+import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
+import { PaginatedTripsSchema, TripCostSchema, TripDatasource, TripExpensesSchema, TripFuelsSchema, TripPositionSchema, TripSchema, TripTimeoutSchema, buildTripQuery, getTripErrorMessage } from "@/features/trips/trips";
 import { ApiResponseSchema } from "@/features/shared/shared";
 import { isAxiosError, type AxiosInstance } from "axios";
 import { z } from "zod";
@@ -423,6 +423,35 @@ export class TripDatasourceImpl extends TripDatasource {
         try {
             const { data } = await this.api.get(`${this.url}/${id}/timeouts`);
             const response = z.array(TripTimeoutSchema).safeParse(data['data']);
+
+            if (response.success) {
+                return response.data;
+            }
+
+            throw new Error("Información no válida");
+        } catch (error) {
+            if (isAxiosError(error)) throw new Error(getTripErrorMessage(error), { cause: error });
+
+            throw new Error("Error no controlado.", { cause: error });
+        }
+    }
+
+    /**
+     * El costo **directo** de un viaje finalizado. Sin query params ni cuerpo:
+     * cualquiera se ignora. Las guardas van en orden 404 → 403 → 400:
+     *
+     * - **404** si no existe o está borrado.
+     * - **403** para cualquier `pilot` —incluido el asignado: revela su
+     *   salario— y para el `carrier` fuera de ámbito.
+     * - **400** si el viaje no está `finished`. No hay costo parcial.
+     *
+     * Un 200 no garantiza que los cuatro componentes tengan valor: un insumo
+     * ausente llega en `null` con su subtotal en `"0.00"`.
+     */
+    async getTripCost(id: string): Promise<TripCost> {
+        try {
+            const { data } = await this.api.get(`${this.url}/${id}/cost`);
+            const response = TripCostSchema.safeParse(data['data']);
 
             if (response.success) {
                 return response.data;

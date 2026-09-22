@@ -446,3 +446,62 @@ export const TripTimeoutSchema = z.object({
     /** `null` con `endedAt` puesto = la cerró el fin del viaje. */
     endPositionId: z.number().nullable(),
 });
+
+/* ------------------------------------------------------------------ *
+ * Costo directo
+ * ------------------------------------------------------------------ */
+
+/**
+ * Un tipo de combustible dentro del costo. Agrupa por tipo pero **cotiza por
+ * carga**: si el viaje cruzó un cambio de precio, `pricePerGallon` es el medio
+ * ponderado, no una tarifa real. `null` = ninguna carga del tipo encontró
+ * precio para su fecha, y entonces `amount` es `"0.00"` aunque `gallons` cuente.
+ */
+export const TripCostFuelTypeSchema = z.object({
+    fuelType: FuelTypeSchema,
+    gallons: z.string(),
+    pricePerGallon: z.string().nullable(),
+    amount: z.string(),
+});
+
+/**
+ * El desglose de `GET /api/trips/{trip}/cost`. Es **costo directo**, no «lo
+ * que costó el viaje»: combustible, viáticos, salario y seguro prorrateados, y
+ * nada más —ni depreciación, ni mantenimiento, ni peajes—.
+ *
+ * Todos los importes son **cadenas** de dos decimales; el único número de
+ * verdad es `expenses.count`. Un insumo que falta llega en `null` y su
+ * subtotal en `"0.00"`, con 200: el hueco se ve, no revienta.
+ */
+export const TripCostSchema = z.object({
+    tripId: z.number(),
+    order: z.string(),
+    /** Horas brutas, sin descontar paradas. `null` = viaje cerrado antes de SPEC 32. */
+    traveledHours: z.string().nullable(),
+    fuel: z.object({
+        gallons: z.string(),
+        /** `[]` sin cargas confirmadas; nunca `null`. */
+        byType: z.array(TripCostFuelTypeSchema),
+        subtotal: z.string(),
+    }),
+    expenses: z.object({
+        count: z.number(),
+        subtotal: z.string(),
+    }),
+    pilot: z.object({
+        pilotId: z.number().nullable(),
+        pilotName: z.string().nullable(),
+        /** `null` = sin piloto, piloto desvinculado o salario sin asignar. */
+        monthlySalary: z.string().nullable(),
+        subtotal: z.string(),
+    }),
+    vehicle: z.object({
+        vehicleId: z.number().nullable(),
+        plate: z.string().nullable(),
+        /** Único insumo **no histórico**: editar el seguro mueve costos ya cerrados. */
+        monthlyInsuranceCost: z.string().nullable(),
+        subtotal: z.string(),
+    }),
+    /** Suma exacta de los cuatro subtotales tal como salen. No se recalcula. */
+    totalCost: z.string(),
+});

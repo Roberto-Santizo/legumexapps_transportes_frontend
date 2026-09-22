@@ -60,7 +60,7 @@ export function Dashboard() {
 
     return (
         <StaggerContainer>
-            <div className="flex flex-col gap-8">
+            <div className="flex min-w-0 flex-col gap-8">
                 <StaggerItem>
                     <div className="flex flex-wrap items-end justify-between gap-4">
                         <Title
@@ -91,7 +91,7 @@ export function Dashboard() {
                 </StaggerItem>
 
                 <StaggerItem>
-                    <div className="grid gap-6 xl:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                         <TripsSummaryPanel
                             summary={trips.data}
                             range={range}

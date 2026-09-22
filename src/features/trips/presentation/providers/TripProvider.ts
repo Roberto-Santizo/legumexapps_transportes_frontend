@@ -60,6 +60,10 @@ export class TripProvider {
     getTripTimeouts(id: string) {
         return this.repository.getTripTimeouts(id);
     }
+
+    getTripCost(id: string) {
+        return this.repository.getTripCost(id);
+    }
 }
 
 const datasource = new TripDatasourceImpl(api);

@@ -55,7 +55,7 @@ export function TripsSummaryPanel({ summary, range, carrierFiltered, isLoading, 
                             formatValue={(value) => `${formatInteger(value)} ${value === 1 ? "viaje" : "viajes"}`}
                         />
 
-                        <div className="grid gap-8 md:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                             <RankedList
                                 heading="Por cliente"
                                 total={total}

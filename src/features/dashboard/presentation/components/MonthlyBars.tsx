@@ -40,8 +40,8 @@ export function MonthlyBars({ points, dataKey, color, formatValue, formatTick, d
     }
 
     return (
-        <div className="h-64">
-            <ResponsiveContainer>
+        <div className="h-64 min-w-0">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={points} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
                     <CartesianGrid vertical={false} stroke="var(--color-line)" />
 

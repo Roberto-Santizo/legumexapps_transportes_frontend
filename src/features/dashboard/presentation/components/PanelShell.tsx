@@ -10,7 +10,7 @@ type Props = {
 
 export function PanelShell({ eyebrow, title, description, aside, children }: Props) {
     return (
-        <section className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
+        <section className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface">
             <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line px-6 py-5">
                 <div className="min-w-0">
                     <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-subtle">

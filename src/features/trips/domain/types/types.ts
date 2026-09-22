@@ -1,4 +1,4 @@
-import type { FuelTypeSchema, PaginatedTripsSchema, TripExpenseSchema, TripExpensesSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
+import type { FuelTypeSchema, PaginatedTripsSchema, TripCostFuelTypeSchema, TripCostSchema, TripExpenseSchema, TripExpensesSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
 import type { z } from "zod";
 
 export type PaginatedTrips = z.infer<typeof PaginatedTripsSchema>;
@@ -237,3 +237,13 @@ export type TripExpenseForm = {
  * no son ISO y `endedAt === null` es la parada todavía abierta.
  */
 export type TripTimeout = z.infer<typeof TripTimeoutSchema>;
+
+/* ------------------------------------------------------------------ *
+ * Costo directo
+ * ------------------------------------------------------------------ */
+
+/** Un tipo de combustible del costo. `pricePerGallon: null` = falta historial de precios. */
+export type TripCostFuelType = z.infer<typeof TripCostFuelTypeSchema>;
+
+/** El costo **directo** de un viaje finalizado. Todo importe es cadena salvo `expenses.count`. */
+export type TripCost = z.infer<typeof TripCostSchema>;

@@ -106,7 +106,7 @@ export function VehicleExpensesPanel({ summary, range, isLoading, error, onRetry
 
                 {summary && (
                     <div className="flex flex-col gap-8">
-                        <div className="grid gap-8 md:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                             <SplitBar
                                 heading="Naturaleza"
                                 left={{ label: "Preventivo", ...summary.byNature.preventive, className: "bg-success" }}
@@ -129,7 +129,7 @@ export function VehicleExpensesPanel({ summary, range, isLoading, error, onRetry
                             describe={(point) => point.total > 0 ? `${formatInteger(point.total)} ${point.total === 1 ? "gasto" : "gastos"}` : null}
                         />
 
-                        <div className="grid gap-8 md:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                             <RankedList
                                 heading="Por categoría"
                                 total={totalAmount}

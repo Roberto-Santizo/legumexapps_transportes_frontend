@@ -19,7 +19,7 @@ export function AdminSidebar({ collapsed, onNavigate }: Props) {
 
     return (
         <aside
-            className={`flex h-full shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200 ease-out ${collapsed ? "w-16" : "w-64"
+            className={`flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-line bg-surface transition-[width] duration-200 ease-out ${collapsed ? "w-16" : "w-64"
                 }`}
         >
             <Link
@@ -46,7 +46,7 @@ export function AdminSidebar({ collapsed, onNavigate }: Props) {
                 </span>
             </Link>
 
-            <nav className="flex-1 overflow-x-hidden overflow-y-auto py-4">
+            <nav className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto py-4">
                 <ul className="flex flex-col gap-1 px-3">
                     {items.map((item) => (
                         <AdminNavItem

@@ -18,7 +18,7 @@
  */
 
 import type { Option } from "@/features/shared/shared";
-import type { LatLng, Trip, TripAssignmentForm, TripAssignmentFormValues, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
+import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
 import { formatDistanceKilometers, formatDurationHours } from "@/features/places/places";
 import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
 import { isAxiosError, type AxiosError } from "axios";
@@ -985,3 +985,54 @@ export const timeoutMapUrl = (timeout: Pick<TripTimeout, 'latitude' | 'longitude
 
 /** El 403 que responde el `GET` a cualquier piloto, incluido el asignado. */
 export const TRIP_TIMEOUTS_FORBIDDEN_MESSAGE = "No tienes permisos para consultar las paradas de un viaje";
+
+/* ------------------------------------------------------------------ *
+ * Costo directo
+ * ------------------------------------------------------------------ */
+
+/**
+ * Consultar el costo es de todos **menos del piloto**, incluido el asignado: el
+ * desglose revela su salario. La misma regla que el rastro y las paradas.
+ */
+export const canReadTripCost = (role?: string): boolean => canTrackTrips(role);
+
+/** Solo un viaje `finished` tiene costo: `pending` e `in_route` responden 400. */
+export const hasTripCost = (trip: Pick<TripListItem, 'status'>): boolean => trip.status === 'finished';
+
+/** El mes del prorrateo: 30 × 24 horas, no una jornada laboral. */
+export const TRIP_COST_MONTH_HOURS = 720;
+
+/** Los cuatro componentes del costo directo, en el orden en que se pintan. */
+export type TripCostComponent = 'fuel' | 'expenses' | 'pilot' | 'vehicle';
+
+export const TRIP_COST_COMPONENT_LABELS: Record<TripCostComponent, string> = {
+    fuel: "Combustible",
+    expenses: "Viáticos",
+    pilot: "Salario del piloto",
+    vehicle: "Seguro del vehículo",
+};
+
+/** Subtotal de cada componente ya convertido a número, tal como sale redondeado. */
+export const tripCostShares = (cost: TripCost): { component: TripCostComponent; amount: number }[] => [
+    { component: 'fuel', amount: parseAmount(cost.fuel.subtotal) },
+    { component: 'expenses', amount: parseAmount(cost.expenses.subtotal) },
+    { component: 'pilot', amount: parseAmount(cost.pilot.subtotal) },
+    { component: 'vehicle', amount: parseAmount(cost.vehicle.subtotal) },
+];
+
+/**
+ * Los huecos del desglose. Un total bajo casi siempre es un insumo que falta,
+ * no un viaje barato: se avisa en vez de pintar un cero limpio.
+ */
+export const tripCostMissingInputs = (cost: TripCost): string[] => {
+    const holes: string[] = [];
+
+    if (cost.traveledHours === null) holes.push("El viaje no tiene horas reales registradas: el salario y el seguro no se pudieron prorratear y valen Q0.00.");
+    if (cost.pilot.monthlySalary === null) holes.push(cost.pilot.pilotId === null
+        ? "El viaje no tiene piloto asignado: no hay salario que prorratear."
+        : "No hay salario vigente para el piloto: puede estar desvinculado de la empresa o no tener salario asignado.");
+    if (cost.vehicle.monthlyInsuranceCost === null) holes.push("El viaje no tiene vehículo asignado: no hay seguro que prorratear.");
+    if (cost.fuel.byType.some((type) => type.pricePerGallon === null)) holes.push("Hay combustible sin precio capturado para la fecha de su carga: sus galones cuentan, pero su importe vale Q0.00.");
+
+    return holes;
+};

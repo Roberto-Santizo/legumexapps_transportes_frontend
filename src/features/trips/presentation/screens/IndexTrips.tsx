@@ -30,6 +30,7 @@ import {
     canAssignTrip,
     canAssignTrips,
     canFinishTrip,
+    canReadTripCost,
     canReadTripExpenses,
     canReadTripFuels,
     canRegisterTripExpenses,
@@ -42,13 +43,14 @@ import {
     formatTripHours,
     formatTripKilometers,
     hasTraveledMetrics,
+    hasTripCost,
     hasTripEstimates,
     isTripInBag,
     tripProvider,
     type TripListItem
 } from "@/features/trips/trips";
 import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
-import { CircleCheckBig, Eye, Fuel, Pencil, Play, Plus, Radar, Trash2, Truck, Wallet } from "lucide-react";
+import { Calculator, CircleCheckBig, Eye, Fuel, Pencil, Play, Plus, Radar, Trash2, Truck, Wallet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -83,6 +85,8 @@ export function IndexTrips() {
     /** Los viáticos siguen la misma regla que las cargas. */
     const canReadExpenses = canReadTripExpenses(role);
     const canRegisterExpenses = canRegisterTripExpenses(role, user?.carrierId);
+    /** El costo directo: todos menos el piloto, y solo sobre un viaje finalizado. */
+    const canReadCost = canReadTripCost(role);
 
     const search = searchParams.get('search') ?? '';
     const status = searchParams.get('status') ?? '';
@@ -187,6 +191,11 @@ export function IndexTrips() {
             label: "Viáticos",
             icon: <Wallet />,
             onClick: () => setTripToExpense(trip)
+        }] : []),
+        ...(canReadCost && hasTripCost(trip) ? [{
+            label: "Costo directo",
+            icon: <Calculator />,
+            onClick: () => navigate(`/viajes/${trip.id}/costo`)
         }] : []),
         ...(canRun && canStartTrip(trip) ? [{
             label: "Iniciar viaje",
