@@ -1,4 +1,4 @@
-import { BarChartDatumSchema, FileResponseSchema } from '@/features/shared/shared';
+import { BarChartDatumSchema, FileResponseSchema, type UserRole } from '@/features/shared/shared';
 import type { ReactNode } from 'react';
 import z, { type ZodSchema } from 'zod';
 
@@ -49,8 +49,6 @@ export interface ExportExcelOptions<T> {
     columns: Column<T>[];
     data: T[];
 }
-
-export type UserRole = "administrator" | "carrier" | "pilot" | "manager";
 
 export type NavItem = {
     to: string;

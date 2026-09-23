@@ -1,5 +1,5 @@
 import type { RootState } from "@/config/config";
-import { AdminNavItem, NAVIGATION, type UserRole } from "@/features/shared/shared";
+import { AdminNavItem, NAVIGATION, homeRoute, isUserRole } from "@/features/shared/shared";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 
@@ -14,7 +14,7 @@ export function AdminSidebar({ collapsed, onNavigate }: Props) {
     const role = useSelector((state: RootState) => state.auth.user?.role);
 
     const items = NAVIGATION.filter(
-        (item) => !item.roles || item.roles.includes(role as UserRole)
+        (item) => !item.roles || (isUserRole(role) && item.roles.includes(role))
     );
 
     return (
@@ -23,7 +23,7 @@ export function AdminSidebar({ collapsed, onNavigate }: Props) {
                 }`}
         >
             <Link
-                to="/dashboard"
+                to={homeRoute(role)}
                 onClick={onNavigate}
                 className="group flex h-16 shrink-0 items-center border-b border-line px-3 focus-visible:outline-none"
             >

@@ -10,7 +10,7 @@
  */
 
 import type { Accessory, AccessoryFilters, AccessoryForm } from "@/features/accessories/accessories";
-import type { Option } from "@/features/shared/shared";
+import { can, type Option } from "@/features/shared/shared";
 import { isAxiosError } from "axios";
 
 /**
@@ -40,8 +40,8 @@ export const ACCESSORY_PRICE_MAX = 99999999.99;
 export const ACCESSORY_DEPRECIATION_MIN = 0;
 export const ACCESSORY_DEPRECIATION_MAX = 100;
 
-/** Leer lo puede cualquier autenticado; crear, editar y dar de baja es solo de `administrator`. */
-export const canWriteAccessories = (role?: string): boolean => role === 'administrator';
+/** Leen todos menos `user` y `shipment`; crear, editar y dar de baja es solo de `administrator`. */
+export const canWriteAccessories = (role?: string): boolean => can(role, 'writeCoreCatalogs');
 
 /** Cadena de la API → número. Un importe ilegible se trata como 0, nunca como NaN. */
 export const toAmount = (value: string | null): number => {

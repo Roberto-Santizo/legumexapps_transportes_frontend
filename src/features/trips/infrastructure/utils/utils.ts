@@ -17,7 +17,7 @@
  *   es: una etiqueta que alguien movió a mano.
  */
 
-import type { Option } from "@/features/shared/shared";
+import { can, type Option } from "@/features/shared/shared";
 import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
 import { formatDistanceKilometers, formatDurationHours } from "@/features/places/places";
 import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
@@ -46,8 +46,8 @@ export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
 export const TRIP_STATUSES: Option[] = (Object.keys(TRIP_STATUS_LABELS) as TripStatus[])
     .map((value) => ({ value, label: TRIP_STATUS_LABELS[value] }));
 
-/** Publicar, editar y dar de baja es solo de `administrator`. Los cuatro roles leen. */
-export const canWriteTrips = (role?: string): boolean => role === 'administrator';
+/** Publicar, editar y dar de baja: `administrator` y `export`. Los siete roles leen (con su ámbito). */
+export const canWriteTrips = (role?: string): boolean => can(role, 'manageTrips');
 
 /**
  * Tomar el viaje es solo de `carrier`, y además con empresa registrada: sin
@@ -55,10 +55,10 @@ export const canWriteTrips = (role?: string): boolean => role === 'administrator
  * administrador no puede asignar por ninguna ruta.**
  */
 export const canAssignTrips = (role?: string, carrierId?: number | null): boolean =>
-    role === 'carrier' && typeof carrierId === 'number';
+    can(role, 'assignTrip') && typeof carrierId === 'number';
 
 /** Arrancar y cerrar es solo del piloto, y dentro el service exige que sea *el* asignado. */
-export const canRunTrips = (role?: string): boolean => role === 'pilot';
+export const canRunTrips = (role?: string): boolean => can(role, 'driveTrip');
 
 /**
  * La bolsa: el viaje que todavía no tomó nadie. Es lo que separa las dos listas
@@ -84,14 +84,13 @@ export const canFinishTrip = (trip: Pick<TripListItem, 'startDate' | 'endDate'>)
 /**
  * Mirar el rastro es de todos **menos del piloto**, que recibe 403 tanto en el
  * `GET` como al suscribirse al canal —también sobre su propio viaje: su
- * aplicación ya conoce su posición—. Es la inversa exacta de `canRunTrips`.
+ * aplicación ya conoce su posición—. `user` y `shipment` sí lo ven.
  *
  * Esconder la opción es cortesía, no seguridad: el ámbito lo cierra el
  * servidor, y un `carrier` fuera del suyo recibe 403 aunque llegue a la URL a
  * mano.
  */
-export const canTrackTrips = (role?: string): boolean =>
-    role === 'administrator' || role === 'manager' || role === 'carrier';
+export const canTrackTrips = (role?: string): boolean => can(role, 'readTripTracking');
 
 /**
  * Solo un viaje en ruta tiene algo que seguir. Uno `pending` no ha reportado
@@ -719,19 +718,19 @@ export const TRIP_FUEL_TYPES: Option[] = FUEL_TYPES;
 export const TRIP_FUEL_TYPE_LABELS: Record<string, string> = FUEL_TYPE_LABELS;
 
 /**
- * Registrar cargas es solo de `carrier`, y con empresa registrada: sin ella el
- * service responde 403 «No perteneces a ninguna empresa transportista». **Ni el
- * administrador ni el `manager` pueden cargar por ninguna ruta.**
+ * Registrar cargas: `administrator` (sobre cualquier viaje ya asignado) y
+ * `carrier` con empresa registrada —sin ella el service responde 403 «No
+ * perteneces a ninguna empresa transportista»—. Nadie más.
  */
 export const canRegisterTripFuels = (role?: string, carrierId?: number | null): boolean =>
-    role === 'carrier' && typeof carrierId === 'number';
+    can(role, 'registerTripFuelOrExpense') && (role !== 'carrier' || typeof carrierId === 'number');
 
 /**
- * Leer las cargas lo pueden los cuatro roles, **incluido el piloto asignado**
+ * Leer las cargas lo pueden los siete roles, **incluido el piloto asignado**
  * —al revés que el rastro, que a todo piloto le responde 403—: el dato es sobre
  * él y lo necesita para confirmarlo desde su aplicación.
  */
-export const canReadTripFuels = (role?: string): boolean => Boolean(role);
+export const canReadTripFuels = (role?: string): boolean => can(role, 'readTripFuels');
 
 /**
  * Sobre qué viaje se puede cargar. Dos condiciones, y las dos son del servidor:
@@ -812,15 +811,17 @@ export const getTripFuelFieldErrors = (error: unknown): TripFuelFieldError[] => 
 export const TRIP_EXPENSE_MAX_AMOUNT = 99999999.99;
 
 /**
- * Registrar viáticos es solo de `carrier`, y con empresa registrada: la misma
- * regla que las cargas. **Ni el administrador ni el `manager` pueden
- * registrar ni confirmar por ninguna ruta.**
+ * Registrar viáticos: la misma regla que las cargas —`administrator` y
+ * `carrier` con empresa—. Confirmarlos es solo del piloto asignado.
  */
 export const canRegisterTripExpenses = (role?: string, carrierId?: number | null): boolean =>
-    role === 'carrier' && typeof carrierId === 'number';
+    canRegisterTripFuels(role, carrierId);
 
-/** Leer los viáticos lo pueden los cuatro roles, **incluido el piloto asignado**. */
-export const canReadTripExpenses = (role?: string): boolean => Boolean(role);
+/**
+ * Leer los viáticos lo pueden todos, **incluido el piloto asignado**, menos
+ * `shipment`: no ve dinero (tampoco el total de viáticos del viaje).
+ */
+export const canReadTripExpenses = (role?: string): boolean => can(role, 'readTripExpenses');
 
 /**
  * Sobre qué viaje se puede registrar un viático: las dos mismas condiciones
@@ -991,10 +992,10 @@ export const TRIP_TIMEOUTS_FORBIDDEN_MESSAGE = "No tienes permisos para consulta
  * ------------------------------------------------------------------ */
 
 /**
- * Consultar el costo es de todos **menos del piloto**, incluido el asignado: el
- * desglose revela su salario. La misma regla que el rastro y las paradas.
+ * Consultar el costo es de todos **menos del piloto**, incluido el asignado (el
+ * desglose revela su salario), **y de `shipment`**, que no ve dinero.
  */
-export const canReadTripCost = (role?: string): boolean => canTrackTrips(role);
+export const canReadTripCost = (role?: string): boolean => can(role, 'readTripCost');
 
 /** Solo un viaje `finished` tiene costo: `pending` e `in_route` responden 400. */
 export const hasTripCost = (trip: Pick<TripListItem, 'status'>): boolean => trip.status === 'finished';

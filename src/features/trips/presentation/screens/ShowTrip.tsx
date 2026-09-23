@@ -87,10 +87,10 @@ export function ShowTrip() {
     const canAssign = canAssignTrips(role, user?.carrierId);
     const canRun = canRunTrips(role);
     const canTrack = canTrackTrips(role);
-    /** Leer las cargas lo pueden los cuatro roles; registrarlas, solo la empresa. */
+    /** Leer las cargas lo pueden los siete roles; registrarlas, la empresa o el administrador. */
     const canReadFuels = canReadTripFuels(role);
     const canRegisterFuels = canRegisterTripFuels(role, user?.carrierId);
-    /** Los viáticos siguen la misma regla que las cargas. */
+    /** Los viáticos siguen la misma regla que las cargas, salvo que `shipment` no los ve. */
     const canReadExpenses = canReadTripExpenses(role);
     const canRegisterExpenses = canRegisterTripExpenses(role, user?.carrierId);
     /** Las paradas las ven los mismos que el rastro: todos menos el piloto. */
@@ -357,12 +357,15 @@ export function ShowTrip() {
                                             </span>
                                         </Field>
 
-                                        {/* Misma regla que el combustible: solo lo que el piloto confirmó haber recibido. */}
-                                        <Field label="Viáticos confirmados">
-                                            <span className="font-mono text-[13px] tabular-nums">
-                                                {formatAmount(trip.totalExpensesAmount ?? "0.00")}
-                                            </span>
-                                        </Field>
+                                        {/* Misma regla que el combustible: solo lo que el piloto confirmó haber recibido.
+                                          * A `shipment` la API le manda siempre "0.00": no ve dinero, así que no se pinta. */}
+                                        {canReadExpenses && (
+                                            <Field label="Viáticos confirmados">
+                                                <span className="font-mono text-[13px] tabular-nums">
+                                                    {formatAmount(trip.totalExpensesAmount ?? "0.00")}
+                                                </span>
+                                            </Field>
+                                        )}
                                     </dl>
 
                                     {trip.pilotName && (

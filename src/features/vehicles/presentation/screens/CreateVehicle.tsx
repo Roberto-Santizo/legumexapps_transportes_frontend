@@ -1,10 +1,14 @@
-import { canCreateVehicle, VehicleFormComponent, VehiclePageHeader, vehicleProvider, type VehicleForm } from "@/features/vehicles/vehicles";
+import { canWriteVehicles, mustPickVehicleCarrier, VehicleFormComponent, VehiclePageHeader, vehicleProvider, type VehicleForm } from "@/features/vehicles/vehicles";
+import { carrierProvider } from "@/features/carriers/carriers";
 import { CustomFilledButton, CustomForm, FadeInUp, useNotification } from "@/features/shared/shared";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/config/store/store";
+
+/** Tope del select de empresas del administrador: el mismo que el filtro del listado. */
+const CARRIERS_LIMIT = '500';
 
 export function CreateVehicle() {
     const navigate = useNavigate();
@@ -12,6 +16,18 @@ export function CreateVehicle() {
     const queryClient = useQueryClient();
 
     const role = useSelector((state: RootState) => state.auth.user?.role);
+    const pickCarrier = mustPickVehicleCarrier(role);
+
+    /** El administrador registra a nombre de una empresa: `carrier_id` es obligatorio para él. */
+    const { data: carriers } = useQuery({
+        queryKey: ['getCarriers', CARRIERS_LIMIT],
+        queryFn: () => carrierProvider.getCarriers(CARRIERS_LIMIT, '0'),
+        enabled: pickCarrier
+    });
+
+    const carrierOptions = pickCarrier
+        ? (carriers?.data ?? []).map((carrier) => ({ value: carrier.id, label: carrier.name }))
+        : undefined;
 
     const {
         register,
@@ -33,11 +49,10 @@ export function CreateVehicle() {
     const onSubmit = (data: VehicleForm) => mutate(data);
 
     /**
-     * El alta es `role:carrier` a secas: un `administrator` recibe 403 aunque
-     * pueda listar, ver, editar y desactivar. Se dice antes de que teclee los
-     * trece campos, no después de perderlos.
+     * El alta es de `administrator` y `carrier`; `manager` y `export` reciben
+     * 403. Se dice antes de que teclee los trece campos, no después de perderlos.
      */
-    if (!canCreateVehicle(role)) {
+    if (!canWriteVehicles(role)) {
         return (
             <div className="flex flex-col gap-8">
                 <VehiclePageHeader
@@ -52,12 +67,12 @@ export function CreateVehicle() {
                         </p>
 
                         <p className="mx-auto mt-3 max-w-[38ch] font-display text-xl font-semibold tracking-tight text-ink">
-                            Solo un transportista puede registrar una unidad.
+                            Tu rol solo puede consultar las unidades.
                         </p>
 
                         <p className="mx-auto mt-2 max-w-[46ch] text-sm text-ink-muted">
-                            La unidad queda vinculada a la empresa de quien la registra. Desde aquí sí puedes
-                            consultar, editar y desactivar las unidades ya registradas.
+                            Las unidades las registra cada transportista o un administrador. Desde aquí sí
+                            puedes consultar las unidades ya registradas.
                         </p>
 
                         <div className="mt-6 flex justify-center">
@@ -87,6 +102,7 @@ export function CreateVehicle() {
                             register={register}
                             control={control}
                             errors={errors}
+                            carrierOptions={carrierOptions}
                         />
 
                         <CustomFilledButton

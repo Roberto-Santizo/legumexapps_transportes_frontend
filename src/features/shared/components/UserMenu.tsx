@@ -1,5 +1,6 @@
 import type { AppDispatch, RootState } from "@/config/config";
 import { logout } from "@/features/auth/slices/authSlice";
+import { roleLabel } from "@/features/shared/shared";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { CircleUser, LogOut } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -34,7 +35,7 @@ export function UserMenu() {
                     </span>
 
                     <span className="max-w-40 truncate font-mono text-[10px] uppercase tracking-wider text-ink-subtle">
-                        {user.role}
+                        {roleLabel(user.role)}
                     </span>
                 </span>
             </MenuButton>

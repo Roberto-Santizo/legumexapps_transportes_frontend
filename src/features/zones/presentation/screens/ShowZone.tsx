@@ -9,7 +9,7 @@ import {
     formatLatLng,
     zoneProvider
 } from "@/features/zones/zones";
-import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
+import { can, CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
@@ -39,7 +39,8 @@ export function ShowZone() {
     const queryClient = useQueryClient();
 
     const role = useSelector((state: RootState) => state.auth.user?.role);
-    const canWrite = role === 'administrator';
+    /** Crear, editar y dar de baja es solo de `administrator`. */
+    const canWrite = can(role, 'writeCoreCatalogs');
 
     const { data: zone, isLoading, isError, error } = useQuery({
         queryKey: ['getZoneById', id],

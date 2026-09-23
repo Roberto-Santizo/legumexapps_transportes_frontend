@@ -11,7 +11,7 @@
  * este módulo, así que la dependencia inversa cerraría el círculo entre los dos.
  */
 
-import type { Option } from "@/features/shared/shared";
+import { can, type Option } from "@/features/shared/shared";
 import type { VehicleExpenseFilters, VehicleExpenseForm, VehicleExpenseUpdateForm } from "@/features/vehicle-expenses/vehicle-expenses";
 import { isAxiosError } from "axios";
 
@@ -79,16 +79,14 @@ export const CARRIER_MISSING_MESSAGE = "No perteneces a ninguna empresa transpor
  * Los cinco endpoints le responden 403 a un `pilot`, así que a él no se le
  * pinta el panel: no es que no pueda escribir, es que no puede ni leer.
  */
-export const canReadVehicleExpenses = (role?: string): boolean =>
-    role === 'administrator' || role === 'carrier' || role === 'manager';
+export const canReadVehicleExpenses = (role?: string): boolean => can(role, 'readVehicleExpenses');
 
 /**
  * El `manager` lee cualquier empresa pero no escribe nada: alta, edición y
  * borrado le responden 403. Se le esconden los botones en lugar de dejarle
  * capturar el gasto entero para perderlo al enviarlo.
  */
-export const canWriteVehicleExpenses = (role?: string): boolean =>
-    role === 'administrator' || role === 'carrier';
+export const canWriteVehicleExpenses = (role?: string): boolean => can(role, 'writeVehicleExpenses');
 
 /** Cadena de la API → número. Un importe ilegible se trata como 0, nunca como NaN. */
 export const toExpenseAmount = (value: string | null): number => {

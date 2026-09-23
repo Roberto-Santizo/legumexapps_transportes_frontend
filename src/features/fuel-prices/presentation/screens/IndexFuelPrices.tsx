@@ -1,7 +1,9 @@
 import { FUEL_TYPE_LABELS, FuelPriceBoard, FuelPriceFigure, FuelPriceMoment, FuelPriceStatus, FuelTypeTag, fuelPriceProvider, type FuelPrice } from "@/features/fuel-prices/fuel-prices";
-import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
+import { can, ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
 import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/config/config";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export function IndexFuelPrices() {
@@ -10,6 +12,10 @@ export function IndexFuelPrices() {
     const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
     const { page, rowsPerPage } = usePagination(searchParams);
+
+    /** Crear, editar y eliminar es solo de `administrator`; el resto de lectores solo consulta. */
+    const role = useSelector((state: RootState) => state.auth.user?.role);
+    const canWrite = can(role, 'writeCoreCatalogs');
 
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ['getFuelPrices', page, rowsPerPage],
@@ -50,12 +56,14 @@ export function IndexFuelPrices() {
                     subtitle="El precio del galón con el que se costean los viajes. Cada cambio de precio queda registrado."
                 />
 
-                <CustomFilledButton
-                    label="Registrar precio"
-                    type="button"
-                    icon={<Plus size={16} />}
-                    onClick={() => navigate('/gasolina-precios/crear')}
-                />
+                {canWrite && (
+                    <CustomFilledButton
+                        label="Registrar precio"
+                        type="button"
+                        icon={<Plus size={16} />}
+                        onClick={() => navigate('/gasolina-precios/crear')}
+                    />
+                )}
             </div>
 
             {/*
@@ -91,12 +99,14 @@ export function IndexFuelPrices() {
                         </p>
 
                         <div className="mt-6 flex justify-center">
-                            <CustomFilledButton
-                                label="Registrar precio"
-                                type="button"
-                                icon={<Plus size={16} />}
-                                onClick={() => navigate('/gasolina-precios/crear')}
-                            />
+                            {canWrite && (
+                                <CustomFilledButton
+                                    label="Registrar precio"
+                                    type="button"
+                                    icon={<Plus size={16} />}
+                                    onClick={() => navigate('/gasolina-precios/crear')}
+                                />
+                            )}
                         </div>
                     </div>
                 </FadeInUp>
@@ -145,17 +155,19 @@ export function IndexFuelPrices() {
                                                     icon: <Eye />,
                                                     onClick: () => navigate(`/gasolina-precios/${fuelPrice.id}`)
                                                 },
-                                                {
-                                                    label: "Editar",
-                                                    icon: <Pencil />,
-                                                    onClick: () => navigate(`/gasolina-precios/${fuelPrice.id}/editar`)
-                                                },
-                                                {
-                                                    label: "Eliminar",
-                                                    icon: <Trash2 />,
-                                                    onClick: () => askToDelete(fuelPrice),
-                                                    danger: true
-                                                }
+                                                ...(canWrite ? [
+                                                    {
+                                                        label: "Editar",
+                                                        icon: <Pencil />,
+                                                        onClick: () => navigate(`/gasolina-precios/${fuelPrice.id}/editar`)
+                                                    },
+                                                    {
+                                                        label: "Eliminar",
+                                                        icon: <Trash2 />,
+                                                        onClick: () => askToDelete(fuelPrice),
+                                                        danger: true
+                                                    }
+                                                ] : [])
                                             ]}
                                         />
                                     </Td>

@@ -11,13 +11,19 @@
  */
 
 import type { DashboardDateRange, DashboardMonthPoint, DashboardPeriod, DashboardSummaryFilters, DashboardVehicleFilters } from "@/features/dashboard/dashboard";
-import type { Option } from "@/features/shared/shared";
+import { can, type Option } from "@/features/shared/shared";
 import { isAxiosError } from "axios";
 
-/** Los cuatro endpoints responden 403 a `carrier` y a `pilot`: el tablero entero se les oculta. */
-export const canReadDashboard = (role?: string): boolean => role === 'administrator' || role === 'manager';
+/**
+ * `administrator`, `manager`, `export` y `carrier` (este acotado a su empresa:
+ * el filtro `carrierId` se le ignora). `pilot`, `user` y `shipment` reciben 403.
+ */
+export const canReadDashboard = (role?: string): boolean => can(role, 'dashboard');
 
-/** A dónde va un rol sin tablero después de iniciar sesión: la única pantalla que los cuatro roles comparten. */
+/** Solo quien lee `GET /carriers` puede elegir empresa en el tablero. */
+export const canFilterDashboardByCarrier = (role?: string): boolean => can(role, 'readCarriers');
+
+/** A dónde va un rol sin tablero: la única pantalla que los siete roles comparten. */
 export const DASHBOARD_FALLBACK_ROUTE = '/viajes';
 
 /**

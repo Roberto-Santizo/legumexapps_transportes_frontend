@@ -23,20 +23,20 @@ import {
     type AssistantToolName,
     type AssistantToolOutcome,
 } from "@/features/assistant/assistant";
-import type { UserRole } from "@/features/shared/shared";
+import { can } from "@/features/shared/shared";
 import type { UIMessage } from "ai";
 
-/** Mismos permisos que el tablero: `pilot` recibe 403 y un `carrier` sin empresa también. */
+/**
+ * Mismos permisos que el tablero: `administrator`, `manager`, `export` y
+ * `carrier` con empresa (sin ella, `carrier.required` responde 403).
+ */
 export const canUseAssistant = (role?: string, carrierId?: number | null): boolean => {
-    if (role === 'administrator' || role === 'manager') return true;
+    if (!can(role, 'assistant')) return false;
 
-    return role === 'carrier' && typeof carrierId === 'number';
+    return role !== 'carrier' || typeof carrierId === 'number';
 };
 
-/** Los tres roles con acceso, para la entrada de `NAVIGATION`. */
-export const ASSISTANT_ROLES: UserRole[] = ['administrator', 'manager', 'carrier'];
-
-/** A dónde va un rol sin asistente: la única pantalla que comparten los cuatro. */
+/** A dónde va un rol sin asistente: la única pantalla que comparten los siete. */
 export const ASSISTANT_FALLBACK_ROUTE = '/viajes';
 
 /** `messages` admite entre 1 y 50 elementos; se recorta por el principio conservando la pregunta. */

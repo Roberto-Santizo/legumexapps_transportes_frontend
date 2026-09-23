@@ -9,6 +9,7 @@
  * silencio, así que el mapeo campo↔mensaje se hace a mano por el texto.
  */
 
+import { can } from "@/features/shared/shared";
 import type { ClientField, ClientFilters, ClientForm } from "@/features/clients/clients";
 import { isAxiosError, type AxiosError } from "axios";
 
@@ -23,8 +24,8 @@ export const CLIENT_NAME_MAX_LENGTH = 255;
  */
 export const CLIENT_CODE_PATTERN = /^\S+$/;
 
-/** Leer lo puede cualquier autenticado; crear, editar y borrar es solo de `administrator`. */
-export const canWriteClients = (role?: string): boolean => role === 'administrator';
+/** Leen todos menos `user` y `shipment`; crear, editar y borrar es de `administrator` y `export`. */
+export const canWriteClients = (role?: string): boolean => can(role, 'writeTripCatalogs');
 
 /**
  * La normalización que hace el backend con el código: recorte y MAYÚSCULAS.

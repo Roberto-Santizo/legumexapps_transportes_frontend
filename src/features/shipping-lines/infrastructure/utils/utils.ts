@@ -9,14 +9,15 @@
  * silencio, así que el mapeo campo↔mensaje se hace a mano por el texto.
  */
 
+import { can } from "@/features/shared/shared";
 import type { ShippingLineField, ShippingLineFilters, ShippingLineForm } from "@/features/shipping-lines/shipping-lines";
 import { isAxiosError, type AxiosError } from "axios";
 
 /** Límite que valida el backend. Se replica para no gastar un viaje en un 422. */
 export const SHIPPING_LINE_NAME_MAX_LENGTH = 255;
 
-/** Leer lo puede cualquier autenticado; crear, editar y borrar es solo de `administrator`. */
-export const canWriteShippingLines = (role?: string): boolean => role === 'administrator';
+/** Leen todos menos `user` y `shipment`; crear, editar y borrar es de `administrator` y `export`. */
+export const canWriteShippingLines = (role?: string): boolean => can(role, 'writeTripCatalogs');
 
 /**
  * La normalización que hace el backend antes de guardar y antes de comparar la

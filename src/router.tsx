@@ -14,7 +14,7 @@ import { CreateTrip, IndexTrips, ShowTrip, ShowTripCost, TrackingTrip, UpdateTri
 import { IndexPilots } from "@/features/pilots/pilots";
 import { Dashboard } from "@/features/dashboard/dashboard";
 import { Assistant } from "@/features/assistant/assistant";
-import { Profile, ProtectedLayout, PublicLayout } from "@/features/shared/shared";
+import { Profile, ProtectedLayout, PublicLayout, RoleGuard } from "@/features/shared/shared";
 
 export default function AppRouter() {
     return (
@@ -30,88 +30,138 @@ export default function AppRouter() {
                 <Route path="/completar-perfil" element={<CompleteProfile />} />
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route element={<RoleGuard permission="dashboard" redirectTo="/viajes" />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                    </Route>
                     <Route path="/perfil" element={<Profile />} />
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/vehiculos" element={<IndexVehicles />} />
-                    <Route path="/vehiculos/crear" element={<CreateVehicle />} />
-                    <Route path="/vehiculos/:id" element={<ShowVehicle />} />
-                    <Route path="/vehiculos/:id/editar" element={<UpdateVehicle />} />
+                    <Route element={<RoleGuard permission="readVehicles" />}>
+                        <Route path="/vehiculos" element={<IndexVehicles />} />
+                        <Route path="/vehiculos/:id" element={<ShowVehicle />} />
+                        <Route element={<RoleGuard permission="writeVehicles" redirectTo="/vehiculos" />}>
+                            <Route path="/vehiculos/crear" element={<CreateVehicle />} />
+                            <Route path="/vehiculos/:id/editar" element={<UpdateVehicle />} />
+                        </Route>
+                    </Route>
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/gasolina-precios" element={<IndexFuelPrices />} />
-                    <Route path="/gasolina-precios/crear" element={<CreateFuelPrice />} />
-                    <Route path="/gasolina-precios/:id" element={<ShowFuelPrice />} />
-                    <Route path="/gasolina-precios/:id/editar" element={<UpdateFuelPrice />} />
+                    <Route element={<RoleGuard permission="readCatalogs" />}>
+                        <Route path="/gasolina-precios" element={<IndexFuelPrices />} />
+                        <Route path="/gasolina-precios/:id" element={<ShowFuelPrice />} />
+                        <Route element={<RoleGuard permission="writeCoreCatalogs" redirectTo="/gasolina-precios" />}>
+                            <Route path="/gasolina-precios/crear" element={<CreateFuelPrice />} />
+                            <Route path="/gasolina-precios/:id/editar" element={<UpdateFuelPrice />} />
+                        </Route>
+                    </Route>
                 </Route>
                
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/productos" element={<IndexProducts />} />
-                    <Route path="/productos/crear" element={<CreateProduct />} />
-                    <Route path="/productos/:id" element={<ShowProduct />} />
-                    <Route path="/productos/:id/editar" element={<UpdateProduct />} />
+                    <Route element={<RoleGuard permission="readCatalogs" />}>
+                        <Route path="/productos" element={<IndexProducts />} />
+                        <Route path="/productos/:id" element={<ShowProduct />} />
+                        <Route element={<RoleGuard permission="writeCoreCatalogs" redirectTo="/productos" />}>
+                            <Route path="/productos/crear" element={<CreateProduct />} />
+                            <Route path="/productos/:id/editar" element={<UpdateProduct />} />
+                        </Route>
+                    </Route>
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/zonas" element={<IndexZones />} />
-                    <Route path="/zonas/crear" element={<CreateZone />} />
-                    <Route path="/zonas/:id" element={<ShowZone />} />
-                    <Route path="/zonas/:id/editar" element={<UpdateZone />} />
+                    <Route element={<RoleGuard permission="readCatalogs" />}>
+                        <Route path="/zonas" element={<IndexZones />} />
+                        <Route path="/zonas/:id" element={<ShowZone />} />
+                        <Route element={<RoleGuard permission="writeCoreCatalogs" redirectTo="/zonas" />}>
+                            <Route path="/zonas/crear" element={<CreateZone />} />
+                            <Route path="/zonas/:id/editar" element={<UpdateZone />} />
+                        </Route>
+                    </Route>
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/ubicaciones" element={<IndexLocations />} />
-                    <Route path="/ubicaciones/crear" element={<CreateLocation />} />
-                    <Route path="/ubicaciones/:id" element={<ShowLocation />} />
-                    <Route path="/ubicaciones/:id/editar" element={<UpdateLocation />} />
+                    <Route element={<RoleGuard permission="readCatalogs" />}>
+                        <Route path="/ubicaciones" element={<IndexLocations />} />
+                        <Route path="/ubicaciones/:id" element={<ShowLocation />} />
+                        <Route element={<RoleGuard permission="writeTripCatalogs" redirectTo="/ubicaciones" />}>
+                            <Route path="/ubicaciones/crear" element={<CreateLocation />} />
+                            <Route path="/ubicaciones/:id/editar" element={<UpdateLocation />} />
+                        </Route>
+                    </Route>
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/puntos-de-partida" element={<IndexDeparturePoints />} />
-                    <Route path="/puntos-de-partida/crear" element={<CreateDeparturePoint />} />
-                    <Route path="/puntos-de-partida/:id" element={<ShowDeparturePoint />} />
-                    <Route path="/puntos-de-partida/:id/editar" element={<UpdateDeparturePoint />} />
+                    <Route element={<RoleGuard permission="readCatalogs" />}>
+                        <Route path="/puntos-de-partida" element={<IndexDeparturePoints />} />
+                        <Route path="/puntos-de-partida/:id" element={<ShowDeparturePoint />} />
+                        <Route element={<RoleGuard permission="writeTripCatalogs" redirectTo="/puntos-de-partida" />}>
+                            <Route path="/puntos-de-partida/crear" element={<CreateDeparturePoint />} />
+                            <Route path="/puntos-de-partida/:id/editar" element={<UpdateDeparturePoint />} />
+                        </Route>
+                    </Route>
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/accesorios" element={<IndexAccessories />} />
-                    <Route path="/accesorios/crear" element={<CreateAccessory />} />
-                    <Route path="/accesorios/:id" element={<ShowAccessory />} />
-                    <Route path="/accesorios/:id/editar" element={<UpdateAccessory />} />
+                    <Route element={<RoleGuard permission="readCatalogs" />}>
+                        <Route path="/accesorios" element={<IndexAccessories />} />
+                        <Route path="/accesorios/:id" element={<ShowAccessory />} />
+                        <Route element={<RoleGuard permission="writeCoreCatalogs" redirectTo="/accesorios" />}>
+                            <Route path="/accesorios/crear" element={<CreateAccessory />} />
+                            <Route path="/accesorios/:id/editar" element={<UpdateAccessory />} />
+                        </Route>
+                    </Route>
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/clientes" element={<IndexClients />} />
-                    <Route path="/clientes/crear" element={<CreateClient />} />
-                    <Route path="/clientes/:id" element={<ShowClient />} />
-                    <Route path="/clientes/:id/editar" element={<UpdateClient />} />
+                    <Route element={<RoleGuard permission="readCatalogs" />}>
+                        <Route path="/clientes" element={<IndexClients />} />
+                        <Route path="/clientes/:id" element={<ShowClient />} />
+                        <Route element={<RoleGuard permission="writeTripCatalogs" redirectTo="/clientes" />}>
+                            <Route path="/clientes/crear" element={<CreateClient />} />
+                            <Route path="/clientes/:id/editar" element={<UpdateClient />} />
+                        </Route>
+                    </Route>
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/navieras" element={<IndexShippingLines />} />
-                    <Route path="/navieras/crear" element={<CreateShippingLine />} />
-                    <Route path="/navieras/:id" element={<ShowShippingLine />} />
-                    <Route path="/navieras/:id/editar" element={<UpdateShippingLine />} />
+                    <Route element={<RoleGuard permission="readCatalogs" />}>
+                        <Route path="/navieras" element={<IndexShippingLines />} />
+                        <Route path="/navieras/:id" element={<ShowShippingLine />} />
+                        <Route element={<RoleGuard permission="writeTripCatalogs" redirectTo="/navieras" />}>
+                            <Route path="/navieras/crear" element={<CreateShippingLine />} />
+                            <Route path="/navieras/:id/editar" element={<UpdateShippingLine />} />
+                        </Route>
+                    </Route>
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/pilotos" element={<IndexPilots />} />
+                    <Route element={<RoleGuard permission="readPilots" />}>
+                        <Route path="/pilotos" element={<IndexPilots />} />
+                    </Route>
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/viajes" element={<IndexTrips />} />
-                    <Route path="/viajes/crear" element={<CreateTrip />} />
-                    <Route path="/viajes/:id" element={<ShowTrip />} />
-                    <Route path="/viajes/:id/seguimiento" element={<TrackingTrip />} />
-                    <Route path="/viajes/:id/costo" element={<ShowTripCost />} />
-                    <Route path="/viajes/:id/editar" element={<UpdateTrip />} />
+                    <Route element={<RoleGuard permission="readTrips" />}>
+                        <Route path="/viajes" element={<IndexTrips />} />
+                        <Route path="/viajes/:id" element={<ShowTrip />} />
+                        <Route element={<RoleGuard permission="readTripTracking" redirectTo="/viajes" />}>
+                            <Route path="/viajes/:id/seguimiento" element={<TrackingTrip />} />
+                        </Route>
+                        <Route element={<RoleGuard permission="readTripCost" redirectTo="/viajes" />}>
+                            <Route path="/viajes/:id/costo" element={<ShowTripCost />} />
+                        </Route>
+                        <Route element={<RoleGuard permission="manageTrips" redirectTo="/viajes" />}>
+                            <Route path="/viajes/crear" element={<CreateTrip />} />
+                            <Route path="/viajes/:id/editar" element={<UpdateTrip />} />
+                        </Route>
+                    </Route>
                 </Route>
 
                 <Route element={<ProtectedLayout />}>
-                    <Route path="/inteligencia-artificial" element={<Assistant />} />
+                    <Route element={<RoleGuard permission="assistant" />}>
+                        <Route path="/inteligencia-artificial" element={<Assistant />} />
+                    </Route>
                 </Route>
             </Routes>
         </BrowserRouter>

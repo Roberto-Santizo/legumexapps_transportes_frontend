@@ -1,8 +1,8 @@
-import { authProvider } from "@/features/auth/auth";
+import { authProvider, MobileOnlyNotice } from "@/features/auth/auth";
 import { CustomFilledButton, CustomForm, FadeInUp, PasswordFormField, SelectFormField, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
 import { Link, useNavigate } from "react-router-dom";
 import { RoleOptions } from "@/features/auth/auth";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import type { RegisterForm } from "@/features/auth/auth";
 
@@ -19,6 +19,8 @@ export function Register() {
     formState: { errors },
   } = useForm<RegisterForm>();
 
+  const isPilot = useWatch({ control, name: 'role' }) === 'pilot';
+
   const { mutate, isPending } = useMutation({
     mutationFn: (payload: RegisterForm) => authProvider.register(payload),
     onSuccess: (message) => {
@@ -31,7 +33,12 @@ export function Register() {
     }
   });
 
-  const onSubmit = (data: RegisterForm) => mutate(data);
+  /** El registro de piloto pide fotos de DPI y licencia: solo existe en la app móvil. */
+  const onSubmit = (data: RegisterForm) => {
+    if (data.role === 'pilot') return;
+
+    mutate(data);
+  };
 
   return (
     <main className="min-h-screen w-full bg-canvas lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
@@ -123,6 +130,13 @@ export function Register() {
                 }}
               />
 
+              {isPilot && (
+                <MobileOnlyNotice
+                  title="Los pilotos se registran desde la app móvil."
+                  description="Descarga la app de LegumexApps Transportes: ahí creas tu cuenta con tu DPI y tu licencia, y desde ahí inicias sesión. La web no admite cuentas de piloto."
+                />
+              )}
+
               <PasswordFormField<RegisterForm>
                 label="Contraseña"
                 name="password"
@@ -156,7 +170,7 @@ export function Register() {
                 label="Crear cuenta"
                 type="submit"
                 fullWitdh
-                disabled={isPending}
+                disabled={isPending || isPilot}
               />
 
               <p className="text-center text-sm text-ink-muted">

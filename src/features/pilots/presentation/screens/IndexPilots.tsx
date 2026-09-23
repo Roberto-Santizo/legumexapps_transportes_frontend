@@ -12,6 +12,7 @@ import {
 } from "@/features/pilots/pilots";
 import {
     ActionsMenu,
+    can,
     CustomFilledButton,
     ErrorComponent,
     FadeInUp,
@@ -45,10 +46,12 @@ export function IndexPilots() {
     const user = useSelector((state: RootState) => state.auth.user);
     const role = user?.role;
 
-    /** El `manager` ve todos los salarios del país pero no puede tocar ninguno. */
-    const canWrite = role === 'administrator' || role === 'carrier';
+    /** `manager` y `export` ven los salarios pero no pueden tocar ninguno. */
+    const canWrite = can(role, 'editSalary');
+    /** La bitácora de salarios no la lee `export`. */
+    const canReadHistory = can(role, 'readSalaryHistory');
     /** A un `carrier` el backend le ignora el filtro: solo se pinta a quien sí lo usa. */
-    const canFilterByCarrier = role === 'administrator' || role === 'manager';
+    const canFilterByCarrier = can(role, 'readCarriers');
 
     const carrierId = searchParams.get('carrierId') ?? '';
 
@@ -110,11 +113,13 @@ export function IndexPilots() {
                 onClick: () => setEditing(pilot)
             }]
             : []),
-        {
-            label: "Ver historial",
-            icon: <History />,
-            onClick: () => setInspecting(pilot)
-        }
+        ...(canReadHistory
+            ? [{
+                label: "Ver historial",
+                icon: <History />,
+                onClick: () => setInspecting(pilot)
+            }]
+            : [])
     ];
 
     return (
@@ -193,7 +198,7 @@ export function IndexPilots() {
                                     </Td>
 
                                     <Td className="text-right">
-                                        <ActionsMenu items={buildActions(pilot)} />
+                                        {(canWrite || canReadHistory) && <ActionsMenu items={buildActions(pilot)} />}
                                     </Td>
                                 </Tr>
                             ))}

@@ -81,7 +81,7 @@ Respuestas de API: `ApiResponseSchema` (`statusCode`, `message`), `ApiPaginatedR
 
 ### Roles
 
-`UserRole = "administrator" | "carrier" | "pilot" | "manager"` (`shared/domain/types`). Cada `NavItem` declara `roles?: UserRole[]` y `disabled?`. `ProtectedLayout` redirige a `/login` sin sesión y a `/completar-perfil` cuando el usuario es `carrier` y su `carrierId` es `null`. Los permisos de escritura por feature se resuelven con helpers en su `infrastructure/utils` (p. ej. `canWriteClients(role)`).
+Siete roles: `administrator`, `manager`, `carrier`, `pilot`, `export`, `user`, `shipment`. La matriz vive en `shared/domain/permissions/permissions.ts` (réplica de `roles-api.md` §4): `PERMISSIONS` (permiso → roles), `can(role, permission)`, `ROLE_LABEL`/`roleLabel`, `homeRoute(role)` (tablero si lo tiene, si no `/viajes`). Cada `NavItem` declara `roles?: UserRole[]` y `disabled?`; el menú sigue los flujos de §6 (`carrier`/`pilot` leen catálogos pero no se les muestran). `ProtectedLayout` redirige a `/login` sin sesión y a `/completar-perfil` cuando el usuario es `carrier` y su `carrierId` es `null`. En `router.tsx` cada bloque va envuelto en `<RoleGuard permission="…" />` (lectura) y las rutas `crear`/`editar` en uno de escritura con `redirectTo`. Los helpers por feature en `infrastructure/utils` (p. ej. `canWriteClients(role)`) delegan en `can()`; no comparar roles a mano.
 
 ### Shared
 

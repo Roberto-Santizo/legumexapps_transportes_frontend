@@ -6,6 +6,7 @@ import {
     TripsKpiStrip,
     TripsSummaryPanel,
     VehicleExpensesPanel,
+    canFilterDashboardByCarrier,
     canReadDashboard,
     dashboardProvider,
     parseApiDay,
@@ -41,8 +42,10 @@ export function Dashboard() {
     const user = useSelector((state: RootState) => state.auth.user);
     const { period, carrierId, range, setPeriod, setCarrierId } = useDashboardFilters();
 
-    /** Los cuatro endpoints responden 403 a `carrier` y `pilot`; la UX no los deja llegar. */
+    /** `pilot`, `user` y `shipment` reciben 403 en los cuatro endpoints; la UX no los deja llegar. */
     const allowed = canReadDashboard(user?.role);
+    /** Al `carrier` el backend le ignora `carrierId` (ve su empresa) y `export` no lee `GET /carriers`. */
+    const showCarrierFilter = canFilterDashboardByCarrier(user?.role);
 
     const trips = useQuery({
         queryKey: ['dashboardTrips', range, carrierId],
@@ -65,7 +68,7 @@ export function Dashboard() {
                     <div className="flex flex-wrap items-end justify-between gap-4">
                         <Title
                             title="Tablero"
-                            subtitle={`${describeRange(range.dateFrom, range.dateTo)} · ${carrierId ? "una empresa" : "todas las empresas"}. Los viajes en curso y la flota no dependen del periodo.`}
+                            subtitle={`${describeRange(range.dateFrom, range.dateTo)} · ${user?.role === 'carrier' ? "tu empresa" : carrierId ? "una empresa" : "todas las empresas"}. Los viajes en curso y la flota no dependen del periodo.`}
                         />
 
                         <DashboardFilters
@@ -73,6 +76,7 @@ export function Dashboard() {
                             carrierId={carrierId}
                             onPeriodChange={setPeriod}
                             onCarrierChange={setCarrierId}
+                            showCarrierFilter={showCarrierFilter}
                         />
                     </div>
                 </StaggerItem>

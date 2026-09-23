@@ -1,5 +1,6 @@
 import { AUTH_SESSION_QUERY_KEY } from '@/config/initializer/session';
 import { authProvider, login, logout, type LoginResponse } from '@/features/auth/auth';
+import { can } from '@/features/shared/shared';
 import { useDispatch } from "react-redux";
 import { useEffect } from "react";
 import { useQuery } from '@tanstack/react-query';
@@ -25,7 +26,8 @@ export const AppInitializer = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         if (isPending) return;
 
-        if (isError || !data) {
+        /** Un token de piloto guardado de antes no abre la web: opera solo desde la app móvil. */
+        if (isError || !data || !can(data.user.role, 'webAccess')) {
             dispatch(logout());
             return;
         }

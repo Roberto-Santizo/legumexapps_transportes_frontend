@@ -1,7 +1,9 @@
 import { ProductMoment, ProductName, ProductPageHeader, ProductStatus, productProvider } from "@/features/products/products";
-import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
+import { can, CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { Pencil, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/config/config";
 import { useNavigate, useParams } from "react-router-dom";
 import type { ReactNode } from "react";
 
@@ -26,6 +28,10 @@ export function ShowProduct() {
     const navigate = useNavigate();
     const notification = useNotification();
     const queryClient = useQueryClient();
+
+    /** Crear, editar y eliminar es solo de `administrator`; el resto de lectores solo consulta. */
+    const role = useSelector((state: RootState) => state.auth.user?.role);
+    const canWrite = can(role, 'writeCoreCatalogs');
 
     const { data: product, isLoading, isError, error } = useQuery({
         queryKey: ['getProductById', id],
@@ -62,7 +68,7 @@ export function ShowProduct() {
                 title="Detalle del producto"
                 subtitle="Cómo aparece en el catálogo y quién lo registró."
             >
-                {product && (
+                {product && canWrite && (
                     <div className="flex items-center gap-2">
                         <CustomFilledButton
                             label="Editar"
