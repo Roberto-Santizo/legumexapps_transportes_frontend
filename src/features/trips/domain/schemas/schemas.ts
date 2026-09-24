@@ -103,6 +103,12 @@ export const TripSchema = z.object({
      */
     traveledPoints: z.array(z.tuple([z.number(), z.number()])).default([]),
     /**
+     * El recorrido del piloto como pares `[lat, lng]`, mismo formato que
+     * `points`. **`null` mientras no haya recorrido.** Si llega, manda sobre
+     * `traveledPoints` para pintar la ruta real.
+     */
+    positions: z.array(z.tuple([z.number(), z.number()])).nullable().default(null),
+    /**
      * Las dos cifras de la ruta **real** (SPEC 32), espejo de las estimaciones
      * y con su mismo formato: kilómetros (`"111.40"`) y **horas decimales**
      * (`"2.10"` es 2 h 6 min) como cadenas de dos decimales. **Las calcula el

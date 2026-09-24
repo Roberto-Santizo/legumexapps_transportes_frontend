@@ -43,7 +43,7 @@ import {
     formatTripHours,
     formatTripKilometers,
     hasTraveledMetrics,
-    hasTraveledRoute,
+    tripTraveledPoints,
     hasTripEstimates,
     parseGallons,
     parseTripEstimate,
@@ -169,7 +169,8 @@ export function ShowTrip() {
      * tanto en un viaje en ruta como en uno cerrado sin rastro. Las estimaciones
      * en `null` son un viaje anterior a la spec, y ninguna de las dos es un error.
      */
-    const hasTraveled = Boolean(trip && hasTraveledRoute(trip));
+    const traveledPoints = trip ? tripTraveledPoints(trip) : undefined;
+    const hasTraveled = traveledPoints !== undefined;
     const hasEstimates = Boolean(trip && hasTripEstimates(trip));
     /** Solo en un viaje cerrado después de SPEC 32; `"0.00"` sí cuenta, es un cierre sin recorrido medible. */
     const hasMetrics = Boolean(trip && hasTraveledMetrics(trip));
@@ -532,12 +533,12 @@ export function ShowTrip() {
 
                             <TripRouteMap
                                 points={trip.points}
-                                traveledPoints={hasTraveled ? trip.traveledPoints : undefined}
+                                traveledPoints={traveledPoints}
                             />
 
                             <p className="text-xs text-ink-muted">
                                 {hasTraveled
-                                    ? "En ámbar, el recorrido que quedó registrado al cerrar el viaje; en guion, la ruta que se planificó. Del puerto en adelante el trayecto es marítimo y no se dibuja."
+                                    ? "Usa los botones para mostrar u ocultar cada ruta: en guion la planificada, en ámbar la que hizo el piloto. Del puerto en adelante el trayecto es marítimo y no se dibuja."
                                     : trip.status === 'finished'
                                         ? "Es la ruta que se guardó al publicar el viaje. El cierre no dejó ningún recorrido registrado: el piloto no reportó posiciones, o el viaje se cerró antes de que se guardaran."
                                         : "Es la ruta que se guardó al publicar el viaje, no la posición del vehículo. Del puerto en adelante el trayecto es marítimo y no se dibuja."}

@@ -200,6 +200,19 @@ export const formatSignedHours = (delta: number): string => {
 export const hasTraveledRoute = (trip: Pick<Trip, 'traveledPolyline' | 'traveledPoints'>): boolean =>
     trip.traveledPolyline !== null && trip.traveledPoints.length > 0;
 
+/**
+ * Los puntos de la ruta real que se pintan: `positions` si la API lo manda con
+ * algo, si no `traveledPoints` cuando hay ruta cerrada. `undefined` = no hay
+ * recorrido que dibujar.
+ */
+export const tripTraveledPoints = (
+    trip: Pick<Trip, 'positions' | 'traveledPolyline' | 'traveledPoints'>
+): LatLng[] | undefined => {
+    if (trip.positions && trip.positions.length > 0) return trip.positions;
+
+    return hasTraveledRoute(trip) ? trip.traveledPoints : undefined;
+};
+
 /* ------------------------------------------------------------------ *
  * Fechas
  * ------------------------------------------------------------------ */
