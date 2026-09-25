@@ -7,6 +7,7 @@ import {
     tripProvider,
     type TripFormValues
 } from "@/features/trips/trips";
+import { getTripProductLineErrors } from "@/features/trip-finished-products/trip-finished-products";
 import { CustomFilledButton, CustomForm, FadeInUp, useNotification } from "@/features/shared/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -29,7 +30,10 @@ export function CreateTrip() {
         setValue,
         setError,
         formState: { errors },
-    } = useForm<TripFormValues>();
+    } = useForm<TripFormValues>({
+        /** SPEC 37: el viaje nace con al menos una línea de producto. */
+        defaultValues: { products: [{ finishedProductId: undefined, boxes: undefined }] }
+    });
 
     const { mutate, isPending } = useMutation({
         mutationFn: (payload: TripFormValues) => tripProvider.createTrip(buildTripPayload(payload)),
@@ -47,13 +51,23 @@ export function CreateTrip() {
          */
         onError: (err) => {
             const fieldErrors = getTripFieldErrors(err);
+            /** Los 422 de las líneas vuelven a su fila: `products.{i}.{campo}`, índice desde 0. */
+            const lineErrors = getTripProductLineErrors(err);
 
-            if (fieldErrors.length === 0) {
+            if (fieldErrors.length === 0 && lineErrors.length === 0) {
                 notification.error(err.message);
                 return;
             }
 
             fieldErrors.forEach(({ field, message }) => setError(field, { message }));
+            lineErrors.forEach(({ index, field, message }) => {
+                if (index === null || field === null) {
+                    setError('products', { message });
+                    return;
+                }
+
+                setError(`products.${index}.${field}`, { message });
+            });
         }
     });
 

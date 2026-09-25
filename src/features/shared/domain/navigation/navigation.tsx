@@ -2,7 +2,7 @@ import type { NavItem, UserRole } from "@/features/shared/shared";
 // Import directo, no por el barrel: `NAVIGATION` usa `PERMISSIONS` al evaluarse el
 // módulo y el barrel de `shared` forma un ciclo que lo deja sin inicializar.
 import { PERMISSIONS } from "@/features/shared/domain/permissions/permissions";
-import { Apple, Building2, Car, Fuel, IdCard, LayoutDashboard, MapPin, Route, Ship, Sparkles, Warehouse, Wrench } from "lucide-react";
+import { Apple, Boxes, Building2, Car, Fuel, IdCard, LayoutDashboard, MapPin, Route, Ship, Sparkles, Warehouse, Wrench } from "lucide-react";
 
 /**
  * El menú sigue los flujos por rol de `roles-api.md` §6, no solo la matriz de
@@ -23,6 +23,7 @@ export const NAVIGATION: NavItem[] = [
     { to: "/ubicaciones", text: "Ubicaciones", icon: <MapPin />, roles: TRIP_CATALOGS },
     { to: "/accesorios", text: "Accesorios", icon: <Wrench />, roles: CORE_CATALOGS },
     { to: "/clientes", text: "Clientes", icon: <Building2 />, roles: TRIP_CATALOGS },
+    { to: "/productos-terminados", text: "Productos terminados", icon: <Boxes />, roles: [...TRIP_CATALOGS, 'user', 'shipment'] },
     { to: "/navieras", text: "Navieras", icon: <Ship />, roles: TRIP_CATALOGS },
     { to: "/pilotos", text: "Pilotos", icon: <IdCard />, roles: PERMISSIONS.readPilots },
     { to: "/viajes", text: "Viajes", icon: <Route />, roles: [...PERMISSIONS.readTrips] },

@@ -1,4 +1,5 @@
 import type { FuelTypeSchema, PaginatedTripsSchema, TripCostFuelTypeSchema, TripCostSchema, TripExpenseSchema, TripExpensesSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
+import type { TripProductLine, TripProductLineValues } from "@/features/trip-finished-products/trip-finished-products";
 import type { z } from "zod";
 
 export type PaginatedTrips = z.infer<typeof PaginatedTripsSchema>;
@@ -40,8 +41,8 @@ export type TripRouteForm = {
 }
 
 /**
- * Los catorce campos del alta, **los catorce obligatorios** (doce hasta SPEC
- * 30: un `POST` de doce es 422). Otras cinco claves —`status`, `pilotId`,
+ * Los quince campos del alta, **los quince obligatorios** (catorce hasta SPEC
+ * 37: un `POST` sin `products` es 422). Otras cinco claves —`status`, `pilotId`,
  * `vehicleId`, `assignedBy` y `registeredBy`— se descartan en el servidor sin
  * error: el viaje nace `pending`, sin tripulación y con el autor sacado del
  * token.
@@ -63,6 +64,11 @@ export type TripForm = TripRouteForm & {
     /** `Y-m-d H:i:s`. En el alta, futura y >= `recolectionDate`. */
     shipDate: string;
     observations: string;
+    /**
+     * SPEC 37: al menos una línea, sin repetir producto, y cada producto del
+     * cliente del viaje. El viaje y sus líneas se guardan en una transacción.
+     */
+    products: TripProductLine[];
 }
 
 /**
@@ -74,7 +80,7 @@ export type TripForm = TripRouteForm & {
  * Opcional no es vaciable: una clave en `null` o en blanco es 422. Un cuerpo
  * vacío responde 200 sin tocar siquiera `updatedAt`.
  */
-export type TripUpdateForm = Partial<Omit<TripForm, keyof TripRouteForm>>
+export type TripUpdateForm = Partial<Omit<TripForm, keyof TripRouteForm | 'products'>>
     & (TripRouteForm | { polyline?: never; estimatedKilometers?: never; estimatedHours?: never })
     & { status?: TripStatus };
 
@@ -86,8 +92,10 @@ export type TripUpdateForm = Partial<Omit<TripForm, keyof TripRouteForm>>
  * los tres se escriben juntos, con la línea llegan también las dos cifras.
  * `status` solo se pinta al editar.
  */
-export type TripFormValues = Omit<TripForm, keyof TripRouteForm> & Partial<TripRouteForm> & {
+export type TripFormValues = Omit<TripForm, keyof TripRouteForm | 'products'> & Partial<TripRouteForm> & {
     status?: TripStatus;
+    /** Solo en el alta: las líneas del viaje ya creado se editan desde el detalle. */
+    products?: TripProductLineValues[];
 }
 
 /**
@@ -136,7 +144,7 @@ export type TripAssignmentFormValues = {
 }
 
 /** Los campos del formulario a los que se puede anclar un error del backend. */
-export type TripField = keyof TripForm | 'status';
+export type TripField = Exclude<keyof TripForm, 'products'> | 'status';
 
 /**
  * Los diez filtros del listado. **Todos tolerantes**: un valor inválido se

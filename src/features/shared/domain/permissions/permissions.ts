@@ -37,6 +37,8 @@ export const PERMISSIONS = {
     writeCoreCatalogs: ['administrator'],
     /** `clients`, `shipping-lines`, `locations`, `departure-points`. */
     writeTripCatalogs: ['administrator', 'export'],
+    /** `finished-products`: al revés que el resto de catálogos, `user` y `shipment` leen y el `pilot` no. Escribe `writeTripCatalogs`. */
+    readFinishedProducts: except('pilot'),
 
     /* Viajes */
     readTrips: ALL,

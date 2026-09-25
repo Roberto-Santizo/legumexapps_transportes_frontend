@@ -8,6 +8,7 @@ export * from './TripIdentity';
 export * from './TripPageHeader';
 export * from './TripMapLayers';
 export * from './TripPilotDocuments';
+export * from './TripProductLinesField';
 export * from './TripRouteMap';
 export * from './TripRouteSection';
 export * from './TripTimeline';

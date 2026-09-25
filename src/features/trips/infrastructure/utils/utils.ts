@@ -21,6 +21,7 @@ import { can, type Option } from "@/features/shared/shared";
 import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
 import { formatDistanceKilometers, formatDurationHours } from "@/features/places/places";
 import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
+import { TRIP_CLIENT_LOCKED_MESSAGE, buildTripProductLines } from "@/features/trip-finished-products/trip-finished-products";
 import { isAxiosError, type AxiosError } from "axios";
 
 /** Límite que valida el backend en los cinco campos de texto. */
@@ -381,7 +382,7 @@ export const buildTripQuery = (limit: string, page: string, filters?: TripFilter
  * **número** y sin convertir —kilómetros y horas decimales, tal como las dio
  * `/directions`—: la API las guarda con dos decimales y no las coteja.
  */
-export const buildTripPayload = (form: TripFormValues): TripForm => ({
+const buildTripBasePayload = (form: TripFormValues): Omit<TripForm, 'products'> => ({
     order: form.order.trim(),
     clientId: Number(form.clientId),
     shippingLineId: Number(form.shippingLineId),
@@ -396,6 +397,15 @@ export const buildTripPayload = (form: TripFormValues): TripForm => ({
     estimatedKilometers: Number(form.estimatedKilometers),
     estimatedHours: Number(form.estimatedHours),
     observations: form.observations.trim(),
+});
+
+/**
+ * El alta lleva además las líneas de producto terminado (SPEC 37): sin
+ * `products` todo `POST /api/trips` es 422.
+ */
+export const buildTripPayload = (form: TripFormValues): TripForm => ({
+    ...buildTripBasePayload(form),
+    products: buildTripProductLines(form.products),
 });
 
 /**
@@ -414,10 +424,11 @@ export const buildTripPayload = (form: TripFormValues): TripForm => ({
  *   el mismo cuerpo. Mandarlas juntas cierra el hueco.
  *
  * `pilotId` y `vehicleId` no aparecen: el `PATCH` los ignora en silencio y
- * responde 200 sin aplicarlos.
+ * responde 200 sin aplicarlos. `products` tampoco: las líneas se editan con
+ * `/trip-finished-products`.
  */
 export const buildTripUpdatePayload = (form: TripFormValues): TripUpdateForm => ({
-    ...buildTripPayload(form),
+    ...buildTripBasePayload(form),
     ...(form.status ? { status: form.status } : {}),
 });
 
@@ -585,6 +596,7 @@ const TRIP_FIELDS: readonly TripField[] = [
  */
 const BUSINESS_FIELD_MESSAGES: { field: TripField; message: string }[] = [
     { field: 'clientId', message: "El cliente seleccionado fue eliminado" },
+    { field: 'clientId', message: TRIP_CLIENT_LOCKED_MESSAGE },
     { field: 'shippingLineId', message: "La naviera seleccionada fue eliminada" },
     { field: 'locationId', message: "El destino seleccionado no es un puerto" },
     { field: 'locationId', message: "El puerto de destino está inactivo" },

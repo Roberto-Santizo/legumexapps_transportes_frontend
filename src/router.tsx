@@ -4,6 +4,7 @@ import { CreateAccessory, IndexAccessories, ShowAccessory, UpdateAccessory } fro
 import { ConfirmAccount, Login, Register } from "@/features/auth/auth";
 import { CreateClient, IndexClients, ShowClient, UpdateClient } from "@/features/clients/clients";
 import { CreateDeparturePoint, IndexDeparturePoints, ShowDeparturePoint, UpdateDeparturePoint } from "@/features/departure-points/departure-points";
+import { CreateFinishedProduct, IndexFinishedProducts, ShowFinishedProduct, UpdateFinishedProduct } from "@/features/finished-products/finished-products";
 import { CreateFuelPrice, IndexFuelPrices, ShowFuelPrice, UpdateFuelPrice } from "@/features/fuel-prices/fuel-prices";
 import { CreateLocation, IndexLocations, ShowLocation, UpdateLocation } from "@/features/locations/locations";
 import { CreateProduct, IndexProducts, ShowProduct, UpdateProduct } from "@/features/products/products";
@@ -120,6 +121,17 @@ export default function AppRouter() {
                         <Route element={<RoleGuard permission="writeTripCatalogs" redirectTo="/clientes" />}>
                             <Route path="/clientes/crear" element={<CreateClient />} />
                             <Route path="/clientes/:id/editar" element={<UpdateClient />} />
+                        </Route>
+                    </Route>
+                </Route>
+
+                <Route element={<ProtectedLayout />}>
+                    <Route element={<RoleGuard permission="readFinishedProducts" />}>
+                        <Route path="/productos-terminados" element={<IndexFinishedProducts />} />
+                        <Route path="/productos-terminados/:id" element={<ShowFinishedProduct />} />
+                        <Route element={<RoleGuard permission="writeTripCatalogs" redirectTo="/productos-terminados" />}>
+                            <Route path="/productos-terminados/crear" element={<CreateFinishedProduct />} />
+                            <Route path="/productos-terminados/:id/editar" element={<UpdateFinishedProduct />} />
                         </Route>
                     </Route>
                 </Route>

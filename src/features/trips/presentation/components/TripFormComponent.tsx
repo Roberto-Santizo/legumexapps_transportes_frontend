@@ -1,7 +1,7 @@
 /**
- * Los catorce campos del viaje, agrupados como se dicta un viaje por teléfono: qué
- * carga es y de quién, cuándo sale, por dónde va y qué hay que saber al
- * llevarla.
+ * Los catorce campos del viaje —más sus productos terminados, en el alta—,
+ * agrupados como se dicta un viaje por teléfono: qué carga es y de quién,
+ * cuándo sale, por dónde va y qué hay que saber al llevarla.
  *
  * Tres cosas que el formulario dice y la API no:
  *
@@ -23,6 +23,7 @@ import {
     TRIP_CATALOG_LIMIT,
     TRIP_STATUSES,
     TRIP_TEXT_MAX_LENGTH,
+    TripProductLinesField,
     TripRouteSection,
     isShipDateBeforeRecolection,
     nowForInput
@@ -55,6 +56,13 @@ type Props = {
     enablePackingListLookup?: boolean;
     /** Los fallos del buscador no tienen campo al que anclarse: los avisa la pantalla. */
     onError?: (message: string) => void;
+    /**
+     * El viaje ya tiene productos terminados: cambiarle el cliente es 400. El
+     * cliente se muestra fijo y se reenvía el mismo, que no cuenta como cambio.
+     */
+    lockClient?: boolean;
+    /** El nombre del cliente fijo, para pintarlo sin depender del catálogo. */
+    lockedClientName?: string | null;
 }
 
 /**
@@ -100,7 +108,9 @@ export function TripFormComponent({
     setValue,
     isUpdate = false,
     enablePackingListLookup = false,
-    onError
+    onError,
+    lockClient = false,
+    lockedClientName
 }: Props) {
     const { data: clients, isLoading: isLoadingClients } = useQuery({
         queryKey: ['getClients', TRIP_CATALOG_LIMIT, '0', ''],
@@ -209,17 +219,34 @@ export function TripFormComponent({
                 )}
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <SelectFormField<TripFormValues>
-                        label="Cliente"
-                        name="clientId"
-                        options={(clients?.data ?? []).map((client) => ({
-                            value: client.id,
-                            label: `${client.code} · ${client.name}`
-                        }))}
-                        errorMessage={errors.clientId?.message}
-                        control={control}
-                        validation={{ required: "El cliente es obligatorio" }}
-                    />
+                    {lockClient ? (
+                        <div className="flex flex-col gap-2">
+                            <span className="text-sm font-medium text-gray-700">Cliente</span>
+
+                            <p className="rounded-lg border border-line bg-canvas px-3 py-2 text-sm text-ink">
+                                {lockedClientName ?? "Cliente no disponible"}
+                            </p>
+
+                            <p className="text-xs text-ink-muted">
+                                El viaje ya lleva productos terminados de este cliente: no se
+                                puede cambiar.
+                            </p>
+
+                            <p className="text-red-400 text-xs">{errors.clientId?.message}</p>
+                        </div>
+                    ) : (
+                        <SelectFormField<TripFormValues>
+                            label="Cliente"
+                            name="clientId"
+                            options={(clients?.data ?? []).map((client) => ({
+                                value: client.id,
+                                label: `${client.code} · ${client.name}`
+                            }))}
+                            errorMessage={errors.clientId?.message}
+                            control={control}
+                            validation={{ required: "El cliente es obligatorio" }}
+                        />
+                    )}
 
                     <SelectFormField<TripFormValues>
                         label="Naviera"
@@ -261,6 +288,16 @@ export function TripFormComponent({
                     asigne después la empresa transportista.
                 </p>
             </Fieldset>
+
+            {/* Solo en el alta: las líneas de un viaje creado se editan desde su detalle. */}
+            {!isUpdate && (
+                <Fieldset
+                    legend="Los productos"
+                    hint="Cuántas cajas de cada producto terminado del cliente lleva el viaje. Si cambias el cliente, las líneas se vacían."
+                >
+                    <TripProductLinesField register={register} control={control} errors={errors} />
+                </Fieldset>
+            )}
 
             <Fieldset
                 legend="Las fechas"

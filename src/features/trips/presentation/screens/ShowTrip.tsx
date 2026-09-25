@@ -50,6 +50,7 @@ import {
     tripDeviation,
     tripProvider
 } from "@/features/trips/trips";
+import { TripFinishedProductsSection } from "@/features/trip-finished-products/trip-finished-products";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { CircleCheckBig, Fuel, Pencil, Play, Radar, Trash2, Truck, Wallet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -389,6 +390,13 @@ export function ShowTrip() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* La API no trae las líneas en el viaje: la sección las pide aparte. */}
+                        <TripFinishedProductsSection
+                            tripId={trip.id}
+                            clientId={trip.clientId}
+                            tripStatus={trip.status}
+                        />
 
                         <div className="rounded-2xl border border-line bg-surface p-6">
                             <h2 className="font-display text-lg font-semibold tracking-tight text-ink">
