@@ -1,5 +1,5 @@
 import { carrierProvider, type CarrierForm } from "@/features/carriers/carriers";
-import { CustomFilledButton, CustomForm, FadeInUp, FileFormField, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
+import { CustomFilledButton, CustomForm, FadeInUp, FileFormField, homeRoute, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
 import { logout } from "@/features/auth/auth";
 import { Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -39,7 +39,7 @@ export function CompleteProfile() {
   if (!isSignedIn) return <Navigate to={'/login'} replace />
 
   if (user?.role !== "carrier" || user.carrierId !== null) {
-    return <Navigate to={'/dashboard'} replace />
+    return <Navigate to={homeRoute(user?.role)} replace />
   }
 
   return (

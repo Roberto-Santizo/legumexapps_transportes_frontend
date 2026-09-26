@@ -1,13 +1,7 @@
-import { FadeInUp, initials, Title } from "@/features/shared/shared";
+import { FadeInUp, initials, roleLabel, Title } from "@/features/shared/shared";
 import { Mail } from "lucide-react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/config/config";
-
-const ROLE_LABEL: Record<string, string> = {
-    administrator: "Administrador",
-    carrier: "Transportista",
-    pilot: "Piloto",
-};
 
 export function Profile() {
     const user = useSelector((state: RootState) => state.auth.user);
@@ -29,7 +23,7 @@ export function Profile() {
                         </span>
 
                         <span className="rounded-full border border-canvas/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-canvas">
-                            {ROLE_LABEL[user.role] ?? user.role}
+                            {roleLabel(user.role)}
                         </span>
                     </div>
 

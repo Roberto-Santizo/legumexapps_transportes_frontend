@@ -1,7 +1,9 @@
 import { ProductMoment, ProductName, ProductStatus, productProvider, type Product } from "@/features/products/products";
-import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
+import { can, ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
 import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/config/config";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export function IndexProducts() {
@@ -10,6 +12,10 @@ export function IndexProducts() {
     const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
     const { page, rowsPerPage } = usePagination(searchParams);
+
+    /** Crear, editar y eliminar es solo de `administrator`; el resto de lectores solo consulta. */
+    const role = useSelector((state: RootState) => state.auth.user?.role);
+    const canWrite = can(role, 'writeCoreCatalogs');
 
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ['getProducts', page, rowsPerPage],
@@ -46,12 +52,14 @@ export function IndexProducts() {
                     subtitle="El catálogo de lo que se transporta. Cada viaje se arma eligiendo de aquí."
                 />
 
-                <CustomFilledButton
-                    label="Agregar producto"
-                    type="button"
-                    icon={<Plus size={16} />}
-                    onClick={() => navigate('/productos/crear')}
-                />
+                {canWrite && (
+                    <CustomFilledButton
+                        label="Agregar producto"
+                        type="button"
+                        icon={<Plus size={16} />}
+                        onClick={() => navigate('/productos/crear')}
+                    />
+                )}
             </div>
 
             {isLoading && (
@@ -76,12 +84,14 @@ export function IndexProducts() {
                         </p>
 
                         <div className="mt-6 flex justify-center">
-                            <CustomFilledButton
-                                label="Agregar producto"
-                                type="button"
-                                icon={<Plus size={16} />}
-                                onClick={() => navigate('/productos/crear')}
-                            />
+                            {canWrite && (
+                                <CustomFilledButton
+                                    label="Agregar producto"
+                                    type="button"
+                                    icon={<Plus size={16} />}
+                                    onClick={() => navigate('/productos/crear')}
+                                />
+                            )}
                         </div>
                     </div>
                 </FadeInUp>
@@ -125,17 +135,19 @@ export function IndexProducts() {
                                                     icon: <Eye />,
                                                     onClick: () => navigate(`/productos/${product.id}`)
                                                 },
-                                                {
-                                                    label: "Editar",
-                                                    icon: <Pencil />,
-                                                    onClick: () => navigate(`/productos/${product.id}/editar`)
-                                                },
-                                                {
-                                                    label: "Eliminar",
-                                                    icon: <Trash2 />,
-                                                    onClick: () => askToDelete(product),
-                                                    danger: true
-                                                }
+                                                ...(canWrite ? [
+                                                    {
+                                                        label: "Editar",
+                                                        icon: <Pencil />,
+                                                        onClick: () => navigate(`/productos/${product.id}/editar`)
+                                                    },
+                                                    {
+                                                        label: "Eliminar",
+                                                        icon: <Trash2 />,
+                                                        onClick: () => askToDelete(product),
+                                                        danger: true
+                                                    }
+                                                ] : [])
                                             ]}
                                         />
                                     </Td>

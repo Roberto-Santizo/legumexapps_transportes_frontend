@@ -1,4 +1,5 @@
 import {
+    canWriteVehicles,
     isLegacyVehicle,
     VehicleCapacity,
     VehicleCondition,
@@ -67,6 +68,8 @@ export function ShowVehicle() {
     const role = useSelector((state: RootState) => state.auth.user?.role);
     /** Un `pilot` recibe 403 en los cinco endpoints de gastos: no se le pinta el panel. */
     const canReadExpenses = canReadVehicleExpenses(role);
+    /** `manager` y `export` ven la unidad pero no la tocan. */
+    const canWrite = canWriteVehicles(role);
 
     const { data: vehicle, isLoading, isError, error } = useQuery({
         queryKey: ['getVehicleById', id],
@@ -103,7 +106,7 @@ export function ShowVehicle() {
                 title="Detalle del vehículo"
                 subtitle="Datos registrados de esta unidad."
             >
-                {vehicle && (
+                {vehicle && canWrite && (
                     <div className="flex items-center gap-2">
                         <CustomFilledButton
                             label="Editar"

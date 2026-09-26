@@ -26,6 +26,11 @@ export type VehicleForm = {
     image: File;
     /** Solo se edita: al crear, el backend registra la unidad como `active`. */
     status?: string;
+    /**
+     * Empresa dueña de la unidad. Solo la manda un `administrator` al crear (es
+     * obligatoria para él); al `carrier` el backend la descarta y usa la suya.
+     */
+    carrierId?: number | string;
 }
 
 /** Filtros del listado. Todos opcionales y todos tolerantes en el backend. */

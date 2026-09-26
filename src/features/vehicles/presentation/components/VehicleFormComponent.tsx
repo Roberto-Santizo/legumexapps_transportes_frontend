@@ -1,4 +1,4 @@
-import { FileFormField, SelectFormField, TextFormField } from "@/features/shared/shared";
+import { FileFormField, SelectFormField, TextFormField, type Option } from "@/features/shared/shared";
 import {
     VEHICLE_CONDITIONS,
     VEHICLE_DECIMAL_MIN,
@@ -29,6 +29,11 @@ type Props = {
     mileageLocked?: boolean;
     /** Valor guardado, para pintarlo cuando el campo va bloqueado. */
     storedMileage?: number;
+    /**
+     * Empresas a elegir. Solo se pasa al `administrator` en el alta: él debe
+     * decir a qué empresa registra la unidad.
+     */
+    carrierOptions?: Option[];
 }
 
 const currentYear = new Date().getFullYear();
@@ -41,10 +46,24 @@ export function VehicleFormComponent({
     imageLabel = "Fotografía de la unidad",
     showStatus = false,
     mileageLocked = false,
-    storedMileage
+    storedMileage,
+    carrierOptions
 }: Props) {
     return (
         <>
+            {carrierOptions && (
+                <SelectFormField<VehicleForm>
+                    label="Empresa transportista"
+                    name="carrierId"
+                    options={carrierOptions}
+                    control={control}
+                    errorMessage={errors.carrierId?.message}
+                    validation={{
+                        required: "Selecciona la empresa dueña de la unidad",
+                    }}
+                />
+            )}
+
             <TextFormField<VehicleForm>
                 label="Placa"
                 name="plate"

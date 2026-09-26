@@ -8,6 +8,8 @@ type Props = {
     carrierId?: number;
     onPeriodChange: (period: DashboardPeriod) => void;
     onCarrierChange: (carrierId?: number) => void;
+    /** Solo `administrator` y `manager` leen `GET /carriers`; al resto ni se le pide. */
+    showCarrierFilter: boolean;
 };
 
 /**
@@ -19,11 +21,12 @@ type Props = {
  * listado falla o no está permitido para el rol, se omite en silencio y el
  * tablero sigue mostrando todas las empresas.
  */
-export function DashboardFilters({ period, carrierId, onPeriodChange, onCarrierChange }: Props) {
+export function DashboardFilters({ period, carrierId, onPeriodChange, onCarrierChange, showCarrierFilter }: Props) {
     const { data, isError } = useQuery({
         queryKey: ['getCarriers', 'dashboard'],
         queryFn: () => carrierProvider.getCarriers('100', '0'),
         staleTime: 5 * 60_000,
+        enabled: showCarrierFilter,
     });
 
     const carriers = data?.data ?? [];
@@ -53,7 +56,7 @@ export function DashboardFilters({ period, carrierId, onPeriodChange, onCarrierC
                 })}
             </div>
 
-            {!isError && carriers.length > 0 && (
+            {showCarrierFilter && !isError && carriers.length > 0 && (
                 <label className="inline-flex items-center gap-2 rounded-full border border-line bg-surface py-1 pl-3 pr-2">
                     <Building2 size={14} className="text-ink-subtle" />
 

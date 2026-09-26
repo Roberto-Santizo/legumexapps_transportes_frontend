@@ -1,4 +1,4 @@
-import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
+import { can, CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { DeparturePointMoment, DeparturePointName, DeparturePointPageHeader, DeparturePointPinPreview, DeparturePointStatus, departurePointProvider } from "@/features/departure-points/departure-points";
 import { Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,7 +30,8 @@ export function ShowDeparturePoint() {
     const queryClient = useQueryClient();
 
     const role = useSelector((state: RootState) => state.auth.user?.role);
-    const canWrite = role === 'administrator';
+    /** Crear, editar y dar de baja: `administrator` y `export`. */
+    const canWrite = can(role, 'writeTripCatalogs');
 
     const { data: departurePoint, isLoading, isError, error } = useQuery({
         queryKey: ['getDeparturePointById', id],

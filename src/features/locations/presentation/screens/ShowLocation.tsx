@@ -1,4 +1,4 @@
-import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
+import { can, CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { LocationMoment, LocationName, LocationPinPreview, LocationStatus, LocationTypeTag, locationProvider } from "@/features/locations/locations";
 import { Coins, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { FreightRatesModal } from "@/features/freight-rates/freight-rates";
@@ -34,7 +34,10 @@ export function ShowLocation() {
     const [ratesModal, setRatesModal] = useState(false);
 
     const role = useSelector((state: RootState) => state.auth.user?.role);
-    const canWrite = role === 'administrator';
+    /** Crear, editar y dar de baja: `administrator` y `export`. */
+    const canWrite = can(role, 'writeTripCatalogs');
+    /** Las tarifas de flete son catálogo del administrador: `export` edita el destino, no sus tarifas. */
+    const canWriteRates = can(role, 'writeCoreCatalogs');
 
     const { data: location, isLoading, isError, error } = useQuery({
         queryKey: ['getLocationById', id],
@@ -186,7 +189,7 @@ export function ShowLocation() {
                     locationId={location.id}
                     locationName={location.name}
                     locationActive={location.status}
-                    canWrite={canWrite}
+                    canWrite={canWriteRates}
                     modal={ratesModal}
                     closeModal={() => setRatesModal(false)}
                 />

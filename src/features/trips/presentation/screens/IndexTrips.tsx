@@ -27,8 +27,10 @@ import {
     TripOrder,
     TripRouteLine,
     TripStatusBadge,
+    TripsReportModal,
     canAssignTrip,
     canAssignTrips,
+    canDownloadTripsReport,
     canFinishTrip,
     canReadTripCost,
     canReadTripExpenses,
@@ -50,7 +52,7 @@ import {
     type TripListItem
 } from "@/features/trips/trips";
 import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
-import { Calculator, CircleCheckBig, Eye, Fuel, Pencil, Play, Plus, Radar, Trash2, Truck, Wallet } from "lucide-react";
+import { Calculator, CircleCheckBig, Download, Eye, Fuel, Pencil, Play, Plus, Radar, Trash2, Truck, Wallet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -87,6 +89,8 @@ export function IndexTrips() {
     const canRegisterExpenses = canRegisterTripExpenses(role, user?.carrierId);
     /** El costo directo: todos menos el piloto, y solo sobre un viaje finalizado. */
     const canReadCost = canReadTripCost(role);
+    /** El Excel del rango: todos menos el piloto. */
+    const canDownloadReport = canDownloadTripsReport(role);
 
     const search = searchParams.get('search') ?? '';
     const status = searchParams.get('status') ?? '';
@@ -101,6 +105,8 @@ export function IndexTrips() {
     const [tripToFuel, setTripToFuel] = useState<TripListItem | null>(null);
     /** El viaje cuyos viáticos se están mirando. */
     const [tripToExpense, setTripToExpense] = useState<TripListItem | null>(null);
+    /** El diálogo del reporte descargable. */
+    const [isReportOpen, setIsReportOpen] = useState(false);
 
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ['getTrips', page, rowsPerPage, search, status, dateFrom, dateTo],
@@ -321,14 +327,27 @@ export function IndexTrips() {
                     subtitle={SUBTITLES[role ?? ''] ?? "Los viajes de exportación."}
                 />
 
-                {canWrite && (
-                    <CustomFilledButton
-                        label="Publicar viaje"
-                        type="button"
-                        icon={<Plus size={16} />}
-                        onClick={() => navigate('/viajes/crear')}
-                    />
-                )}
+                <div className="flex flex-wrap items-center gap-3">
+                    {canDownloadReport && (
+                        <button
+                            type="button"
+                            onClick={() => setIsReportOpen(true)}
+                            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
+                        >
+                            <Download size={16} aria-hidden />
+                            Descargar reporte
+                        </button>
+                    )}
+
+                    {canWrite && (
+                        <CustomFilledButton
+                            label="Publicar viaje"
+                            type="button"
+                            icon={<Plus size={16} />}
+                            onClick={() => navigate('/viajes/crear')}
+                        />
+                    )}
+                </div>
             </div>
 
             <TripFiltersBar
@@ -460,6 +479,18 @@ export function IndexTrips() {
                 canRegister={canRegisterExpenses}
                 onClose={() => setTripToExpense(null)}
             />
+
+            {canDownloadReport && (
+                <TripsReportModal
+                    open={isReportOpen}
+                    onClose={() => setIsReportOpen(false)}
+                    role={role}
+                    search={search}
+                    status={status}
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                />
+            )}
         </div>
     );
 }

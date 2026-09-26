@@ -1,4 +1,4 @@
-import type { TripAssignmentForm, TripExpenseForm, TripFilters, TripForm, TripFuelForm, TripRepository, TripUpdateForm } from "@/features/trips/trips";
+import type { TripAssignmentForm, TripExpenseForm, TripFilters, TripForm, TripFuelForm, TripRepository, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 import { TripDatasourceImpl, TripRepositoryImpl } from "@/features/trips/infrastructure/infrastructure";
 import api from "@/config/http/axios";
 
@@ -63,6 +63,10 @@ export class TripProvider {
 
     getTripCost(id: string) {
         return this.repository.getTripCost(id);
+    }
+
+    downloadTripsReport(params: TripsReportParams) {
+        return this.repository.downloadTripsReport(params);
     }
 }
 

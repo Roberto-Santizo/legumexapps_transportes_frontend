@@ -13,6 +13,7 @@
  * este módulo, así que la dependencia inversa cerraría el círculo entre los dos.
  */
 
+import { can } from "@/features/shared/shared";
 import type { AccessoryCharacteristicForm } from "@/features/accessory-characteristics/accessory-characteristics";
 import { isAxiosError } from "axios";
 
@@ -33,8 +34,8 @@ export const DUPLICATE_NAME_MESSAGE = "El accesorio ya tiene una característica
  */
 export const ACCESSORY_NOT_FOUND_MESSAGE = "El accesorio no existe";
 
-/** Leer lo puede cualquier autenticado; crear, editar y eliminar es solo de `administrator`. */
-export const canWriteAccessoryCharacteristics = (role?: string): boolean => role === 'administrator';
+/** Leen todos menos `user` y `shipment`; crear, editar y eliminar es solo de `administrator`. */
+export const canWriteAccessoryCharacteristics = (role?: string): boolean => can(role, 'writeCoreCatalogs');
 
 /**
  * La misma normalización que aplica el backend antes de validar: recortar,

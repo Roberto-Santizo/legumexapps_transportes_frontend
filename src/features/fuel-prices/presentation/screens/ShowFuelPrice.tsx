@@ -1,7 +1,9 @@
 import { FUEL_TYPE_LABELS, FuelPriceFigure, FuelPriceMoment, FuelPricePageHeader, FuelPriceStatus, fuelPriceProvider } from "@/features/fuel-prices/fuel-prices";
-import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
+import { can, CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { Pencil, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/config/config";
 import { useNavigate, useParams } from "react-router-dom";
 import type { ReactNode } from "react";
 
@@ -26,6 +28,10 @@ export function ShowFuelPrice() {
     const navigate = useNavigate();
     const notification = useNotification();
     const queryClient = useQueryClient();
+
+    /** Crear, editar y eliminar es solo de `administrator`; el resto de lectores solo consulta. */
+    const role = useSelector((state: RootState) => state.auth.user?.role);
+    const canWrite = can(role, 'writeCoreCatalogs');
 
     const { data: fuelPrice, isLoading, isError, error } = useQuery({
         queryKey: ['getFuelPriceById', id],
@@ -66,7 +72,7 @@ export function ShowFuelPrice() {
                 title="Detalle del precio"
                 subtitle="El precio registrado para este combustible y quién lo capturó."
             >
-                {fuelPrice && (
+                {fuelPrice && canWrite && (
                     <div className="flex items-center gap-2">
                         <CustomFilledButton
                             label="Editar"

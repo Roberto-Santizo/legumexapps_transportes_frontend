@@ -1,7 +1,8 @@
-import { authProvider, login, type LoginForm } from "@/features/auth/auth";
-import { CustomFilledButton, CustomForm, FadeInUp, PasswordFormField, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
+import { authProvider, login, MobileOnlyNotice, type LoginForm } from "@/features/auth/auth";
+import { can, CustomFilledButton, CustomForm, FadeInUp, PasswordFormField, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AUTH_SESSION_QUERY_KEY } from "@/config/config";
@@ -11,6 +12,8 @@ export function Login() {
   const dispatch = useDispatch<AppDispatch>();
   const queryClient = useQueryClient();
   const notification = useNotification();
+  /** La cuenta es de piloto: el login fue válido, pero la web no le abre sesión. */
+  const [mobileOnly, setMobileOnly] = useState(false);
 
   const {
     register,
@@ -20,7 +23,15 @@ export function Login() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: (payload: LoginForm) => authProvider.login(payload),
+    onMutate: () => setMobileOnly(false),
     onSuccess: (data) => {
+      /** No se guarda el token: sin él no queda ninguna sesión web del piloto. */
+      if (!can(data.user.role, 'webAccess')) {
+        setMobileOnly(true);
+        notification.warning("Los pilotos inician sesión desde la app móvil.");
+        return;
+      }
+
       dispatch(login(data));
       queryClient.setQueryData(AUTH_SESSION_QUERY_KEY, data);
     },
@@ -76,6 +87,13 @@ export function Login() {
                 title="Iniciar sesión"
                 subtitle="Ingresa con tu cuenta de LegumexApps."
               />
+
+              {mobileOnly && (
+                <MobileOnlyNotice
+                  title="Esta cuenta es de piloto."
+                  description="La web es para la administración de viajes y flota. Abre la app móvil de LegumexApps Transportes e inicia sesión ahí con el mismo correo y contraseña."
+                />
+              )}
 
               <TextFormField<LoginForm>
                 label="Correo"

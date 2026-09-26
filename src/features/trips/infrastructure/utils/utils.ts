@@ -17,10 +17,11 @@
  *   es: una etiqueta que alguien movió a mano.
  */
 
-import type { Option } from "@/features/shared/shared";
-import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
+import { can, type Option } from "@/features/shared/shared";
+import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 import { formatDistanceKilometers, formatDurationHours } from "@/features/places/places";
 import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
+import { TRIP_CLIENT_LOCKED_MESSAGE, buildTripProductLines } from "@/features/trip-finished-products/trip-finished-products";
 import { isAxiosError, type AxiosError } from "axios";
 
 /** Límite que valida el backend en los cinco campos de texto. */
@@ -46,8 +47,8 @@ export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
 export const TRIP_STATUSES: Option[] = (Object.keys(TRIP_STATUS_LABELS) as TripStatus[])
     .map((value) => ({ value, label: TRIP_STATUS_LABELS[value] }));
 
-/** Publicar, editar y dar de baja es solo de `administrator`. Los cuatro roles leen. */
-export const canWriteTrips = (role?: string): boolean => role === 'administrator';
+/** Publicar, editar y dar de baja: `administrator` y `export`. Los siete roles leen (con su ámbito). */
+export const canWriteTrips = (role?: string): boolean => can(role, 'manageTrips');
 
 /**
  * Tomar el viaje es solo de `carrier`, y además con empresa registrada: sin
@@ -55,10 +56,10 @@ export const canWriteTrips = (role?: string): boolean => role === 'administrator
  * administrador no puede asignar por ninguna ruta.**
  */
 export const canAssignTrips = (role?: string, carrierId?: number | null): boolean =>
-    role === 'carrier' && typeof carrierId === 'number';
+    can(role, 'assignTrip') && typeof carrierId === 'number';
 
 /** Arrancar y cerrar es solo del piloto, y dentro el service exige que sea *el* asignado. */
-export const canRunTrips = (role?: string): boolean => role === 'pilot';
+export const canRunTrips = (role?: string): boolean => can(role, 'driveTrip');
 
 /**
  * La bolsa: el viaje que todavía no tomó nadie. Es lo que separa las dos listas
@@ -84,14 +85,13 @@ export const canFinishTrip = (trip: Pick<TripListItem, 'startDate' | 'endDate'>)
 /**
  * Mirar el rastro es de todos **menos del piloto**, que recibe 403 tanto en el
  * `GET` como al suscribirse al canal —también sobre su propio viaje: su
- * aplicación ya conoce su posición—. Es la inversa exacta de `canRunTrips`.
+ * aplicación ya conoce su posición—. `user` y `shipment` sí lo ven.
  *
  * Esconder la opción es cortesía, no seguridad: el ámbito lo cierra el
  * servidor, y un `carrier` fuera del suyo recibe 403 aunque llegue a la URL a
  * mano.
  */
-export const canTrackTrips = (role?: string): boolean =>
-    role === 'administrator' || role === 'manager' || role === 'carrier';
+export const canTrackTrips = (role?: string): boolean => can(role, 'readTripTracking');
 
 /**
  * Solo un viaje en ruta tiene algo que seguir. Uno `pending` no ha reportado
@@ -200,6 +200,19 @@ export const formatSignedHours = (delta: number): string => {
  */
 export const hasTraveledRoute = (trip: Pick<Trip, 'traveledPolyline' | 'traveledPoints'>): boolean =>
     trip.traveledPolyline !== null && trip.traveledPoints.length > 0;
+
+/**
+ * Los puntos de la ruta real que se pintan: `positions` si la API lo manda con
+ * algo, si no `traveledPoints` cuando hay ruta cerrada. `undefined` = no hay
+ * recorrido que dibujar.
+ */
+export const tripTraveledPoints = (
+    trip: Pick<Trip, 'positions' | 'traveledPolyline' | 'traveledPoints'>
+): LatLng[] | undefined => {
+    if (trip.positions && trip.positions.length > 0) return trip.positions;
+
+    return hasTraveledRoute(trip) ? trip.traveledPoints : undefined;
+};
 
 /* ------------------------------------------------------------------ *
  * Fechas
@@ -336,9 +349,17 @@ const STRICT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
  * dos fechas se descartan si no son `Y-m-d` estricto, porque mandarlas mal no
  * da error —devuelve el listado entero— y el usuario creería que filtró.
  */
-export const buildTripQuery = (limit: string, page: string, filters?: TripFilters): string => {
-    const query = new URLSearchParams({ limit, page });
+export const buildTripQuery = (limit: string, page: string, filters?: TripFilters): string =>
+    appendTripFilters(new URLSearchParams({ limit, page }), filters).toString();
 
+/**
+ * La query de `GET /api/reports/trips`: los mismos filtros del listado y con
+ * las mismas reglas, **sin** `limit` ni `page` —el archivo trae todo el rango—.
+ */
+export const buildTripsReportQuery = (params: TripsReportParams): string =>
+    appendTripFilters(new URLSearchParams(), params).toString();
+
+const appendTripFilters = (query: URLSearchParams, filters?: TripFilters): URLSearchParams => {
     const plain: (keyof TripFilters)[] = ['status', 'clientId', 'shippingLineId', 'locationId', 'pilotId', 'vehicleId'];
 
     plain.forEach((key) => {
@@ -355,7 +376,7 @@ export const buildTripQuery = (limit: string, page: string, filters?: TripFilter
 
     if (filters?.search?.trim()) query.set('search', filters.search.trim());
 
-    return query.toString();
+    return query;
 };
 
 /**
@@ -369,7 +390,7 @@ export const buildTripQuery = (limit: string, page: string, filters?: TripFilter
  * **número** y sin convertir —kilómetros y horas decimales, tal como las dio
  * `/directions`—: la API las guarda con dos decimales y no las coteja.
  */
-export const buildTripPayload = (form: TripFormValues): TripForm => ({
+const buildTripBasePayload = (form: TripFormValues): Omit<TripForm, 'products'> => ({
     order: form.order.trim(),
     clientId: Number(form.clientId),
     shippingLineId: Number(form.shippingLineId),
@@ -384,6 +405,15 @@ export const buildTripPayload = (form: TripFormValues): TripForm => ({
     estimatedKilometers: Number(form.estimatedKilometers),
     estimatedHours: Number(form.estimatedHours),
     observations: form.observations.trim(),
+});
+
+/**
+ * El alta lleva además las líneas de producto terminado (SPEC 37): sin
+ * `products` todo `POST /api/trips` es 422.
+ */
+export const buildTripPayload = (form: TripFormValues): TripForm => ({
+    ...buildTripBasePayload(form),
+    products: buildTripProductLines(form.products),
 });
 
 /**
@@ -402,10 +432,11 @@ export const buildTripPayload = (form: TripFormValues): TripForm => ({
  *   el mismo cuerpo. Mandarlas juntas cierra el hueco.
  *
  * `pilotId` y `vehicleId` no aparecen: el `PATCH` los ignora en silencio y
- * responde 200 sin aplicarlos.
+ * responde 200 sin aplicarlos. `products` tampoco: las líneas se editan con
+ * `/trip-finished-products`.
  */
 export const buildTripUpdatePayload = (form: TripFormValues): TripUpdateForm => ({
-    ...buildTripPayload(form),
+    ...buildTripBasePayload(form),
     ...(form.status ? { status: form.status } : {}),
 });
 
@@ -573,6 +604,7 @@ const TRIP_FIELDS: readonly TripField[] = [
  */
 const BUSINESS_FIELD_MESSAGES: { field: TripField; message: string }[] = [
     { field: 'clientId', message: "El cliente seleccionado fue eliminado" },
+    { field: 'clientId', message: TRIP_CLIENT_LOCKED_MESSAGE },
     { field: 'shippingLineId', message: "La naviera seleccionada fue eliminada" },
     { field: 'locationId', message: "El destino seleccionado no es un puerto" },
     { field: 'locationId', message: "El puerto de destino está inactivo" },
@@ -719,19 +751,19 @@ export const TRIP_FUEL_TYPES: Option[] = FUEL_TYPES;
 export const TRIP_FUEL_TYPE_LABELS: Record<string, string> = FUEL_TYPE_LABELS;
 
 /**
- * Registrar cargas es solo de `carrier`, y con empresa registrada: sin ella el
- * service responde 403 «No perteneces a ninguna empresa transportista». **Ni el
- * administrador ni el `manager` pueden cargar por ninguna ruta.**
+ * Registrar cargas: `administrator` (sobre cualquier viaje ya asignado) y
+ * `carrier` con empresa registrada —sin ella el service responde 403 «No
+ * perteneces a ninguna empresa transportista»—. Nadie más.
  */
 export const canRegisterTripFuels = (role?: string, carrierId?: number | null): boolean =>
-    role === 'carrier' && typeof carrierId === 'number';
+    can(role, 'registerTripFuelOrExpense') && (role !== 'carrier' || typeof carrierId === 'number');
 
 /**
- * Leer las cargas lo pueden los cuatro roles, **incluido el piloto asignado**
+ * Leer las cargas lo pueden los siete roles, **incluido el piloto asignado**
  * —al revés que el rastro, que a todo piloto le responde 403—: el dato es sobre
  * él y lo necesita para confirmarlo desde su aplicación.
  */
-export const canReadTripFuels = (role?: string): boolean => Boolean(role);
+export const canReadTripFuels = (role?: string): boolean => can(role, 'readTripFuels');
 
 /**
  * Sobre qué viaje se puede cargar. Dos condiciones, y las dos son del servidor:
@@ -812,15 +844,17 @@ export const getTripFuelFieldErrors = (error: unknown): TripFuelFieldError[] => 
 export const TRIP_EXPENSE_MAX_AMOUNT = 99999999.99;
 
 /**
- * Registrar viáticos es solo de `carrier`, y con empresa registrada: la misma
- * regla que las cargas. **Ni el administrador ni el `manager` pueden
- * registrar ni confirmar por ninguna ruta.**
+ * Registrar viáticos: la misma regla que las cargas —`administrator` y
+ * `carrier` con empresa—. Confirmarlos es solo del piloto asignado.
  */
 export const canRegisterTripExpenses = (role?: string, carrierId?: number | null): boolean =>
-    role === 'carrier' && typeof carrierId === 'number';
+    canRegisterTripFuels(role, carrierId);
 
-/** Leer los viáticos lo pueden los cuatro roles, **incluido el piloto asignado**. */
-export const canReadTripExpenses = (role?: string): boolean => Boolean(role);
+/**
+ * Leer los viáticos lo pueden todos, **incluido el piloto asignado**, menos
+ * `shipment`: no ve dinero (tampoco el total de viáticos del viaje).
+ */
+export const canReadTripExpenses = (role?: string): boolean => can(role, 'readTripExpenses');
 
 /**
  * Sobre qué viaje se puede registrar un viático: las dos mismas condiciones
@@ -991,10 +1025,10 @@ export const TRIP_TIMEOUTS_FORBIDDEN_MESSAGE = "No tienes permisos para consulta
  * ------------------------------------------------------------------ */
 
 /**
- * Consultar el costo es de todos **menos del piloto**, incluido el asignado: el
- * desglose revela su salario. La misma regla que el rastro y las paradas.
+ * Consultar el costo es de todos **menos del piloto**, incluido el asignado (el
+ * desglose revela su salario), **y de `shipment`**, que no ve dinero.
  */
-export const canReadTripCost = (role?: string): boolean => canTrackTrips(role);
+export const canReadTripCost = (role?: string): boolean => can(role, 'readTripCost');
 
 /** Solo un viaje `finished` tiene costo: `pending` e `in_route` responden 400. */
 export const hasTripCost = (trip: Pick<TripListItem, 'status'>): boolean => trip.status === 'finished';
@@ -1035,4 +1069,105 @@ export const tripCostMissingInputs = (cost: TripCost): string[] => {
     if (cost.fuel.byType.some((type) => type.pricePerGallon === null)) holes.push("Hay combustible sin precio capturado para la fecha de su carga: sus galones cuentan, pero su importe vale Q0.00.");
 
     return holes;
+};
+
+
+/* ------------------------------------------------------------------ *
+ * Reporte descargable (`GET /api/reports/trips`)
+ * ------------------------------------------------------------------ */
+
+/** Todos menos el piloto, que recibe 403. */
+export const canDownloadTripsReport = (role?: string): boolean => can(role, 'downloadTripsReport');
+
+/** `carrier` y `user` reciben 22 columnas; el resto, además «Productos» y «Total de cajas». */
+export const tripsReportIncludesProducts = (role?: string): boolean => can(role, 'readTripsReportProducts');
+
+/** Prefijo del 400 por tope: se muestra como aviso para acotar, no como fallo. */
+export const TRIPS_REPORT_TOO_LARGE_MESSAGE = "El reporte excede 5000 viajes";
+
+/**
+ * El nombre se construye aquí: `Content-Disposition` no es legible en una
+ * petición cross-origin (`exposed_headers: []`), pero el backend lo arma con
+ * las mismas dos fechas.
+ */
+export const tripsReportFileName = ({ dateFrom, dateTo }: Pick<TripsReportParams, 'dateFrom' | 'dateTo'>): string =>
+    `viajes-${dateFrom}_${dateTo}.xlsx`;
+
+const toInputDate = (date: Date): string =>
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+/** Rango por defecto cuando el listado no trae fechas: del día 1 del mes a hoy. */
+export const defaultTripsReportRange = (): Pick<TripsReportParams, 'dateFrom' | 'dateTo'> => {
+    const today = new Date();
+
+    return {
+        dateFrom: toInputDate(new Date(today.getFullYear(), today.getMonth(), 1)),
+        dateTo: toInputDate(today),
+    };
+};
+
+export type TripsReportField = 'dateFrom' | 'dateTo';
+
+export type TripsReportFieldError = {
+    field: TripsReportField;
+    message: string;
+}
+
+/**
+ * La validación del cliente, con los mismos textos que el 422: el servidor es
+ * la red, no la UX. Las dos fechas se comparan como cadenas porque `Y-m-d`
+ * ordena lexicográficamente.
+ */
+export const validateTripsReportRange = ({ dateFrom, dateTo }: Pick<TripsReportParams, 'dateFrom' | 'dateTo'>): TripsReportFieldError[] => {
+    const errors: TripsReportFieldError[] = [];
+
+    if (!dateFrom) errors.push({ field: 'dateFrom', message: "La fecha inicial es obligatoria" });
+    else if (!STRICT_DATE_PATTERN.test(dateFrom)) errors.push({ field: 'dateFrom', message: "La fecha inicial debe tener el formato AAAA-MM-DD" });
+
+    if (!dateTo) errors.push({ field: 'dateTo', message: "La fecha final es obligatoria" });
+    else if (!STRICT_DATE_PATTERN.test(dateTo)) errors.push({ field: 'dateTo', message: "La fecha final debe tener el formato AAAA-MM-DD" });
+
+    if (errors.length === 0 && dateTo < dateFrom) {
+        errors.push({ field: 'dateTo', message: "La fecha final no puede ser anterior a la fecha inicial" });
+    }
+
+    return errors;
+};
+
+/**
+ * Con `responseType: 'blob'` axios entrega también el cuerpo del error como
+ * `Blob`. Se lee y se sustituye por el JSON para que `getTripErrorMessage` y
+ * `getTripsReportFieldErrors` lo lean como cualquier otro error del dominio.
+ */
+export const readTripsReportErrorBody = async (error: AxiosError): Promise<void> => {
+    const response = error.response;
+
+    if (!response || !(response.data instanceof Blob)) return;
+
+    try {
+        response.data = JSON.parse(await response.data.text());
+    } catch {
+        response.data = null;
+    }
+};
+
+/** Los mensajes del 422 anclados a `dateFrom` / `dateTo`. */
+export const getTripsReportFieldErrors = (error: unknown): TripsReportFieldError[] => {
+    const response = toAxiosError(error)?.response;
+
+    if (response?.status !== 422) return [];
+
+    return collectFieldErrors((response.data as { errors?: unknown } | null)?.errors, ['dateFrom', 'dateTo'] as const);
+};
+
+/** Dispara la descarga en el navegador; la URL se libera en el siguiente tick. */
+export const saveTripsReportFile = (file: Blob, fileName: string): void => {
+    const url = URL.createObjectURL(file);
+    const link = Object.assign(document.createElement('a'), { href: url, download: fileName });
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 0);
 };

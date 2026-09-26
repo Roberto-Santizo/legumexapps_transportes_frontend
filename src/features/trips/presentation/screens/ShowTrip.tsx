@@ -43,13 +43,14 @@ import {
     formatTripHours,
     formatTripKilometers,
     hasTraveledMetrics,
-    hasTraveledRoute,
+    tripTraveledPoints,
     hasTripEstimates,
     parseGallons,
     parseTripEstimate,
     tripDeviation,
     tripProvider
 } from "@/features/trips/trips";
+import { TripFinishedProductsSection } from "@/features/trip-finished-products/trip-finished-products";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { CircleCheckBig, Fuel, Pencil, Play, Radar, Trash2, Truck, Wallet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -87,10 +88,10 @@ export function ShowTrip() {
     const canAssign = canAssignTrips(role, user?.carrierId);
     const canRun = canRunTrips(role);
     const canTrack = canTrackTrips(role);
-    /** Leer las cargas lo pueden los cuatro roles; registrarlas, solo la empresa. */
+    /** Leer las cargas lo pueden los siete roles; registrarlas, la empresa o el administrador. */
     const canReadFuels = canReadTripFuels(role);
     const canRegisterFuels = canRegisterTripFuels(role, user?.carrierId);
-    /** Los viáticos siguen la misma regla que las cargas. */
+    /** Los viáticos siguen la misma regla que las cargas, salvo que `shipment` no los ve. */
     const canReadExpenses = canReadTripExpenses(role);
     const canRegisterExpenses = canRegisterTripExpenses(role, user?.carrierId);
     /** Las paradas las ven los mismos que el rastro: todos menos el piloto. */
@@ -169,7 +170,8 @@ export function ShowTrip() {
      * tanto en un viaje en ruta como en uno cerrado sin rastro. Las estimaciones
      * en `null` son un viaje anterior a la spec, y ninguna de las dos es un error.
      */
-    const hasTraveled = Boolean(trip && hasTraveledRoute(trip));
+    const traveledPoints = trip ? tripTraveledPoints(trip) : undefined;
+    const hasTraveled = traveledPoints !== undefined;
     const hasEstimates = Boolean(trip && hasTripEstimates(trip));
     /** Solo en un viaje cerrado después de SPEC 32; `"0.00"` sí cuenta, es un cierre sin recorrido medible. */
     const hasMetrics = Boolean(trip && hasTraveledMetrics(trip));
@@ -357,12 +359,15 @@ export function ShowTrip() {
                                             </span>
                                         </Field>
 
-                                        {/* Misma regla que el combustible: solo lo que el piloto confirmó haber recibido. */}
-                                        <Field label="Viáticos confirmados">
-                                            <span className="font-mono text-[13px] tabular-nums">
-                                                {formatAmount(trip.totalExpensesAmount ?? "0.00")}
-                                            </span>
-                                        </Field>
+                                        {/* Misma regla que el combustible: solo lo que el piloto confirmó haber recibido.
+                                          * A `shipment` la API le manda siempre "0.00": no ve dinero, así que no se pinta. */}
+                                        {canReadExpenses && (
+                                            <Field label="Viáticos confirmados">
+                                                <span className="font-mono text-[13px] tabular-nums">
+                                                    {formatAmount(trip.totalExpensesAmount ?? "0.00")}
+                                                </span>
+                                            </Field>
+                                        )}
                                     </dl>
 
                                     {trip.pilotName && (
@@ -385,6 +390,13 @@ export function ShowTrip() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* La API no trae las líneas en el viaje: la sección las pide aparte. */}
+                        <TripFinishedProductsSection
+                            tripId={trip.id}
+                            clientId={trip.clientId}
+                            tripStatus={trip.status}
+                        />
 
                         <div className="rounded-2xl border border-line bg-surface p-6">
                             <h2 className="font-display text-lg font-semibold tracking-tight text-ink">
@@ -529,12 +541,12 @@ export function ShowTrip() {
 
                             <TripRouteMap
                                 points={trip.points}
-                                traveledPoints={hasTraveled ? trip.traveledPoints : undefined}
+                                traveledPoints={traveledPoints}
                             />
 
                             <p className="text-xs text-ink-muted">
                                 {hasTraveled
-                                    ? "En ámbar, el recorrido que quedó registrado al cerrar el viaje; en guion, la ruta que se planificó. Del puerto en adelante el trayecto es marítimo y no se dibuja."
+                                    ? "Usa los botones para mostrar u ocultar cada ruta: en guion la planificada, en ámbar la que hizo el piloto. Del puerto en adelante el trayecto es marítimo y no se dibuja."
                                     : trip.status === 'finished'
                                         ? "Es la ruta que se guardó al publicar el viaje. El cierre no dejó ningún recorrido registrado: el piloto no reportó posiciones, o el viaje se cerró antes de que se guardaran."
                                         : "Es la ruta que se guardó al publicar el viaje, no la posición del vehículo. Del puerto en adelante el trayecto es marítimo y no se dibuja."}

@@ -38,9 +38,9 @@ infrastructure/  datasources/*Impl.ts (axios + zod), repositories/*Impl.ts (dele
 presentation/    screens/, components/, providers/, hooks/ (opcional)
 ```
 
-Features con pantallas y rutas: `auth`, `dashboard`, `vehicles`, `fuel-prices`, `products`, `zones`, `locations`, `departure-points`, `accessories`, `clients`, `shipping-lines`, `pilots`, `trips`, `carriers` (de esta última solo `/completar-perfil` está registrada), `assistant` (`/inteligencia-artificial`, apartado de IA: por ahora solo el asistente del tablero).
+Features con pantallas y rutas: `auth`, `dashboard`, `vehicles`, `fuel-prices`, `products`, `zones`, `locations`, `departure-points`, `accessories`, `clients`, `finished-products` (SKU por cliente; sin relación con `products`), `shipping-lines`, `pilots`, `trips`, `carriers` (de esta última solo `/completar-perfil` está registrada), `assistant` (`/inteligencia-artificial`, apartado de IA: por ahora solo el asistente del tablero).
 
-Features de soporte, sin pantallas propias: `accessory-characteristics`, `freight-rates`, `places`, `vehicle-expenses`, `packing-lists` — exponen componentes (modales, campos, secciones) que se montan dentro de otras features.
+Features de soporte, sin pantallas propias: `accessory-characteristics`, `freight-rates`, `places`, `vehicle-expenses`, `packing-lists`, `trip-finished-products` — exponen componentes (modales, campos, secciones) que se montan dentro de otras features.
 
 `trips` es la feature más grande: además del CRUD tiene `/viajes/:id/seguimiento` (`TrackingTrip`), asignación de piloto/vehículo (`TripAssignmentModal`), combustibles (`TripFuelsModal`), tiempos muertos (`TripTimeoutsSection`), documentos del piloto (`TripPilotDocuments`), resumen de packing list y mapas de ruta/seguimiento. El hook `presentation/hooks/useTripTracking.ts` cose el historial HTTP (`getTripPositions`) con el canal privado `trips.{tripId}` (evento `.trip.position.updated`, con punto inicial obligatorio); se suscribe al socket **antes** de pedir el `GET` y deduplica con `mergeTripPositions`. El estado del socket se lee con `useSyncExternalStore`, no se copia a `useState`.
 
@@ -81,7 +81,7 @@ Respuestas de API: `ApiResponseSchema` (`statusCode`, `message`), `ApiPaginatedR
 
 ### Roles
 
-`UserRole = "administrator" | "carrier" | "pilot" | "manager"` (`shared/domain/types`). Cada `NavItem` declara `roles?: UserRole[]` y `disabled?`. `ProtectedLayout` redirige a `/login` sin sesión y a `/completar-perfil` cuando el usuario es `carrier` y su `carrierId` es `null`. Los permisos de escritura por feature se resuelven con helpers en su `infrastructure/utils` (p. ej. `canWriteClients(role)`).
+Siete roles: `administrator`, `manager`, `carrier`, `pilot`, `export`, `user`, `shipment`. La matriz vive en `shared/domain/permissions/permissions.ts` (réplica de `roles-api.md` §4): `PERMISSIONS` (permiso → roles), `can(role, permission)`, `ROLE_LABEL`/`roleLabel`, `homeRoute(role)` (tablero si lo tiene, si no `/viajes`). Cada `NavItem` declara `roles?: UserRole[]` y `disabled?`; el menú sigue los flujos de §6 (`carrier`/`pilot` leen catálogos pero no se les muestran). `ProtectedLayout` redirige a `/login` sin sesión y a `/completar-perfil` cuando el usuario es `carrier` y su `carrierId` es `null`. En `router.tsx` cada bloque va envuelto en `<RoleGuard permission="…" />` (lectura) y las rutas `crear`/`editar` en uno de escritura con `redirectTo`. Los helpers por feature en `infrastructure/utils` (p. ej. `canWriteClients(role)`) delegan en `can()`; no comparar roles a mano.
 
 ### Shared
 
@@ -98,7 +98,7 @@ Respuestas de API: `ApiResponseSchema` (`statusCode`, `message`), `ApiPaginatedR
 
 ### Rutas
 
-`src/router.tsx` centraliza las rutas, agrupadas por layout (`PublicLayout` / `ProtectedLayout`), un bloque `<Route element={<ProtectedLayout />}>` por feature. Los paths son en español (`/confirmar-cuenta`, `/vehiculos`, `/gasolina-precios`, `/productos`, `/zonas`, `/ubicaciones`, `/puntos-de-partida`, `/accesorios`, `/clientes`, `/navieras`, `/pilotos`, `/viajes`, `.../crear`, `/:id`, `/:id/editar`, `/viajes/:id/seguimiento`, `/inteligencia-artificial`). `/zonas` tiene rutas pero su entrada de `NAVIGATION` está comentada. El scaffolding de features **no** registra rutas ni entradas de `NAVIGATION`; hay que agregarlas a mano.
+`src/router.tsx` centraliza las rutas, agrupadas por layout (`PublicLayout` / `ProtectedLayout`), un bloque `<Route element={<ProtectedLayout />}>` por feature. Los paths son en español (`/confirmar-cuenta`, `/vehiculos`, `/gasolina-precios`, `/productos`, `/zonas`, `/ubicaciones`, `/puntos-de-partida`, `/accesorios`, `/clientes`, `/productos-terminados`, `/navieras`, `/pilotos`, `/viajes`, `.../crear`, `/:id`, `/:id/editar`, `/viajes/:id/seguimiento`, `/inteligencia-artificial`). `/zonas` tiene rutas pero su entrada de `NAVIGATION` está comentada. El scaffolding de features **no** registra rutas ni entradas de `NAVIGATION`; hay que agregarlas a mano.
 
 ## Estilos
 
@@ -108,7 +108,7 @@ Antes de diseñar UI nueva, invocar la skill `frontend-design`.
 
 ## Referencias de API
 
-`src/references/feat-references/*.md` documenta el contrato del backend por dominio (endpoints, validaciones, mensajes de error literales, particularidades). **Leer el archivo correspondiente antes de implementar o tocar una feature**: cada dominio tiene trampas propias (p. ej. `clients-api.md` — el `DELETE` es soft delete real y los duplicados llegan como 400 en `message`, no como 422 en `errors`). Trips se reparte en varios archivos: `trips-api.md`, `trip-fuels-api.md`, `trip-timeouts-api.md`, `trip-positions-api.md` (websockets/seguimiento), `pilot-documents-api.md`, `packing-list-summary-endpoint.md`, `freight-rate-quote-api.md`. El asistente de IA está en `assistant-api.md` (stream SSE, no sobre JSON; leerlo entero antes de tocar `assistant`). Para gastos de vehículo usar `vehicle-expenses-api-updated.md` (el `is_invoiced` obligatorio rompe el alta antigua); `vehicle-expenses-api.md` es la versión previa.
+`src/references/feat-references/*.md` documenta el contrato del backend por dominio (endpoints, validaciones, mensajes de error literales, particularidades). **Leer el archivo correspondiente antes de implementar o tocar una feature**: cada dominio tiene trampas propias (p. ej. `clients-api.md` — el `DELETE` es soft delete real y los duplicados llegan como 400 en `message`, no como 422 en `errors`). Trips se reparte en varios archivos: `trips-api.md`, `trip-fuels-api.md`, `trip-timeouts-api.md`, `trip-positions-api.md` (websockets/seguimiento), `pilot-documents-api.md`, `packing-list-summary-endpoint.md`, `freight-rate-quote-api.md`, `trip-finished-products-api.md` (líneas de producto terminado: `POST /trips` exige `products`, el cliente se bloquea si el viaje tiene líneas). El asistente de IA está en `assistant-api.md` (stream SSE, no sobre JSON; leerlo entero antes de tocar `assistant`). Para gastos de vehículo usar `vehicle-expenses-api-updated.md` (el `is_invoiced` obligatorio rompe el alta antigua); `vehicle-expenses-api.md` es la versión previa.
 
 `src/references/[feature-name]/` es el esqueleto de referencia (archivos en su mayoría vacíos) que consume el scaffolding.
 

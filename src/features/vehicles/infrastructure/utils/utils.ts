@@ -8,7 +8,7 @@
  * kilometraje viaje cuando quien edita no puede moverlo.
  */
 
-import type { Option } from "@/features/shared/shared";
+import { can, type Option } from "@/features/shared/shared";
 import type { VehicleFilters, VehicleForm } from "@/features/vehicles/vehicles";
 import { isAxiosError } from "axios";
 
@@ -75,10 +75,14 @@ export const MILEAGE_ADMIN_ONLY_MESSAGE = "Solo un administrador puede modificar
 export const CARRIER_REQUIRED_MESSAGE = "Debes estar vinculado a un transportista para acceder a este recurso";
 
 /**
- * El alta es `role:carrier` a secas: un `administrator` recibe 403 aunque sí
- * pueda listar, ver, editar y desactivar.
+ * Alta, edición y baja: `administrator` y `carrier`. El administrador debe
+ * mandar `carrier_id` en el alta (ver `mustPickVehicleCarrier`); al `carrier`
+ * se le descarta y se usa su empresa. `manager` y `export` solo leen.
  */
-export const canCreateVehicle = (role?: string): boolean => role === 'carrier';
+export const canWriteVehicles = (role?: string): boolean => can(role, 'writeVehicles');
+
+/** Solo el administrador elige empresa al registrar: el `carrier` registra en la suya. */
+export const mustPickVehicleCarrier = (role?: string): boolean => role === 'administrator';
 
 /**
  * La única autorización por campo del proyecto: vive dentro del service del
@@ -86,10 +90,13 @@ export const canCreateVehicle = (role?: string): boolean => role === 'carrier';
  * kilometraje aborta la petición entera con 403 —ni la marca ni la imagen se
  * guardan—, así que el input se le bloquea y el campo ni siquiera se envía.
  */
-export const canEditMileage = (role?: string): boolean => role === 'administrator';
+export const canEditMileage = (role?: string): boolean => can(role, 'editVehicleMileage');
 
-/** Solo un `administrator` puede acotar el listado por empresa; al `carrier` se le ignora. */
-export const canFilterByCarrier = (role?: string): boolean => role === 'administrator';
+/**
+ * Acotar por empresa: `administrator` y `manager` (los únicos que leen
+ * `GET /carriers`). Al `carrier` el filtro se le ignora en silencio.
+ */
+export const canFilterByCarrier = (role?: string): boolean => can(role, 'readCarriers');
 
 /** Cadena de la API → número. Un importe ilegible se trata como 0, nunca como NaN. */
 export const toAmount = (value: string | null): number => {
@@ -164,6 +171,10 @@ export const buildVehicleFormData = (payload: VehicleForm): FormData => {
 
     if (payload.status) {
         formData.append('status', payload.status);
+    }
+
+    if (payload.carrierId) {
+        formData.append('carrier_id', payload.carrierId.toString());
     }
 
     if (payload.image instanceof File) {

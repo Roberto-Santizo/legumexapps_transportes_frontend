@@ -1,4 +1,4 @@
-import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripDatasource, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
+import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripDatasource, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 import { TripRepository } from "@/features/trips/trips";
 
 export class TripRepositoryImpl extends TripRepository {
@@ -64,5 +64,9 @@ export class TripRepositoryImpl extends TripRepository {
 
     getTripCost(id: string): Promise<TripCost> {
         return this.datasource.getTripCost(id);
+    }
+
+    downloadTripsReport(params: TripsReportParams): Promise<Blob> {
+        return this.datasource.downloadTripsReport(params);
     }
 }

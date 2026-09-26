@@ -12,6 +12,7 @@ import {
     tripProvider,
     type TripFormValues
 } from "@/features/trips/trips";
+import { tripFinishedProductProvider } from "@/features/trip-finished-products/trip-finished-products";
 import { CustomFilledButton, CustomForm, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -34,6 +35,18 @@ export function UpdateTrip() {
         queryFn: () => tripProvider.getTripById(id!),
         enabled: Boolean(id)
     });
+
+    /**
+     * Con líneas de producto el cliente queda fijo: cambiarlo es 400. Un viaje
+     * anterior a SPEC 37 lista `[]` y sí puede cambiar de cliente.
+     */
+    const { data: productLines, isLoading: isLoadingProductLines } = useQuery({
+        queryKey: ['getTripFinishedProducts', id],
+        queryFn: () => tripFinishedProductProvider.getTripFinishedProducts(id!),
+        enabled: Boolean(id)
+    });
+
+    const lockClient = (productLines?.length ?? 0) > 0;
 
     const {
         register,
@@ -142,13 +155,13 @@ export function UpdateTrip() {
                 </FadeInUp>
             )}
 
-            {canWrite && isLoading && (
+            {canWrite && (isLoading || isLoadingProductLines) && (
                 <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-subtle">
                     Cargando viaje
                 </p>
             )}
 
-            {canWrite && !isLoading && trip && (
+            {canWrite && !isLoading && !isLoadingProductLines && trip && (
                 <FadeInUp>
                     <div className="flex max-w-3xl flex-col gap-6">
                         {trip.pilotName && (
@@ -175,6 +188,8 @@ export function UpdateTrip() {
                                 errors={errors}
                                 setValue={setValue}
                                 isUpdate
+                                lockClient={lockClient}
+                                lockedClientName={trip.clientName}
                             />
 
                             <CustomFilledButton

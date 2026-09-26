@@ -1,5 +1,5 @@
-import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
-import { PaginatedTripsSchema, TripCostSchema, TripDatasource, TripExpensesSchema, TripFuelsSchema, TripPositionSchema, TripSchema, TripTimeoutSchema, buildTripQuery, getTripErrorMessage } from "@/features/trips/trips";
+import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
+import { PaginatedTripsSchema, TripCostSchema, TripDatasource, TripExpensesSchema, TripFuelsSchema, TripPositionSchema, TripSchema, TripTimeoutSchema, buildTripQuery, buildTripsReportQuery, getTripErrorMessage, readTripsReportErrorBody } from "@/features/trips/trips";
 import { ApiResponseSchema } from "@/features/shared/shared";
 import { isAxiosError, type AxiosInstance } from "axios";
 import { z } from "zod";
@@ -460,6 +460,43 @@ export class TripDatasourceImpl extends TripDatasource {
             throw new Error("Información no válida");
         } catch (error) {
             if (isAxiosError(error)) throw new Error(getTripErrorMessage(error), { cause: error });
+
+            throw new Error("Error no controlado.", { cause: error });
+        }
+    }
+
+    /**
+     * La única respuesta de la API que no viaja en el sobre: el 200 **es** el
+     * `.xlsx` en binario. Los errores sí son JSON (sobre en 400/401/403,
+     * `{ message, errors }` en 422), pero con `responseType: 'blob'` axios los
+     * entrega también como `Blob`: se leen como texto y se reemplazan por el
+     * JSON antes de traducirlos, o el usuario vería «Error no controlado».
+     *
+     * `Accept: application/json` no impide el Excel; sirve para que los
+     * errores lleguen como JSON. Un rango sin viajes no es error: es un 200
+     * con solo la fila de encabezados.
+     */
+    async downloadTripsReport(params: TripsReportParams): Promise<Blob> {
+        try {
+            const { data } = await this.api.get(`/reports/trips?${buildTripsReportQuery(params)}`, {
+                responseType: 'blob',
+                headers: { Accept: 'application/json' },
+            });
+
+            /** Un JSON con 200 sería un «Excel» que en realidad es texto: no se entrega. */
+            if (data instanceof Blob && !data.type.includes('json')) {
+                return data;
+            }
+
+            throw new Error("Información no válida");
+        } catch (error) {
+            if (isAxiosError(error)) {
+                await readTripsReportErrorBody(error);
+
+                throw new Error(getTripErrorMessage(error), { cause: error });
+            }
+
+            if (error instanceof Error && error.message === "Información no válida") throw error;
 
             throw new Error("Error no controlado.", { cause: error });
         }

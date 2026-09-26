@@ -1,4 +1,4 @@
-import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
+import { can, ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
 import { Eye, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -15,7 +15,8 @@ export function IndexZones() {
     const { page, rowsPerPage } = usePagination(searchParams);
 
     const role = useSelector((state: RootState) => state.auth.user?.role);
-    const canWrite = role === 'administrator';
+    /** Crear, editar y dar de baja es solo de `administrator`. */
+    const canWrite = can(role, 'writeCoreCatalogs');
 
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ['getZones', page, rowsPerPage],

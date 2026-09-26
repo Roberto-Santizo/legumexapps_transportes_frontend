@@ -1,5 +1,5 @@
 import {
-    canCreateVehicle,
+    canWriteVehicles,
     canFilterByCarrier,
     CARRIER_REQUIRED_MESSAGE,
     VehicleCapacity,
@@ -31,8 +31,8 @@ export function IndexVehicles() {
     const { page, rowsPerPage } = usePagination(searchParams);
 
     const role = useSelector((state: RootState) => state.auth.user?.role);
-    /** El alta es de `carrier`: a un `administrator` el backend le responde 403. */
-    const canCreate = canCreateVehicle(role);
+    /** Alta, edición y baja: `administrator` y `carrier`. `manager` y `export` solo leen. */
+    const canCreate = canWriteVehicles(role);
 
     const status = searchParams.get('status') ?? '';
     const condition = searchParams.get('condition') ?? '';
@@ -265,17 +265,19 @@ export function IndexVehicles() {
                                                     icon: <Eye />,
                                                     onClick: () => navigate(`/vehiculos/${vehicle.id}`)
                                                 },
-                                                {
-                                                    label: "Editar",
-                                                    icon: <Pencil />,
-                                                    onClick: () => navigate(`/vehiculos/${vehicle.id}/editar`)
-                                                },
-                                                {
-                                                    label: "Desactivar",
-                                                    icon: <Trash2 />,
-                                                    onClick: () => askToDeactivate(vehicle),
-                                                    danger: true
-                                                }
+                                                ...(canCreate ? [
+                                                    {
+                                                        label: "Editar",
+                                                        icon: <Pencil />,
+                                                        onClick: () => navigate(`/vehiculos/${vehicle.id}/editar`)
+                                                    },
+                                                    {
+                                                        label: "Desactivar",
+                                                        icon: <Trash2 />,
+                                                        onClick: () => askToDeactivate(vehicle),
+                                                        danger: true
+                                                    }
+                                                ] : [])
                                             ]}
                                         />
                                     </Td>
