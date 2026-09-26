@@ -14,3 +14,4 @@ export * from './TripRouteSection';
 export * from './TripTimeline';
 export * from './TripTimeoutsSection';
 export * from './TripTrackingMap';
+export * from './TripsReportModal';

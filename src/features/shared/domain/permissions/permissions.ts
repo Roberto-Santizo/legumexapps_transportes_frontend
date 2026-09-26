@@ -43,6 +43,10 @@ export const PERMISSIONS = {
     /* Viajes */
     readTrips: ALL,
     manageTrips: ['administrator', 'export'],
+    /** `GET /api/reports/trips`: mismo ámbito que el listado. El piloto recibe 403. */
+    downloadTripsReport: except('pilot'),
+    /** Las columnas «Productos» y «Total de cajas» del Excel: su propia matriz, no la de `trip-finished-products`. */
+    readTripsReportProducts: ['administrator', 'manager', 'export', 'shipment'],
     /** Tomar de la bolsa: solo `carrier`, y con empresa (ver `canAssignTrips`). */
     assignTrip: ['carrier'],
     /** Arrancar, cerrar, reportar posición y confirmar cargas/viáticos. */

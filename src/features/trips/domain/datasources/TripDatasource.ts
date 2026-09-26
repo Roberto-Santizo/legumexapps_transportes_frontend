@@ -1,4 +1,4 @@
-import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
+import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 
 /**
  * Los quince endpoints del dominio. Los nueve últimos no son un CRUD: son las
@@ -23,4 +23,5 @@ export abstract class TripDatasource {
     abstract createTripExpense(id: string, payload: TripExpenseForm): Promise<string>;
     abstract getTripTimeouts(id: string): Promise<TripTimeout[]>;
     abstract getTripCost(id: string): Promise<TripCost>;
+    abstract downloadTripsReport(params: TripsReportParams): Promise<Blob>;
 }

@@ -18,7 +18,7 @@
  */
 
 import { can, type Option } from "@/features/shared/shared";
-import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm } from "@/features/trips/trips";
+import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 import { formatDistanceKilometers, formatDurationHours } from "@/features/places/places";
 import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
 import { TRIP_CLIENT_LOCKED_MESSAGE, buildTripProductLines } from "@/features/trip-finished-products/trip-finished-products";
@@ -349,9 +349,17 @@ const STRICT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
  * dos fechas se descartan si no son `Y-m-d` estricto, porque mandarlas mal no
  * da error —devuelve el listado entero— y el usuario creería que filtró.
  */
-export const buildTripQuery = (limit: string, page: string, filters?: TripFilters): string => {
-    const query = new URLSearchParams({ limit, page });
+export const buildTripQuery = (limit: string, page: string, filters?: TripFilters): string =>
+    appendTripFilters(new URLSearchParams({ limit, page }), filters).toString();
 
+/**
+ * La query de `GET /api/reports/trips`: los mismos filtros del listado y con
+ * las mismas reglas, **sin** `limit` ni `page` —el archivo trae todo el rango—.
+ */
+export const buildTripsReportQuery = (params: TripsReportParams): string =>
+    appendTripFilters(new URLSearchParams(), params).toString();
+
+const appendTripFilters = (query: URLSearchParams, filters?: TripFilters): URLSearchParams => {
     const plain: (keyof TripFilters)[] = ['status', 'clientId', 'shippingLineId', 'locationId', 'pilotId', 'vehicleId'];
 
     plain.forEach((key) => {
@@ -368,7 +376,7 @@ export const buildTripQuery = (limit: string, page: string, filters?: TripFilter
 
     if (filters?.search?.trim()) query.set('search', filters.search.trim());
 
-    return query.toString();
+    return query;
 };
 
 /**
@@ -1061,4 +1069,105 @@ export const tripCostMissingInputs = (cost: TripCost): string[] => {
     if (cost.fuel.byType.some((type) => type.pricePerGallon === null)) holes.push("Hay combustible sin precio capturado para la fecha de su carga: sus galones cuentan, pero su importe vale Q0.00.");
 
     return holes;
+};
+
+
+/* ------------------------------------------------------------------ *
+ * Reporte descargable (`GET /api/reports/trips`)
+ * ------------------------------------------------------------------ */
+
+/** Todos menos el piloto, que recibe 403. */
+export const canDownloadTripsReport = (role?: string): boolean => can(role, 'downloadTripsReport');
+
+/** `carrier` y `user` reciben 22 columnas; el resto, además «Productos» y «Total de cajas». */
+export const tripsReportIncludesProducts = (role?: string): boolean => can(role, 'readTripsReportProducts');
+
+/** Prefijo del 400 por tope: se muestra como aviso para acotar, no como fallo. */
+export const TRIPS_REPORT_TOO_LARGE_MESSAGE = "El reporte excede 5000 viajes";
+
+/**
+ * El nombre se construye aquí: `Content-Disposition` no es legible en una
+ * petición cross-origin (`exposed_headers: []`), pero el backend lo arma con
+ * las mismas dos fechas.
+ */
+export const tripsReportFileName = ({ dateFrom, dateTo }: Pick<TripsReportParams, 'dateFrom' | 'dateTo'>): string =>
+    `viajes-${dateFrom}_${dateTo}.xlsx`;
+
+const toInputDate = (date: Date): string =>
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+/** Rango por defecto cuando el listado no trae fechas: del día 1 del mes a hoy. */
+export const defaultTripsReportRange = (): Pick<TripsReportParams, 'dateFrom' | 'dateTo'> => {
+    const today = new Date();
+
+    return {
+        dateFrom: toInputDate(new Date(today.getFullYear(), today.getMonth(), 1)),
+        dateTo: toInputDate(today),
+    };
+};
+
+export type TripsReportField = 'dateFrom' | 'dateTo';
+
+export type TripsReportFieldError = {
+    field: TripsReportField;
+    message: string;
+}
+
+/**
+ * La validación del cliente, con los mismos textos que el 422: el servidor es
+ * la red, no la UX. Las dos fechas se comparan como cadenas porque `Y-m-d`
+ * ordena lexicográficamente.
+ */
+export const validateTripsReportRange = ({ dateFrom, dateTo }: Pick<TripsReportParams, 'dateFrom' | 'dateTo'>): TripsReportFieldError[] => {
+    const errors: TripsReportFieldError[] = [];
+
+    if (!dateFrom) errors.push({ field: 'dateFrom', message: "La fecha inicial es obligatoria" });
+    else if (!STRICT_DATE_PATTERN.test(dateFrom)) errors.push({ field: 'dateFrom', message: "La fecha inicial debe tener el formato AAAA-MM-DD" });
+
+    if (!dateTo) errors.push({ field: 'dateTo', message: "La fecha final es obligatoria" });
+    else if (!STRICT_DATE_PATTERN.test(dateTo)) errors.push({ field: 'dateTo', message: "La fecha final debe tener el formato AAAA-MM-DD" });
+
+    if (errors.length === 0 && dateTo < dateFrom) {
+        errors.push({ field: 'dateTo', message: "La fecha final no puede ser anterior a la fecha inicial" });
+    }
+
+    return errors;
+};
+
+/**
+ * Con `responseType: 'blob'` axios entrega también el cuerpo del error como
+ * `Blob`. Se lee y se sustituye por el JSON para que `getTripErrorMessage` y
+ * `getTripsReportFieldErrors` lo lean como cualquier otro error del dominio.
+ */
+export const readTripsReportErrorBody = async (error: AxiosError): Promise<void> => {
+    const response = error.response;
+
+    if (!response || !(response.data instanceof Blob)) return;
+
+    try {
+        response.data = JSON.parse(await response.data.text());
+    } catch {
+        response.data = null;
+    }
+};
+
+/** Los mensajes del 422 anclados a `dateFrom` / `dateTo`. */
+export const getTripsReportFieldErrors = (error: unknown): TripsReportFieldError[] => {
+    const response = toAxiosError(error)?.response;
+
+    if (response?.status !== 422) return [];
+
+    return collectFieldErrors((response.data as { errors?: unknown } | null)?.errors, ['dateFrom', 'dateTo'] as const);
+};
+
+/** Dispara la descarga en el navegador; la URL se libera en el siguiente tick. */
+export const saveTripsReportFile = (file: Blob, fileName: string): void => {
+    const url = URL.createObjectURL(file);
+    const link = Object.assign(document.createElement('a'), { href: url, download: fileName });
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 0);
 };

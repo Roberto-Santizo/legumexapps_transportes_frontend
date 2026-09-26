@@ -169,6 +169,16 @@ export type TripFilters = {
     search?: string;
 }
 
+/**
+ * Los parámetros de `GET /api/reports/trips`: los mismos filtros del listado,
+ * pero con las dos fechas **obligatorias** (`Y-m-d`, inclusivas). No lleva
+ * `limit`: el archivo trae siempre todo el rango.
+ */
+export type TripsReportParams = Omit<TripFilters, 'dateFrom' | 'dateTo'> & {
+    dateFrom: string;
+    dateTo: string;
+}
+
 /** Un punto del recorrido real. Ojo: `latitude`/`longitude` son cadenas. */
 export type TripPosition = z.infer<typeof TripPositionSchema>;
 
