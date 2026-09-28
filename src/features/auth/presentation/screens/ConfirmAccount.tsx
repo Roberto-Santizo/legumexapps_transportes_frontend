@@ -1,4 +1,4 @@
-import { CustomFilledButton, CustomForm, FadeInUp, OTPFormField, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
+import { BrandLogo, CustomFilledButton, CustomForm, FadeInUp, OTPFormField, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { authProvider, type ConfirmAccountForm } from "@/features/auth/auth";
@@ -99,6 +99,8 @@ export function ConfirmAccount() {
 
       <section className="flex min-h-screen items-center justify-center px-5 py-14 sm:px-10 lg:min-h-full">
         <div className="w-full max-w-md">
+          <BrandLogo className="mx-auto mb-10 w-44 sm:w-52" />
+
           <div className="mb-8 lg:hidden">
             <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-ink-subtle">
               Legumex · Transportes

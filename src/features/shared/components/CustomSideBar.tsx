@@ -1,3 +1,5 @@
+import { BrandLogo } from "@/features/shared/shared";
+
 type Props = {
     collapsed?: boolean;
 }
@@ -9,11 +11,7 @@ export function CustomSideBar({ collapsed = false }: Props) {
                 }`}
         >
             <div className="flex h-10 shrink-0 items-center gap-2 px-2">
-                <img
-                    src="https://legumexappsapi-storage.s3.us-east-1.amazonaws.com/resources/LOGO_LX_V2.png"
-                    alt="Logo"
-                    className="size-6 object-contain"
-                />
+                <BrandLogo variant="mark" className="w-7" />
 
                 <span className="truncate text-[15px] font-semibold tracking-tight text-ink">
                     Producción
