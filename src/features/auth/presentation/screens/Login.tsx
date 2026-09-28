@@ -1,5 +1,5 @@
 import { authProvider, login, MobileOnlyNotice, type LoginForm } from "@/features/auth/auth";
-import { can, CustomFilledButton, CustomForm, FadeInUp, PasswordFormField, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
+import { BrandLogo, can, CustomFilledButton, CustomForm, FadeInUp, PasswordFormField, StaggerContainer, StaggerItem, TextFormField, Title, useNotification } from "@/features/shared/shared";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { useState } from "react";
@@ -72,6 +72,8 @@ export function Login() {
 
       <section className="flex min-h-screen items-center justify-center px-5 py-14 sm:px-10 lg:min-h-full">
         <div className="w-full max-w-md">
+          <BrandLogo className="mx-auto mb-10 w-44 sm:w-52" />
+
           <div className="mb-8 lg:hidden">
             <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-ink-subtle">
               Legumex · Transportes
