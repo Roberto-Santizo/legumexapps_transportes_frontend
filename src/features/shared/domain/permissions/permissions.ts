@@ -47,6 +47,8 @@ export const PERMISSIONS = {
     downloadTripsReport: except('pilot'),
     /** Las columnas «Productos» y «Total de cajas» del Excel: su propia matriz, no la de `trip-finished-products`. */
     readTripsReportProducts: ['administrator', 'manager', 'export', 'shipment'],
+    /** La sección «Productos terminados» del detalle del viaje. Restricción solo de UI. */
+    readTripFinishedProducts: ['administrator', 'export', 'shipment'],
     /** Tomar de la bolsa: solo `carrier`, y con empresa (ver `canAssignTrips`). */
     assignTrip: ['carrier'],
     /** Arrancar, cerrar, reportar posición y confirmar cargas/viáticos. */

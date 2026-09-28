@@ -48,6 +48,9 @@ export const TRIP_PRODUCT_BOXES_VALIDATION = {
     }
 } as const;
 
+/** Ver la sección en el detalle del viaje: `administrator`, `export` y `shipment`. */
+export const canReadTripFinishedProducts = (role?: string): boolean => can(role, 'readTripFinishedProducts');
+
 /** Agregar, editar cajas y quitar líneas es de `administrator` y `export`: los que publican viajes. */
 export const canWriteTripFinishedProducts = (role?: string): boolean => can(role, 'manageTrips');
 
