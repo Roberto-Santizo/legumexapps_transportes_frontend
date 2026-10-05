@@ -1,4 +1,4 @@
-import type { FuelTypeSchema, PaginatedTripsSchema, TripCostFuelTypeSchema, TripCostSchema, TripExpenseSchema, TripExpensesSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
+import type { FuelTypeSchema, PaginatedTripsSchema, TripCostFuelTypeSchema, TripCostSchema, TripEmergencyExpenseSchema, TripEmergencyExpensesSchema, TripExpenseSchema, TripExpensesSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
 import type { TripProductLine, TripProductLineValues } from "@/features/trip-finished-products/trip-finished-products";
 import type { z } from "zod";
 
@@ -244,6 +244,54 @@ export type TripExpenseForm = {
     amount: number;
     /** Texto libre, máx 255. Solo `trim`; en blanco se guarda como `null`. */
     description?: string | null;
+}
+
+/* ------------------------------------------------------------------ *
+ * Gastos emergentes
+ * ------------------------------------------------------------------ */
+
+/** Un gasto emergente. Ojo: `amount` es cadena y las dos fechas no son ISO. */
+export type TripEmergencyExpense = z.infer<typeof TripEmergencyExpenseSchema>;
+
+/** El sobre del listado, con `totalAmount` (suma de todos) en la raíz. */
+export type TripEmergencyExpenses = z.infer<typeof TripEmergencyExpensesSchema>;
+
+/**
+ * El alta. Con `receipt` el cuerpo sale como `FormData`; sin él, JSON.
+ * `tripId` y `registeredBy` no se aceptan: se ignoran en silencio.
+ */
+export type TripEmergencyExpenseForm = {
+    /** `min:0.01`, `max:99999999.99`. GTQ. */
+    amount: number;
+    /** Obligatoria, máx 255. Solo `trim`; en blanco es 422. */
+    description: string;
+    /** jpg, jpeg, png o pdf, ≤ 3 MB. Opcional. */
+    receipt?: File | null;
+}
+
+/**
+ * La corrección. Todo opcional: un cuerpo vacío responde 200 sin escribir.
+ * `receipt` y `removeReceipt: true` juntos son 422.
+ */
+export type TripEmergencyExpenseUpdateForm = {
+    amount?: number;
+    description?: string;
+    /** Reemplaza el comprobante; el anterior se borra del almacenamiento. */
+    receipt?: File | null;
+    /** `true` quita el comprobante y lo borra del almacenamiento. */
+    removeReceipt?: boolean;
+}
+
+/**
+ * Lo que sostiene el formulario, en el alta y en la corrección. La
+ * corrección se calcula después comparando con el gasto original.
+ */
+export type TripEmergencyExpenseFormValues = {
+    amount: number;
+    description: string;
+    receipt: File | null;
+    /** Solo en la corrección: quitar el comprobante actual sin poner otro. */
+    removeReceipt: boolean;
 }
 
 /* ------------------------------------------------------------------ *

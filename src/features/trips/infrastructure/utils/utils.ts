@@ -18,7 +18,7 @@
  */
 
 import { can, type Option } from "@/features/shared/shared";
-import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
+import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripEmergencyExpense, TripEmergencyExpenseForm, TripEmergencyExpenseFormValues, TripEmergencyExpenseUpdateForm, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 import { formatDistanceKilometers, formatDurationHours } from "@/features/places/places";
 import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
 import { TRIP_CLIENT_LOCKED_MESSAGE, buildTripProductLines } from "@/features/trip-finished-products/trip-finished-products";
@@ -910,6 +910,180 @@ export const getTripExpenseFieldErrors = (error: unknown): TripExpenseFieldError
     if (!data || typeof data !== 'object') return [];
 
     return collectFieldErrors((data as { errors?: unknown }).errors, ['amount', 'description'] as const);
+};
+
+/* ------------------------------------------------------------------ *
+ * Gastos emergentes
+ * ------------------------------------------------------------------ */
+
+/**
+ * Leer los gastos emergentes: todos menos `shipment`, que no ve dinero. El
+ * piloto asignado también los lee, pero no entra a la web.
+ */
+export const canReadTripEmergencyExpenses = (role?: string): boolean => can(role, 'readTripEmergencyExpenses');
+
+/**
+ * Registrar, corregir y borrar: `administrator` y `carrier` con empresa —sin
+ * ella el service responde 403 «No perteneces a ninguna empresa
+ * transportista»—. Que la empresa sea **la que tomó el viaje** solo lo sabe
+ * el servidor.
+ */
+export const canWriteTripEmergencyExpenses = (role?: string, carrierId?: number | null): boolean =>
+    can(role, 'writeTripEmergencyExpenses') && (role !== 'carrier' || typeof carrierId === 'number');
+
+/**
+ * Registrar solo con el viaje **en ruta**: `pending` y `finished` responden
+ * 400. Un viaje `in_route` ya está asignado por fuerza, así que basta el estado.
+ */
+export const canRegisterTripEmergencyExpense = (trip: Pick<TripListItem, 'status'>): boolean =>
+    trip.status === 'in_route';
+
+/**
+ * Corregir y borrar sí se puede con el viaje `finished` —la factura suele
+ * llegar después del cierre—. Solo un viaje `pending` lo impide.
+ */
+export const canManageTripEmergencyExpense = (trip: Pick<TripListItem, 'status'>): boolean =>
+    trip.status !== 'pending';
+
+/** Las dos fechas salen del mismo formato: si difieren, alguien lo corrigió. */
+export const isTripEmergencyExpenseCorrected = (expense: Pick<TripEmergencyExpense, 'createdAt' | 'updatedAt'>): boolean =>
+    expense.updatedAt !== expense.createdAt;
+
+/**
+ * Qué pintar se decide por `receiptType`, **no** por la extensión de la URL:
+ * la URL sale del bucket y puede cambiar de dominio sin que cambie el gasto.
+ */
+export const isTripEmergencyReceiptImage = (receiptType: TripEmergencyExpense['receiptType']): boolean =>
+    receiptType === 'jpg' || receiptType === 'png';
+
+export const TRIP_EMERGENCY_RECEIPT_ACCEPT: Record<string, string[]> = {
+    "image/jpeg": [".jpg", ".jpeg"],
+    "image/png": [".png"],
+    "application/pdf": [".pdf"]
+};
+
+/** 3 MB (3072 KB) e inclusive. */
+export const TRIP_EMERGENCY_RECEIPT_MAX_SIZE = 3 * 1024 * 1024;
+
+/**
+ * El tipo y el peso del comprobante. El backend deduce el tipo del contenido,
+ * así que esto no es la validación buena: solo ahorra una subida perdida.
+ */
+export const validateTripEmergencyReceipt = (file: File | null | undefined): true | string => {
+    if (!(file instanceof File)) return true;
+    if (!Object.keys(TRIP_EMERGENCY_RECEIPT_ACCEPT).includes(file.type)) return "El comprobante debe ser un archivo jpg, jpeg, png o pdf";
+    if (file.size > TRIP_EMERGENCY_RECEIPT_MAX_SIZE) return "El comprobante no puede pesar más de 3 MB";
+
+    return true;
+};
+
+/**
+ * El alta. Sin comprobante sale como JSON; con él, como `FormData` y el
+ * `Content-Type` no se fija a mano: el navegador añade el boundary.
+ */
+export const buildTripEmergencyExpensePayload = (form: TripEmergencyExpenseForm): FormData | { amount: number; description: string } => {
+    const fields = {
+        amount: Number(form.amount),
+        description: form.description.trim(),
+    };
+
+    if (!(form.receipt instanceof File)) return fields;
+
+    const formData = new FormData();
+
+    formData.append('amount', fields.amount.toString());
+    formData.append('description', fields.description);
+    formData.append('receipt', form.receipt);
+
+    return formData;
+};
+
+/**
+ * La corrección. Con archivo nuevo sale como `FormData` con `_method=PATCH`
+ * —PHP no lee archivos en un `PATCH` real— y el datasource la manda por
+ * `POST`; sin archivo, JSON. Un archivo nuevo nunca viaja con
+ * `removeReceipt: true`: juntos son 422.
+ */
+export const buildTripEmergencyExpenseUpdatePayload = (form: TripEmergencyExpenseUpdateForm): FormData | Record<string, unknown> => {
+    const fields: Record<string, string | number> = {
+        ...(form.amount !== undefined ? { amount: Number(form.amount) } : {}),
+        ...(form.description !== undefined ? { description: form.description.trim() } : {}),
+    };
+
+    if (!(form.receipt instanceof File)) {
+        return {
+            ...fields,
+            ...(form.removeReceipt ? { removeReceipt: true } : {}),
+        };
+    }
+
+    const formData = new FormData();
+
+    formData.append('_method', 'PATCH');
+    Object.entries(fields).forEach(([key, value]) => formData.append(key, value.toString()));
+    formData.append('receipt', form.receipt);
+
+    return formData;
+};
+
+/**
+ * Solo lo que cambió respecto al gasto original. Un cuerpo vacío responde 200
+ * sin escribir, así que la pantalla puede ahorrarse la petición si esto no
+ * trae nada.
+ */
+export const diffTripEmergencyExpense = (values: TripEmergencyExpenseFormValues, original: TripEmergencyExpense): TripEmergencyExpenseUpdateForm => {
+    const amount = Number(values.amount);
+    const description = values.description.trim();
+    const receipt = values.receipt instanceof File ? values.receipt : null;
+
+    return {
+        ...(amount !== parseAmount(original.amount) ? { amount } : {}),
+        ...(description !== original.description ? { description } : {}),
+        ...(receipt ? { receipt } : {}),
+        ...(!receipt && values.removeReceipt && original.receiptUrl ? { removeReceipt: true } : {}),
+    };
+};
+
+/** La corrección trae al menos un campo: si no, no vale la pena pedirla. */
+export const hasTripEmergencyExpenseChanges = (update: TripEmergencyExpenseUpdateForm): boolean =>
+    Object.keys(update).length > 0;
+
+/** El 403 del alta, la corrección y el borrado sobre un viaje ajeno: dice «registrar» en los tres. */
+export const TRIP_EMERGENCY_EXPENSE_FOREIGN_MESSAGE = "No puedes registrar gastos emergentes en un viaje que no tomó tu empresa transportista";
+
+/** El 400 del alta con el viaje `pending` o `finished`. */
+export const TRIP_EMERGENCY_EXPENSE_NOT_IN_ROUTE_MESSAGE = "Solo se pueden registrar gastos emergentes en un viaje en ruta";
+
+/** El 400 del alta del administrador sobre un viaje sin asignar. */
+export const TRIP_NOT_ASSIGNED_MESSAGE = "El viaje aún no fue asignado";
+
+/** El 400 de corregir o borrar con el viaje devuelto a `pending`. */
+export const TRIP_EMERGENCY_EXPENSE_PENDING_MESSAGE = "No se pueden modificar los gastos emergentes de un viaje pendiente";
+
+/** El 404 de corregir o borrar un gasto que ya no existe. */
+export const TRIP_EMERGENCY_EXPENSE_NOT_FOUND_MESSAGE = "El gasto emergente no existe";
+
+export type TripEmergencyExpenseFieldError = {
+    field: keyof TripEmergencyExpenseFormValues;
+    message: string;
+}
+
+/**
+ * Reparte el 422 entre los campos del formulario. `removeReceipt` se ancla al
+ * comprobante: en pantalla es el mismo control. El resto —403, 400, 404— no
+ * pertenece a ningún campo y se muestra como notificación.
+ */
+export const getTripEmergencyExpenseFieldErrors = (error: unknown): TripEmergencyExpenseFieldError[] => {
+    const data = toAxiosError(error)?.response?.data;
+
+    if (!data || typeof data !== 'object') return [];
+
+    const errors = (data as { errors?: unknown }).errors;
+
+    return [
+        ...collectFieldErrors(errors, ['amount', 'description', 'receipt'] as const),
+        ...collectFieldErrors(errors, ['removeReceipt'] as const).map(({ message }) => ({ field: 'receipt' as const, message })),
+    ];
 };
 
 /* ------------------------------------------------------------------ *

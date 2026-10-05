@@ -62,6 +62,10 @@ export const PERMISSIONS = {
     readTripCost: except('shipment', 'pilot'),
     /** El administrador solo sobre viajes ya asignados; el `carrier`, con empresa. */
     registerTripFuelOrExpense: ['administrator', 'carrier'],
+    /** Gastos emergentes (SPEC 39): mismos lectores que los viáticos; el piloto lee pero no escribe. */
+    readTripEmergencyExpenses: except('shipment'),
+    /** Registrar, corregir y borrar. El administrador solo sobre viajes asignados; el `carrier`, con empresa. */
+    writeTripEmergencyExpenses: ['administrator', 'carrier'],
 
     /* Vehículos */
     readVehicles: ['administrator', 'manager', 'carrier', 'export'],

@@ -1,8 +1,11 @@
-import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
-import { PaginatedTripsSchema, TripCostSchema, TripDatasource, TripExpensesSchema, TripFuelsSchema, TripPositionSchema, TripSchema, TripTimeoutSchema, buildTripQuery, buildTripsReportQuery, getTripErrorMessage, readTripsReportErrorBody } from "@/features/trips/trips";
+import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripEmergencyExpenseForm, TripEmergencyExpenseUpdateForm, TripEmergencyExpenses, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
+import { PaginatedTripsSchema, TripCostSchema, TripDatasource, TripEmergencyExpensesSchema, TripExpensesSchema, TripFuelsSchema, TripPositionSchema, TripSchema, TripTimeoutSchema, buildTripEmergencyExpensePayload, buildTripEmergencyExpenseUpdatePayload, buildTripQuery, buildTripsReportQuery, getTripErrorMessage, readTripsReportErrorBody } from "@/features/trips/trips";
 import { ApiResponseSchema } from "@/features/shared/shared";
 import { isAxiosError, type AxiosInstance } from "axios";
 import { z } from "zod";
+
+/** Corregir y borrar un gasto emergente van **fuera** del viaje, por el id del gasto. */
+const TRIP_EMERGENCY_EXPENSES_URL = '/trip-emergency-expenses';
 
 export class TripDatasourceImpl extends TripDatasource {
     constructor(private api: AxiosInstance, private url = '/trips') {
@@ -378,6 +381,109 @@ export class TripDatasourceImpl extends TripDatasource {
     async createTripExpense(id: string, payload: TripExpenseForm): Promise<string> {
         try {
             const { data } = await this.api.post(`${this.url}/${id}/expenses`, payload);
+            const response = ApiResponseSchema.safeParse(data);
+
+            if (response.success) {
+                return response.data.message;
+            }
+
+            throw new Error("Información no válida");
+        } catch (error) {
+            if (isAxiosError(error)) throw new Error(getTripErrorMessage(error), { cause: error });
+
+            throw new Error("Error no controlado.", { cause: error });
+        }
+    }
+
+    /**
+     * Los gastos emergentes del viaje, y **el sobre entero**: `totalAmount`
+     * viaja en la raíz. Se pide sin `limit` —un viaje tiene un puñado— y orden
+     * fijo por `id` ascendente.
+     *
+     * - **`totalAmount` suma todos**: no hay confirmación que esperar.
+     * - **Lo leen todos menos `shipment`**, incluido el piloto asignado.
+     * - **Un viaje sin gastos no es un error**: 200 con `data: []`.
+     */
+    async getTripEmergencyExpenses(id: string): Promise<TripEmergencyExpenses> {
+        try {
+            const { data } = await this.api.get(`${this.url}/${id}/emergency-expenses`);
+            const response = TripEmergencyExpensesSchema.safeParse(data);
+
+            if (response.success) {
+                return response.data;
+            }
+
+            throw new Error("Información no válida");
+        } catch (error) {
+            if (isAxiosError(error)) throw new Error(getTripErrorMessage(error), { cause: error });
+
+            throw new Error("Error no controlado.", { cause: error });
+        }
+    }
+
+    /**
+     * Registrar un imprevisto ya pagado. Solo con el viaje **`in_route`**:
+     * `pending` y `finished` responden 400. `carrier` si su empresa tomó el
+     * viaje; `administrator` sobre cualquiera ya asignado.
+     *
+     * Con comprobante el cuerpo sale como `FormData` —axios pone el
+     * boundary— y sin él como JSON. El 422 se adelanta a las guardas.
+     */
+    async createTripEmergencyExpense(id: string, payload: TripEmergencyExpenseForm): Promise<string> {
+        try {
+            const { data } = await this.api.post(`${this.url}/${id}/emergency-expenses`, buildTripEmergencyExpensePayload(payload));
+            const response = ApiResponseSchema.safeParse(data);
+
+            if (response.success) {
+                return response.data.message;
+            }
+
+            throw new Error("Información no válida");
+        } catch (error) {
+            if (isAxiosError(error)) throw new Error(getTripErrorMessage(error), { cause: error });
+
+            throw new Error("Error no controlado.", { cause: error });
+        }
+    }
+
+    /**
+     * Corregir monto, descripción o comprobante. Va **fuera del viaje**, por el
+     * id del gasto. Se permite con el viaje `in_route` **y `finished`** —la
+     * factura suele llegar después del cierre—; solo `pending` lo impide.
+     *
+     * PHP no lee archivos en un `PATCH` real, así que **con archivo se manda
+     * `POST` + `_method=PATCH`** en `FormData`; sin archivo, `PATCH` con JSON.
+     */
+    async updateTripEmergencyExpense(expenseId: string, payload: TripEmergencyExpenseUpdateForm): Promise<string> {
+        try {
+            const body = buildTripEmergencyExpenseUpdatePayload(payload);
+            const url = `${TRIP_EMERGENCY_EXPENSES_URL}/${expenseId}`;
+
+            const { data } = body instanceof FormData
+                ? await this.api.post(url, body)
+                : await this.api.patch(url, body);
+            const response = ApiResponseSchema.safeParse(data);
+
+            if (response.success) {
+                return response.data.message;
+            }
+
+            throw new Error("Información no válida");
+        } catch (error) {
+            if (isAxiosError(error)) throw new Error(getTripErrorMessage(error), { cause: error });
+
+            throw new Error("Error no controlado.", { cause: error });
+        }
+    }
+
+    /**
+     * Borrado **físico**: la fila desaparece y el comprobante se borra del
+     * almacenamiento. Mismas guardas que la corrección; un segundo `DELETE`
+     * del mismo id es 404.
+     */
+    async deleteTripEmergencyExpense(expenseId: string): Promise<string> {
+        try {
+            const { data } = await this.api.delete(`${TRIP_EMERGENCY_EXPENSES_URL}/${expenseId}`);
             const response = ApiResponseSchema.safeParse(data);
 
             if (response.success) {

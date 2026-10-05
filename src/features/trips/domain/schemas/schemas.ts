@@ -171,6 +171,14 @@ export const TripSchema = z.object({
      * no la manda.
      */
     totalExpensesAmount: z.string().optional(),
+    /**
+     * La suma de **todos** los gastos emergentes del viaje (SPEC 39), como
+     * cadena de dos decimales. Al revés que los viáticos, no hay confirmación:
+     * suma desde que se registra. A `shipment` le llega siempre `"0.00"`, y la
+     * respuesta de `/finish` también trae `"0.00"` porque no recarga las sumas.
+     * Opcional por el mismo motivo que las otras dos sumas.
+     */
+    totalEmergencyExpensesAmount: z.string().optional(),
     createdAt: z.string().nullable(),
     updatedAt: z.string().nullable(),
     /**
@@ -403,6 +411,50 @@ export const TripExpensesSchema = ApiPaginatedResponseSchema.extend({
 });
 
 /* ------------------------------------------------------------------ *
+ * Gastos emergentes
+ * ------------------------------------------------------------------ */
+
+/**
+ * Un gasto emergente: un imprevisto ya pagado con el viaje en ruta —una
+ * llanta pinchada, una grúa—. Es **hermano del viático, no su calco**: no
+ * hay confirmación del piloto, suma desde que se registra y sí se corrige y
+ * se borra (también con el viaje `finished`).
+ *
+ * - **`amount` es una cadena** de dos decimales. GTQ por convención.
+ * - **`createdAt`/`updatedAt` no son ISO 8601**: `d-m-Y h:i:s A`. Si difieren,
+ *   el gasto se corrigió. No hay `occurredAt`: `createdAt` es la fecha del gasto.
+ */
+export const TripEmergencyExpenseSchema = z.object({
+    /** El id del **gasto**: el parámetro de `/trip-emergency-expenses/{id}`. */
+    id: z.number(),
+    tripId: z.number(),
+    /** ⚠️ Cadena de dos decimales, no número. GTQ. */
+    amount: z.string(),
+    /** Obligatoria y nunca `null`: no hay categorías, es lo único que dice qué pasó. */
+    description: z.string(),
+    /** URL pública y absoluta del bucket. No sirve como identificador. */
+    receiptUrl: z.string().nullable(),
+    /** Decide si se pinta miniatura (`jpg`/`png`) o enlace (`pdf`). */
+    receiptType: z.enum(['jpg', 'png', 'pdf']).nullable(),
+    registeredByName: z.string(),
+    /** ⚠️ `d-m-Y h:i:s A`, no ISO 8601. */
+    createdAt: z.string(),
+    /** ⚠️ `d-m-Y h:i:s A`. Distinta de `createdAt` = corregido. */
+    updatedAt: z.string(),
+});
+
+/**
+ * El sobre entero del listado: `totalAmount` viaja en la **raíz**. Es la suma
+ * de **todos** los gastos del viaje —no hay nada pendiente que excluir— y no
+ * se confunde con `total`, que es el conteo del paginador.
+ */
+export const TripEmergencyExpensesSchema = ApiPaginatedResponseSchema.extend({
+    data: z.array(TripEmergencyExpenseSchema),
+    totalAmount: z.string(),
+    lastPage: z.number().optional(),
+});
+
+/* ------------------------------------------------------------------ *
  * Paradas (tiempos muertos)
  * ------------------------------------------------------------------ */
 
@@ -472,11 +524,11 @@ export const TripCostFuelTypeSchema = z.object({
 
 /**
  * El desglose de `GET /api/trips/{trip}/cost`. Es **costo directo**, no «lo
- * que costó el viaje»: combustible, viáticos, salario y seguro prorrateados, y
+ * que costó el viaje»: combustible, viáticos, gastos emergentes, salario y seguro prorrateados, y
  * nada más —ni depreciación, ni mantenimiento, ni peajes—.
  *
- * Todos los importes son **cadenas** de dos decimales; el único número de
- * verdad es `expenses.count`. Un insumo que falta llega en `null` y su
+ * Todos los importes son **cadenas** de dos decimales; los únicos números de
+ * verdad son los dos `count`. Un insumo que falta llega en `null` y su
  * subtotal en `"0.00"`, con 200: el hueco se ve, no revienta.
  */
 export const TripCostSchema = z.object({
@@ -494,6 +546,15 @@ export const TripCostSchema = z.object({
         count: z.number(),
         subtotal: z.string(),
     }),
+    /**
+     * SPEC 39: los gastos emergentes, aparte de los viáticos. Nunca `null`;
+     * sin gastos llega `{ count: 0, subtotal: "0.00" }`. El `default` cubre a
+     * un backend anterior que todavía no lo manda.
+     */
+    emergencyExpenses: z.object({
+        count: z.number(),
+        subtotal: z.string(),
+    }).default({ count: 0, subtotal: "0.00" }),
     pilot: z.object({
         pilotId: z.number().nullable(),
         pilotName: z.string().nullable(),
@@ -508,6 +569,6 @@ export const TripCostSchema = z.object({
         monthlyInsuranceCost: z.string().nullable(),
         subtotal: z.string(),
     }),
-    /** Suma exacta de los cuatro subtotales tal como salen. No se recalcula. */
+    /** Suma exacta de los cinco subtotales tal como salen. No se recalcula. */
     totalCost: z.string(),
 });
