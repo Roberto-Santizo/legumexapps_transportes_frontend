@@ -97,6 +97,13 @@ function TripEmergencyExpensesPanel({ trip, canWrite, onClose }: PanelProps) {
     /** La fila que se está corrigiendo. Una a la vez: el alta se esconde mientras tanto. */
     const [editingId, setEditingId] = useState<number | null>(null);
 
+    /**
+     * Cambia con cada alta exitosa para **remontar** el formulario. `reset`
+     * no basta: con `amount: undefined` react-hook-form vuelve a leer el valor
+     * que sigue en el DOM, y el dropzone conserva su último rechazo.
+     */
+    const [createFormKey, setCreateFormKey] = useState(0);
+
     /** Sin `limit`: un viaje tiene un puñado de gastos. Orden por `id` ascendente. */
     const { data, isLoading, isError, error } = useQuery({
         queryKey: ['getTripEmergencyExpenses', tripId],
@@ -129,36 +136,6 @@ function TripEmergencyExpensesPanel({ trip, canWrite, onClose }: PanelProps) {
             onClose();
         }
     };
-
-    const {
-        register,
-        control,
-        handleSubmit,
-        reset,
-        setError,
-        formState: { errors },
-    } = useForm<TripEmergencyExpenseFormValues>({
-        defaultValues: { description: '', receipt: null, removeReceipt: false }
-    });
-
-    const { mutate: create, isPending: isCreating } = useMutation({
-        mutationFn: (values: TripEmergencyExpenseFormValues) => tripProvider.createTripEmergencyExpense(tripId, values),
-        onSuccess: (message) => {
-            notification.success(message);
-            refresh();
-            reset({ amount: undefined, description: '', receipt: null, removeReceipt: false });
-        },
-        onError: (err) => {
-            const fieldErrors = getTripEmergencyExpenseFieldErrors(err);
-
-            if (fieldErrors.length > 0) {
-                fieldErrors.forEach(({ field, message }) => setError(field, { message }));
-                return;
-            }
-
-            handleError(err);
-        }
-    });
 
     const { mutate: remove, isPending: isRemoving, variables: removingId } = useMutation({
         mutationFn: (expenseId: number) => tripProvider.deleteTripEmergencyExpense(expenseId.toString()),
@@ -286,31 +263,16 @@ function TripEmergencyExpensesPanel({ trip, canWrite, onClose }: PanelProps) {
                         </p>
                     </div>
 
-                    <form
-                        onSubmit={handleSubmit((values) => create(values))}
-                        noValidate
-                        className="flex flex-col gap-4"
-                    >
-                        <TripEmergencyExpenseFields register={register} control={control} errors={errors} />
-
-                        <div className="flex flex-wrap justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="cursor-pointer rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
-                            >
-                                Cerrar
-                            </button>
-
-                            <button
-                                type="submit"
-                                disabled={isCreating}
-                                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-ink-deep px-4 py-2 text-sm font-semibold text-canvas shadow-sm transition-all duration-200 hover:bg-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-ink-subtle disabled:shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
-                            >
-                                {isCreating ? <SpinnerComponent /> : <><Siren size={16} /> Registrar el gasto</>}
-                            </button>
-                        </div>
-                    </form>
+                    <TripEmergencyExpenseCreator
+                        key={createFormKey}
+                        tripId={tripId}
+                        onCreated={() => {
+                            refresh();
+                            setCreateFormKey((key) => key + 1);
+                        }}
+                        onError={handleError}
+                        onClose={onClose}
+                    />
                 </section>
             )}
 
@@ -331,6 +293,75 @@ function TripEmergencyExpensesPanel({ trip, canWrite, onClose }: PanelProps) {
                 </div>
             )}
         </div>
+    );
+}
+
+type CreatorProps = {
+    tripId: string;
+    /** Refresca y remonta este formulario: así queda limpio para el siguiente gasto. */
+    onCreated: () => void;
+    onError: (error: Error) => void;
+    onClose: () => void;
+}
+
+/** El alta. Vive aparte para poder remontarse limpia después de cada registro. */
+function TripEmergencyExpenseCreator({ tripId, onCreated, onError, onClose }: CreatorProps) {
+    const notification = useNotification();
+
+    const {
+        register,
+        control,
+        handleSubmit,
+        setError,
+        formState: { errors },
+    } = useForm<TripEmergencyExpenseFormValues>({
+        defaultValues: { description: '', receipt: null, removeReceipt: false }
+    });
+
+    const { mutate: create, isPending } = useMutation({
+        mutationFn: (values: TripEmergencyExpenseFormValues) => tripProvider.createTripEmergencyExpense(tripId, values),
+        onSuccess: (message) => {
+            notification.success(message);
+            onCreated();
+        },
+        onError: (err) => {
+            const fieldErrors = getTripEmergencyExpenseFieldErrors(err);
+
+            if (fieldErrors.length > 0) {
+                fieldErrors.forEach(({ field, message }) => setError(field, { message }));
+                return;
+            }
+
+            onError(err);
+        }
+    });
+
+    return (
+        <form
+            onSubmit={handleSubmit((values) => create(values))}
+            noValidate
+            className="flex flex-col gap-4"
+        >
+            <TripEmergencyExpenseFields register={register} control={control} errors={errors} />
+
+            <div className="flex flex-wrap justify-end gap-3">
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="cursor-pointer rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
+                >
+                    Cerrar
+                </button>
+
+                <button
+                    type="submit"
+                    disabled={isPending}
+                    className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-ink-deep px-4 py-2 text-sm font-semibold text-canvas shadow-sm transition-all duration-200 hover:bg-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-ink-subtle disabled:shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+                >
+                    {isPending ? <SpinnerComponent /> : <><Siren size={16} /> Registrar el gasto</>}
+                </button>
+            </div>
+        </form>
     );
 }
 
