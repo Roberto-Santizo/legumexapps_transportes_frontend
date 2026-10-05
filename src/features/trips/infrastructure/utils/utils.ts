@@ -1210,12 +1210,13 @@ export const hasTripCost = (trip: Pick<TripListItem, 'status'>): boolean => trip
 /** El mes del prorrateo: 30 × 24 horas, no una jornada laboral. */
 export const TRIP_COST_MONTH_HOURS = 720;
 
-/** Los cuatro componentes del costo directo, en el orden en que se pintan. */
-export type TripCostComponent = 'fuel' | 'expenses' | 'pilot' | 'vehicle';
+/** Los cinco componentes del costo directo, en el orden en que se pintan. */
+export type TripCostComponent = 'fuel' | 'expenses' | 'emergencyExpenses' | 'pilot' | 'vehicle';
 
 export const TRIP_COST_COMPONENT_LABELS: Record<TripCostComponent, string> = {
     fuel: "Combustible",
     expenses: "Viáticos",
+    emergencyExpenses: "Gastos emergentes",
     pilot: "Salario del piloto",
     vehicle: "Seguro del vehículo",
 };
@@ -1224,6 +1225,7 @@ export const TRIP_COST_COMPONENT_LABELS: Record<TripCostComponent, string> = {
 export const tripCostShares = (cost: TripCost): { component: TripCostComponent; amount: number }[] => [
     { component: 'fuel', amount: parseAmount(cost.fuel.subtotal) },
     { component: 'expenses', amount: parseAmount(cost.expenses.subtotal) },
+    { component: 'emergencyExpenses', amount: parseAmount(cost.emergencyExpenses.subtotal) },
     { component: 'pilot', amount: parseAmount(cost.pilot.subtotal) },
     { component: 'vehicle', amount: parseAmount(cost.vehicle.subtotal) },
 ];

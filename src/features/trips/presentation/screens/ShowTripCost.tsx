@@ -1,8 +1,8 @@
 /**
  * Cuánto le costó **directamente** el viaje a quien lo corrió.
  *
- * La cifra es costo directo y se rotula así a propósito: son cuatro
- * componentes —combustible, viáticos, salario y seguro prorrateados— y ninguno
+ * La cifra es costo directo y se rotula así a propósito: son cinco
+ * componentes —combustible, viáticos, gastos emergentes, salario y seguro prorrateados— y ninguno
  * más. Llamarla «costo total» sería prometer depreciación, mantenimiento y
  * peajes que la API no calcula.
  *
@@ -12,7 +12,7 @@
  *   la opción en ese estado. Quien llega a la URL a mano con otro estado se
  *   topa con el 400 del servidor, que se pinta tal cual.
  * - **El piloto no entra**, ni siquiera al suyo: el desglose revela su salario.
- * - **El total no se recalcula.** `totalCost` ya cuadra con los cuatro
+ * - **El total no se recalcula.** `totalCost` ya cuadra con los cinco
  *   subtotales tal como salen; la barra solo reparte ese mismo total.
  */
 
@@ -44,6 +44,7 @@ import type { RootState } from "@/config/store/store";
 const SWATCHES: Record<TripCostComponent, string> = {
     fuel: "bg-primary",
     expenses: "bg-canvas",
+    emergencyExpenses: "bg-danger",
     pilot: "bg-success",
     vehicle: "bg-ink-subtle",
 };
@@ -209,7 +210,7 @@ export function ShowTripCost() {
                                 </span>
                             </div>
 
-                            {/* Los cuatro subtotales como tramos de una sola barra: ancho = parte del total. */}
+                            {/* Los cinco subtotales como tramos de una sola barra: ancho = parte del total. */}
                             <div className="flex flex-col gap-3">
                                 <div
                                     role="img"
@@ -293,6 +294,16 @@ export function ShowTripCost() {
 
                                 <p className="text-xs text-ink-subtle">
                                     Solo suman los viáticos que el piloto confirmó haber recibido.
+                                </p>
+                            </CostBlock>
+
+                            <CostBlock component="emergencyExpenses" subtotal={cost.emergencyExpenses.subtotal} share={shareOf('emergencyExpenses')}>
+                                <dl className="flex flex-col gap-2.5">
+                                    <Row label="Gastos registrados" value={cost.emergencyExpenses.count.toString()} />
+                                </dl>
+
+                                <p className="text-xs text-ink-subtle">
+                                    Imprevistos pagados en ruta. Suman desde que se registran y se pueden corregir después del cierre: si alguien los edita, este subtotal cambia.
                                 </p>
                             </CostBlock>
 
