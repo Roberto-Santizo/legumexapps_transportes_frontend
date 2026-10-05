@@ -13,6 +13,7 @@ import {
     TripAssignmentModal,
     TripContainer,
     TripDeleteDialog,
+    TripEmergencyExpensesModal,
     TripExpensesModal,
     TripFuelsModal,
     TripMoment,
@@ -26,6 +27,7 @@ import {
     canAssignTrip,
     canAssignTrips,
     canFinishTrip,
+    canReadTripEmergencyExpenses,
     canReadTripExpenses,
     canReadTripFuels,
     canReadTripTimeouts,
@@ -35,6 +37,7 @@ import {
     canStartTrip,
     canTrackTrip,
     canTrackTrips,
+    canWriteTripEmergencyExpenses,
     canWriteTrips,
     formatAmount,
     formatGallons,
@@ -52,7 +55,7 @@ import {
 } from "@/features/trips/trips";
 import { TripFinishedProductsSection, canReadTripFinishedProducts } from "@/features/trip-finished-products/trip-finished-products";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
-import { CircleCheckBig, Fuel, Pencil, Play, Radar, Trash2, Truck, Wallet } from "lucide-react";
+import { CircleCheckBig, Fuel, Pencil, Play, Radar, Siren, Trash2, Truck, Wallet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -94,6 +97,9 @@ export function ShowTrip() {
     /** Los viáticos siguen la misma regla que las cargas, salvo que `shipment` no los ve. */
     const canReadExpenses = canReadTripExpenses(role);
     const canRegisterExpenses = canRegisterTripExpenses(role, user?.carrierId);
+    /** Gastos emergentes: mismos lectores que los viáticos; escriben el administrador y la empresa. */
+    const canReadEmergencyExpenses = canReadTripEmergencyExpenses(role);
+    const canWriteEmergencyExpenses = canWriteTripEmergencyExpenses(role, user?.carrierId);
     /** Las paradas las ven los mismos que el rastro: todos menos el piloto. */
     const canReadTimeouts = canReadTripTimeouts(role);
     const canReadFinishedProducts = canReadTripFinishedProducts(role);
@@ -102,6 +108,7 @@ export function ShowTrip() {
     const [isAssigning, setIsAssigning] = useState(false);
     const [isLoadingFuel, setIsLoadingFuel] = useState(false);
     const [isViewingExpenses, setIsViewingExpenses] = useState(false);
+    const [isViewingEmergencyExpenses, setIsViewingEmergencyExpenses] = useState(false);
 
     const { data: trip, isLoading, isError, error } = useQuery({
         queryKey: ['getTripById', id],
@@ -220,6 +227,15 @@ export function ShowTrip() {
                                 type="button"
                                 icon={<Wallet size={16} />}
                                 onClick={() => setIsViewingExpenses(true)}
+                            />
+                        )}
+
+                        {canReadEmergencyExpenses && (
+                            <CustomFilledButton
+                                label="Gastos emergentes"
+                                type="button"
+                                icon={<Siren size={16} />}
+                                onClick={() => setIsViewingEmergencyExpenses(true)}
                             />
                         )}
 
@@ -366,6 +382,15 @@ export function ShowTrip() {
                                             <Field label="Viáticos confirmados">
                                                 <span className="font-mono text-[13px] tabular-nums">
                                                     {formatAmount(trip.totalExpensesAmount ?? "0.00")}
+                                                </span>
+                                            </Field>
+                                        )}
+
+                                        {/* Aparte de los viáticos: no hay confirmación, suma desde que se registra. */}
+                                        {canReadEmergencyExpenses && (
+                                            <Field label="Gastos emergentes">
+                                                <span className="font-mono text-[13px] tabular-nums">
+                                                    {formatAmount(trip.totalEmergencyExpensesAmount ?? "0.00")}
                                                 </span>
                                             </Field>
                                         )}
@@ -599,6 +624,12 @@ export function ShowTrip() {
                 trip={isViewingExpenses ? trip ?? null : null}
                 canRegister={canRegisterExpenses}
                 onClose={() => setIsViewingExpenses(false)}
+            />
+
+            <TripEmergencyExpensesModal
+                trip={isViewingEmergencyExpenses ? trip ?? null : null}
+                canWrite={canWriteEmergencyExpenses}
+                onClose={() => setIsViewingEmergencyExpenses(false)}
             />
         </div>
     );
