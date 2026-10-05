@@ -68,6 +68,8 @@ export const PERMISSIONS = {
     writeTripEmergencyExpenses: ['administrator', 'carrier'],
     /** La bonificación del viaje en el detalle y su columna del Excel: `shipment` recibe `null` y no tiene columna. Se fija con `assignTrip`. */
     readTripBonus: except('shipment'),
+    /** El seguro de la carga en el detalle y su columna del Excel: misma matriz que la bonificación. Se fija con `assignTrip`. */
+    readTripCargoInsurance: except('shipment'),
 
     /* Vehículos */
     readVehicles: ['administrator', 'manager', 'carrier', 'export'],

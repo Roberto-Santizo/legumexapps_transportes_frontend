@@ -22,6 +22,7 @@ import {
     tripsReportFileName,
     tripsReportColumnCount,
     tripsReportIncludesBonus,
+    tripsReportIncludesCargoInsurance,
     tripsReportIncludesProducts,
     validateTripsReportRange
 } from "@/features/trips/trips";
@@ -117,6 +118,16 @@ function TripsReportForm({ onClose, role, search, status, dateFrom, dateTo }: Fo
     const statusLabel = TRIP_STATUS_LABELS[status as TripStatus];
     const includesProducts = tripsReportIncludesProducts(role);
     const includesBonus = tripsReportIncludesBonus(role);
+    const includesCargoInsurance = tripsReportIncludesCargoInsurance(role);
+    /** Las columnas que van tras las 22 base, en el orden del Excel. */
+    const extraColumns = [
+        ...(includesBonus ? ["la bonificación"] : []),
+        ...(includesCargoInsurance ? ["el seguro de la carga"] : []),
+        ...(includesProducts ? ["los productos", "el total de cajas"] : []),
+    ];
+    const extraColumnsLabel = extraColumns.length > 1
+        ? `${extraColumns.slice(0, -1).join(', ')} y ${extraColumns.at(-1)}`
+        : extraColumns[0];
     const columnCount = tripsReportColumnCount(role);
     const hasValidRange = validateTripsReportRange(range).length === 0;
 
@@ -171,10 +182,9 @@ function TripsReportForm({ onClose, role, search, status, dateFrom, dateTo }: Fo
                 <p className="text-xs text-canvas/70">
                     Una fila por viaje, de la recolección más reciente a la más antigua.
                     {` ${columnCount} columnas`}
-                    {includesBonus && includesProducts && ", con la bonificación, los productos y el total de cajas al final."}
-                    {includesBonus && !includesProducts && ", con la bonificación al final y sin el detalle de productos."}
-                    {!includesBonus && includesProducts && ", con los productos y el total de cajas al final."}
-                    {!includesBonus && !includesProducts && ", sin el detalle de productos."}
+                    {extraColumnsLabel && `, con ${extraColumnsLabel} al final`}
+                    {!includesProducts && (extraColumnsLabel ? " y sin el detalle de productos" : ", sin el detalle de productos")}
+                    .
                     {" "}Máximo 5000 viajes por archivo.
                 </p>
             </div>

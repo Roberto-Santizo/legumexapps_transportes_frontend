@@ -28,11 +28,16 @@
  * Y lleva la **bonificación**: obligatoria, un solo monto por viaje que, al
  * revés que la carga y el viático, **se sobrescribe** al reasignar. Por eso
  * esa sí se precarga con el valor actual.
+ *
+ * El **seguro de la carga** sigue exactamente las mismas reglas que la
+ * bonificación —obligatorio, un solo monto, se sobrescribe—, pero es un
+ * concepto propio: no se suma con ella ni es el seguro del vehículo.
  */
 
 import type { TripAssignmentFormValues, TripSummary } from "@/features/trips/trips";
 import {
     TRIP_BONUS_MAX_AMOUNT,
+    TRIP_CARGO_INSURANCE_MAX_AMOUNT,
     TRIP_CREW_LIMIT,
     TRIP_EXPENSE_MAX_AMOUNT,
     TRIP_FUEL_TYPES,
@@ -113,13 +118,15 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
             vehicleId: crew.vehicleId,
             /** `null` = asignado antes de existir el campo: se deja vacío, no en cero. */
             ...(crew.bonus != null ? { bonus: parseAmount(crew.bonus) } : {}),
+            ...(crew.cargoInsurance != null ? { cargoInsurance: parseAmount(crew.cargoInsurance) } : {}),
         }
         : undefined;
 
     const isReassigning = Boolean(trip.pilotName);
 
     /**
-     * Se precargan la tripulación y la bonificación, que se sobrescriben. Los
+     * Se precargan la tripulación, la bonificación y el seguro de la carga,
+     * que se sobrescriben. Los
      * galones nacen vacíos siempre: cada asignación crea **su propia carga** y
      * heredar la cifra de la anterior invitaría a guardar sin mirar un número
      * que no se puede corregir.
@@ -300,22 +307,24 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                 </div>
             </div>
 
-            {/* Obligatoria en cada asignación: sin `bonus` la API responde 422. */}
+            {/* Obligatorios en cada asignación: sin `bonus` o `cargoInsurance` la API responde 422. */}
             <div className="flex flex-col gap-4 border-t border-line pt-6">
                 <div className="flex flex-col gap-1">
                     <h3 className="font-display text-base font-semibold tracking-tight text-ink">
-                        Bonificación
+                        Bonificación y seguro de la carga
                     </h3>
 
                     <p className="text-sm text-ink-muted">
-                        Lo que el viaje paga de bonificación, en quetzales. Si no hay,
-                        escribe <span className="font-mono text-ink">0</span>. No requiere
+                        Dos montos distintos, en quetzales: lo que el viaje paga de
+                        bonificación y lo que cuesta asegurar la carga (no es el seguro del
+                        vehículo). Si alguno no aplica, escribe{' '}
+                        <span className="font-mono text-ink">0</span>. No requieren
                         confirmación del piloto y{' '}
-                        <span className="text-ink">no se puede cambiar una vez que el viaje arranque</span>.
+                        <span className="text-ink">no se pueden cambiar una vez que el viaje arranque</span>.
                         {isReassigning && (
                             <>
-                                {' '}Al cambiar la tripulación, el monto que guardes{' '}
-                                <span className="text-ink">reemplaza al anterior</span>: no se suma.
+                                {' '}Al cambiar la tripulación, los montos que guardes{' '}
+                                <span className="text-ink">reemplazan a los anteriores</span>: no se suman.
                             </>
                         )}
                     </p>
@@ -336,6 +345,26 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                                 if (typeof value !== 'number' || Number.isNaN(value)) return "La bonificación es obligatoria";
                                 if (value < 0) return "La bonificación no puede ser negativa";
                                 if (value > TRIP_BONUS_MAX_AMOUNT) return `La bonificación no puede superar ${TRIP_BONUS_MAX_AMOUNT}`;
+                                return true;
+                            }
+                        }}
+                        disabled={isPending}
+                    />
+
+                    <TextFormField<TripAssignmentFormValues>
+                        label="Seguro de la carga (Q)"
+                        name="cargoInsurance"
+                        type="number"
+                        placeholder="150.00"
+                        register={register}
+                        errorMessage={errors.cargoInsurance?.message}
+                        validation={{
+                            valueAsNumber: true,
+                            /** Igual que la bonificación: vacío es error y `0` es «sin seguro». */
+                            validate: (value) => {
+                                if (typeof value !== 'number' || Number.isNaN(value)) return "El seguro de la carga es obligatorio";
+                                if (value < 0) return "El seguro de la carga no puede ser negativo";
+                                if (value > TRIP_CARGO_INSURANCE_MAX_AMOUNT) return `El seguro de la carga no puede superar ${TRIP_CARGO_INSURANCE_MAX_AMOUNT}`;
                                 return true;
                             }
                         }}

@@ -99,8 +99,8 @@ export type TripFormValues = Omit<TripForm, keyof TripRouteForm | 'products'> & 
 }
 
 /**
- * Los **cinco** campos obligatorios de `/assignment` más **dos opcionales**.
- * `null` en cualquiera de los cinco es 422: la desasignación no existe en
+ * Los **seis** campos obligatorios de `/assignment` más **dos opcionales**.
+ * `null` en cualquiera de los seis es 422: la desasignación no existe en
  * este dominio. `assignedBy` no se envía —sale del token—.
  *
  * Los dos de combustible son un añadido **incompatible y sin periodo de
@@ -126,6 +126,12 @@ export type TripAssignmentForm = {
      * bonificación. Al revés que la carga, reasignar la **sobrescribe**.
      */
     bonus: number;
+    /**
+     * El seguro de la carga en GTQ. **Obligatorio**, mismas reglas que
+     * `bonus` (`0 ≤ x ≤ 99999999.99`, `0` = sin seguro, reasignar lo
+     * **sobrescribe**). Concepto propio: no se suma con la bonificación.
+     */
+    cargoInsurance: number;
     /** El dinero del primer viático. `min:0.01` si se manda; ausente = sin viático. */
     expenseAmount?: number;
     /** Texto libre, máx 255. Solo viaja junto a `expenseAmount`. */
@@ -146,6 +152,8 @@ export type TripAssignmentFormValues = {
     fuelType?: FuelType;
     /** Se precarga con la bonificación actual al reasignar; `required` la garantiza al enviar. */
     bonus?: number;
+    /** Igual que `bonus`: se precarga al reasignar y `validate` lo exige al enviar. */
+    cargoInsurance?: number;
     /** Vacío o `NaN` significa «sin viático»: el payload lo omite. */
     expenseAmount?: number;
     expenseDescription?: string;

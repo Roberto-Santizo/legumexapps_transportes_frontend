@@ -28,6 +28,7 @@ import {
     canAssignTrips,
     canFinishTrip,
     canReadTripBonus,
+    canReadTripCargoInsurance,
     canReadTripEmergencyExpenses,
     canReadTripExpenses,
     canReadTripFuels,
@@ -103,6 +104,7 @@ export function ShowTrip() {
     const canWriteEmergencyExpenses = canWriteTripEmergencyExpenses(role, user?.carrierId);
     /** A `shipment` la API le manda `null`: no se pinta. */
     const canReadBonus = canReadTripBonus(role);
+    const canReadCargoInsurance = canReadTripCargoInsurance(role);
     /** Las paradas las ven los mismos que el rastro: todos menos el piloto. */
     const canReadTimeouts = canReadTripTimeouts(role);
     const canReadFinishedProducts = canReadTripFinishedProducts(role);
@@ -404,6 +406,15 @@ export function ShowTrip() {
                                                 {trip.bonus != null
                                                     ? <span className="font-mono text-[13px] tabular-nums">{formatAmount(trip.bonus)}</span>
                                                     : <span className="text-ink-subtle">Sin bonificación registrada</span>}
+                                            </Field>
+                                        )}
+
+                                        {/* Fila propia, aparte de la bonificación y del seguro del vehículo. */}
+                                        {canReadCargoInsurance && (
+                                            <Field label="Seguro de la carga">
+                                                {trip.cargoInsurance != null
+                                                    ? <span className="font-mono text-[13px] tabular-nums">{formatAmount(trip.cargoInsurance)}</span>
+                                                    : <span className="text-ink-subtle">Sin seguro registrado</span>}
                                             </Field>
                                         )}
                                     </dl>

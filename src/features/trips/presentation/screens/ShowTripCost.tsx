@@ -1,9 +1,9 @@
 /**
  * Cuánto le costó **directamente** el viaje a quien lo corrió.
  *
- * La cifra es costo directo y se rotula así a propósito: son seis
- * componentes —combustible, viáticos, gastos emergentes, bonificación, salario
- * y seguro prorrateados— y ninguno más. Llamarla «costo total» sería prometer depreciación, mantenimiento y
+ * La cifra es costo directo y se rotula así a propósito: son siete
+ * componentes —combustible, viáticos, gastos emergentes, bonificación, seguro
+ * de la carga, salario y seguro del vehículo prorrateados— y ninguno más. Llamarla «costo total» sería prometer depreciación, mantenimiento y
  * peajes que la API no calcula.
  *
  * Tres decisiones de la pantalla:
@@ -12,7 +12,7 @@
  *   la opción en ese estado. Quien llega a la URL a mano con otro estado se
  *   topa con el 400 del servidor, que se pinta tal cual.
  * - **El piloto no entra**, ni siquiera al suyo: el desglose revela su salario.
- * - **El total no se recalcula.** `totalCost` ya cuadra con los seis
+ * - **El total no se recalcula.** `totalCost` ya cuadra con los siete
  *   subtotales tal como salen; la barra solo reparte ese mismo total.
  */
 
@@ -47,6 +47,8 @@ const SWATCHES: Record<TripCostComponent, string> = {
     emergencyExpenses: "bg-danger",
     /** Se pinta sobre la chapa oscura: `ink` desaparecería ahí. */
     bonus: "bg-primary/50",
+    /** Ídem: claro sobre la chapa oscura, y distinto del gris del seguro del vehículo. */
+    cargoInsurance: "bg-success/50",
     pilot: "bg-success",
     vehicle: "bg-ink-subtle",
 };
@@ -159,7 +161,7 @@ export function ShowTripCost() {
         <div className="flex flex-col gap-8">
             <TripPageHeader
                 title="Costo directo"
-                subtitle="Lo que el viaje consumió en combustible, viáticos y gastos emergentes, su bonificación, más la parte del salario y del seguro que le corresponde por sus horas."
+                subtitle="Lo que el viaje consumió en combustible, viáticos y gastos emergentes, su bonificación y el seguro de su carga, más la parte del salario y del seguro del vehículo que le corresponde por sus horas."
             >
                 <button
                     type="button"
@@ -212,7 +214,7 @@ export function ShowTripCost() {
                                 </span>
                             </div>
 
-                            {/* Los seis subtotales como tramos de una sola barra: ancho = parte del total. */}
+                            {/* Los siete subtotales como tramos de una sola barra: ancho = parte del total. */}
                             <div className="flex flex-col gap-3">
                                 <div
                                     role="img"
@@ -323,6 +325,20 @@ export function ShowTripCost() {
                                 </p>
                             </CostBlock>
 
+                            <CostBlock component="cargoInsurance" subtotal={cost.cargoInsurance.subtotal} share={shareOf('cargoInsurance')}>
+                                <dl className="flex flex-col gap-2.5">
+                                    <Row
+                                        label="Seguro de la carga del viaje"
+                                        value={cost.cargoInsurance.amount === null ? MISSING : formatAmount(cost.cargoInsurance.amount)}
+                                        missing={cost.cargoInsurance.amount === null}
+                                    />
+                                </dl>
+
+                                <p className="text-xs text-ink-subtle">
+                                    Lo fija la empresa al tomar el viaje y entra entero. No es el seguro mensual del vehículo, que se prorratea abajo.
+                                </p>
+                            </CostBlock>
+
                             <CostBlock component="pilot" subtotal={cost.pilot.subtotal} share={shareOf('pilot')}>
                                 <dl className="flex flex-col gap-2.5">
                                     <Row label="Piloto" value={cost.pilot.pilotName ?? "Sin asignar"} missing={cost.pilot.pilotName === null} />
@@ -355,7 +371,7 @@ export function ShowTripCost() {
                         </div>
 
                         <p className="max-w-3xl text-sm text-ink-muted">
-                            El salario y el seguro se reparten sobre un mes de {TRIP_COST_MONTH_HOURS} horas (30 días × 24 h), así que en un viaje corto su parte es pequeña.
+                            El salario y el seguro del vehículo se reparten sobre un mes de {TRIP_COST_MONTH_HOURS} horas (30 días × 24 h), así que en un viaje corto su parte es pequeña.
                             Este costo no incluye depreciación ni mantenimiento del vehículo, llantas, peajes ni gastos de administración.
                         </p>
                     </div>
