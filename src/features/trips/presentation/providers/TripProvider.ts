@@ -1,4 +1,4 @@
-import type { TripAssignmentForm, TripExpenseForm, TripFilters, TripForm, TripFuelForm, TripRepository, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
+import type { TripAssignmentForm, TripEmergencyExpenseForm, TripEmergencyExpenseUpdateForm, TripExpenseForm, TripFilters, TripForm, TripFuelForm, TripRepository, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 import { TripDatasourceImpl, TripRepositoryImpl } from "@/features/trips/infrastructure/infrastructure";
 import api from "@/config/http/axios";
 
@@ -55,6 +55,22 @@ export class TripProvider {
 
     createTripExpense(id: string, payload: TripExpenseForm) {
         return this.repository.createTripExpense(id, payload);
+    }
+
+    getTripEmergencyExpenses(id: string) {
+        return this.repository.getTripEmergencyExpenses(id);
+    }
+
+    createTripEmergencyExpense(id: string, payload: TripEmergencyExpenseForm) {
+        return this.repository.createTripEmergencyExpense(id, payload);
+    }
+
+    updateTripEmergencyExpense(expenseId: string, payload: TripEmergencyExpenseUpdateForm) {
+        return this.repository.updateTripEmergencyExpense(expenseId, payload);
+    }
+
+    deleteTripEmergencyExpense(expenseId: string) {
+        return this.repository.deleteTripEmergencyExpense(expenseId);
     }
 
     getTripTimeouts(id: string) {
