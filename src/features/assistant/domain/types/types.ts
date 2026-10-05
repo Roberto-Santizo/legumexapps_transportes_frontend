@@ -16,7 +16,7 @@ export type AssistantRequestBody = {
 export type AssistantReport = z.infer<typeof AssistantReportSchema>;
 export type StoredAssistantMessage = z.infer<typeof StoredAssistantMessageSchema>;
 
-/** Las trece herramientas que el modelo puede invocar; el nombre viaja en `toolName`. */
+/** Las herramientas que el front sabe rotular; el nombre viaja en `toolName` y uno desconocido se pinta tal cual. */
 export type AssistantToolName =
     | 'trips_summary'
     | 'trips_in_route'
@@ -26,11 +26,13 @@ export type AssistantToolName =
     | 'trip'
     | 'trip_fuels'
     | 'trip_expenses'
+    | 'trip_emergency_expenses'
     | 'trip_timeouts'
     | 'vehicle'
     | 'vehicle_expenses'
     | 'export_trips'
-    | 'export_vehicle_expenses';
+    | 'export_vehicle_expenses'
+    | 'export_trip_emergency_expenses';
 
 /**
  * `output` de una herramienta ya interpretado. El SDK lo entrega como string
