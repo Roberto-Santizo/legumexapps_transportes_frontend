@@ -1,4 +1,4 @@
-import type { FuelTypeSchema, PaginatedTripsSchema, TripCostFuelTypeSchema, TripCostSchema, TripExpenseSchema, TripExpensesSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
+import type { FuelTypeSchema, PaginatedTripsSchema, TripCostFuelTypeSchema, TripCostSchema, TripEmergencyExpenseSchema, TripEmergencyExpensesSchema, TripExpenseSchema, TripExpensesSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
 import type { TripProductLine, TripProductLineValues } from "@/features/trip-finished-products/trip-finished-products";
 import type { z } from "zod";
 
@@ -99,8 +99,8 @@ export type TripFormValues = Omit<TripForm, keyof TripRouteForm | 'products'> & 
 }
 
 /**
- * Los **cuatro** campos obligatorios de `/assignment` más **dos opcionales**.
- * `null` en cualquiera de los cuatro es 422: la desasignación no existe en
+ * Los **seis** campos obligatorios de `/assignment` más **dos opcionales**.
+ * `null` en cualquiera de los seis es 422: la desasignación no existe en
  * este dominio. `assignedBy` no se envía —sale del token—.
  *
  * Los dos de combustible son un añadido **incompatible y sin periodo de
@@ -120,6 +120,18 @@ export type TripAssignmentForm = {
     /** Los galones de la primera carga. `min:0.01`: cero y negativos son 422. */
     fuelGallons: number;
     fuelType: FuelType;
+    /**
+     * La bonificación en GTQ. **Obligatoria** (otro añadido incompatible: sin
+     * ella todo `/assignment` es 422). `0 ≤ x ≤ 99999999.99`; `0` = sin
+     * bonificación. Al revés que la carga, reasignar la **sobrescribe**.
+     */
+    bonus: number;
+    /**
+     * El seguro de la carga en GTQ. **Obligatorio**, mismas reglas que
+     * `bonus` (`0 ≤ x ≤ 99999999.99`, `0` = sin seguro, reasignar lo
+     * **sobrescribe**). Concepto propio: no se suma con la bonificación.
+     */
+    cargoInsurance: number;
     /** El dinero del primer viático. `min:0.01` si se manda; ausente = sin viático. */
     expenseAmount?: number;
     /** Texto libre, máx 255. Solo viaja junto a `expenseAmount`. */
@@ -138,6 +150,10 @@ export type TripAssignmentFormValues = {
     vehicleId: number;
     fuelGallons?: number;
     fuelType?: FuelType;
+    /** Se precarga con la bonificación actual al reasignar; `required` la garantiza al enviar. */
+    bonus?: number;
+    /** Igual que `bonus`: se precarga al reasignar y `validate` lo exige al enviar. */
+    cargoInsurance?: number;
     /** Vacío o `NaN` significa «sin viático»: el payload lo omite. */
     expenseAmount?: number;
     expenseDescription?: string;
@@ -244,6 +260,54 @@ export type TripExpenseForm = {
     amount: number;
     /** Texto libre, máx 255. Solo `trim`; en blanco se guarda como `null`. */
     description?: string | null;
+}
+
+/* ------------------------------------------------------------------ *
+ * Gastos emergentes
+ * ------------------------------------------------------------------ */
+
+/** Un gasto emergente. Ojo: `amount` es cadena y las dos fechas no son ISO. */
+export type TripEmergencyExpense = z.infer<typeof TripEmergencyExpenseSchema>;
+
+/** El sobre del listado, con `totalAmount` (suma de todos) en la raíz. */
+export type TripEmergencyExpenses = z.infer<typeof TripEmergencyExpensesSchema>;
+
+/**
+ * El alta. Con `receipt` el cuerpo sale como `FormData`; sin él, JSON.
+ * `tripId` y `registeredBy` no se aceptan: se ignoran en silencio.
+ */
+export type TripEmergencyExpenseForm = {
+    /** `min:0.01`, `max:99999999.99`. GTQ. */
+    amount: number;
+    /** Obligatoria, máx 255. Solo `trim`; en blanco es 422. */
+    description: string;
+    /** jpg, jpeg, png o pdf, ≤ 3 MB. Opcional. */
+    receipt?: File | null;
+}
+
+/**
+ * La corrección. Todo opcional: un cuerpo vacío responde 200 sin escribir.
+ * `receipt` y `removeReceipt: true` juntos son 422.
+ */
+export type TripEmergencyExpenseUpdateForm = {
+    amount?: number;
+    description?: string;
+    /** Reemplaza el comprobante; el anterior se borra del almacenamiento. */
+    receipt?: File | null;
+    /** `true` quita el comprobante y lo borra del almacenamiento. */
+    removeReceipt?: boolean;
+}
+
+/**
+ * Lo que sostiene el formulario, en el alta y en la corrección. La
+ * corrección se calcula después comparando con el gasto original.
+ */
+export type TripEmergencyExpenseFormValues = {
+    amount: number;
+    description: string;
+    receipt: File | null;
+    /** Solo en la corrección: quitar el comprobante actual sin poner otro. */
+    removeReceipt: boolean;
 }
 
 /* ------------------------------------------------------------------ *

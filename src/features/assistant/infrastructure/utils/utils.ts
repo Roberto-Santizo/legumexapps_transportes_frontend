@@ -100,17 +100,19 @@ const TOOL_LABELS: Record<AssistantToolName, { pending: string; done: string }> 
     trip: { pending: "Consultando el viaje", done: "Detalle del viaje" },
     trip_fuels: { pending: "Consultando los combustibles del viaje", done: "Combustibles del viaje" },
     trip_expenses: { pending: "Consultando los gastos del viaje", done: "Gastos del viaje" },
+    trip_emergency_expenses: { pending: "Consultando los gastos emergentes del viaje", done: "Gastos emergentes del viaje" },
     trip_timeouts: { pending: "Consultando los tiempos muertos", done: "Tiempos muertos del viaje" },
     vehicle: { pending: "Buscando el vehículo", done: "Vehículo" },
     vehicle_expenses: { pending: "Consultando los gastos del vehículo", done: "Gastos del vehículo" },
     export_trips: { pending: "Generando el reporte de viajes", done: "Reporte de viajes" },
     export_vehicle_expenses: { pending: "Generando el reporte de gastos", done: "Reporte de gastos de vehículo" },
+    export_trip_emergency_expenses: { pending: "Generando el reporte de gastos emergentes", done: "Reporte de gastos emergentes del viaje" },
 };
 
 export const isAssistantToolName = (value: string): value is AssistantToolName => value in TOOL_LABELS;
 
 export const isExportTool = (toolName: string): boolean =>
-    toolName === 'export_trips' || toolName === 'export_vehicle_expenses';
+    toolName === 'export_trips' || toolName === 'export_vehicle_expenses' || toolName === 'export_trip_emergency_expenses';
 
 export const getToolLabel = (toolName: string, pending: boolean): string => {
     if (!isAssistantToolName(toolName)) return pending ? `Ejecutando ${toolName}` : toolName;

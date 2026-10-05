@@ -1,5 +1,7 @@
 export * from './TripAssignmentModal';
 export * from './TripDeleteDialog';
+export * from './TripEmergencyExpensesModal';
+export * from './TripEmergencyReceiptField';
 export * from './TripExpensesModal';
 export * from './TripFiltersBar';
 export * from './TripFormComponent';

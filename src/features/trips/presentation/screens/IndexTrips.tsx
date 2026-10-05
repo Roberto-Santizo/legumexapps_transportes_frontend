@@ -20,6 +20,7 @@ import {
     TRIP_ALREADY_DELETED_MESSAGE,
     TripAssignmentModal,
     TripDeleteDialog,
+    TripEmergencyExpensesModal,
     TripExpensesModal,
     TripFiltersBar,
     TripFuelsModal,
@@ -33,6 +34,7 @@ import {
     canDownloadTripsReport,
     canFinishTrip,
     canReadTripCost,
+    canReadTripEmergencyExpenses,
     canReadTripExpenses,
     canReadTripFuels,
     canRegisterTripExpenses,
@@ -41,6 +43,7 @@ import {
     canStartTrip,
     canTrackTrip,
     canTrackTrips,
+    canWriteTripEmergencyExpenses,
     canWriteTrips,
     formatTripHours,
     formatTripKilometers,
@@ -52,7 +55,7 @@ import {
     type TripListItem
 } from "@/features/trips/trips";
 import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
-import { Calculator, CircleCheckBig, Download, Eye, Fuel, Pencil, Play, Plus, Radar, Trash2, Truck, Wallet } from "lucide-react";
+import { Calculator, CircleCheckBig, Download, Eye, Fuel, Pencil, Play, Plus, Radar, Siren, Trash2, Truck, Wallet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -87,6 +90,9 @@ export function IndexTrips() {
     /** Los viáticos siguen la misma regla que las cargas. */
     const canReadExpenses = canReadTripExpenses(role);
     const canRegisterExpenses = canRegisterTripExpenses(role, user?.carrierId);
+    /** Gastos emergentes: mismos lectores que los viáticos; escriben el administrador y la empresa. */
+    const canReadEmergencyExpenses = canReadTripEmergencyExpenses(role);
+    const canWriteEmergencyExpenses = canWriteTripEmergencyExpenses(role, user?.carrierId);
     /** El costo directo: todos menos el piloto, y solo sobre un viaje finalizado. */
     const canReadCost = canReadTripCost(role);
     /** El Excel del rango: todos menos el piloto. */
@@ -105,6 +111,8 @@ export function IndexTrips() {
     const [tripToFuel, setTripToFuel] = useState<TripListItem | null>(null);
     /** El viaje cuyos viáticos se están mirando. */
     const [tripToExpense, setTripToExpense] = useState<TripListItem | null>(null);
+    /** El viaje cuyos gastos emergentes se están mirando. */
+    const [tripToEmergencyExpense, setTripToEmergencyExpense] = useState<TripListItem | null>(null);
     /** El diálogo del reporte descargable. */
     const [isReportOpen, setIsReportOpen] = useState(false);
 
@@ -197,6 +205,11 @@ export function IndexTrips() {
             label: "Viáticos",
             icon: <Wallet />,
             onClick: () => setTripToExpense(trip)
+        }] : []),
+        ...(canReadEmergencyExpenses ? [{
+            label: "Gastos emergentes",
+            icon: <Siren />,
+            onClick: () => setTripToEmergencyExpense(trip)
         }] : []),
         ...(canReadCost && hasTripCost(trip) ? [{
             label: "Costo directo",
@@ -478,6 +491,12 @@ export function IndexTrips() {
                 trip={tripToExpense}
                 canRegister={canRegisterExpenses}
                 onClose={() => setTripToExpense(null)}
+            />
+
+            <TripEmergencyExpensesModal
+                trip={tripToEmergencyExpense}
+                canWrite={canWriteEmergencyExpenses}
+                onClose={() => setTripToEmergencyExpense(null)}
             />
 
             {canDownloadReport && (

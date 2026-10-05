@@ -1,4 +1,4 @@
-import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripDatasource, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
+import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripDatasource, TripEmergencyExpenseForm, TripEmergencyExpenseUpdateForm, TripEmergencyExpenses, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 import { TripRepository } from "@/features/trips/trips";
 
 export class TripRepositoryImpl extends TripRepository {
@@ -56,6 +56,22 @@ export class TripRepositoryImpl extends TripRepository {
 
     createTripExpense(id: string, payload: TripExpenseForm): Promise<string> {
         return this.datasource.createTripExpense(id, payload);
+    }
+
+    getTripEmergencyExpenses(id: string): Promise<TripEmergencyExpenses> {
+        return this.datasource.getTripEmergencyExpenses(id);
+    }
+
+    createTripEmergencyExpense(id: string, payload: TripEmergencyExpenseForm): Promise<string> {
+        return this.datasource.createTripEmergencyExpense(id, payload);
+    }
+
+    updateTripEmergencyExpense(expenseId: string, payload: TripEmergencyExpenseUpdateForm): Promise<string> {
+        return this.datasource.updateTripEmergencyExpense(expenseId, payload);
+    }
+
+    deleteTripEmergencyExpense(expenseId: string): Promise<string> {
+        return this.datasource.deleteTripEmergencyExpense(expenseId);
     }
 
     getTripTimeouts(id: string): Promise<TripTimeout[]> {

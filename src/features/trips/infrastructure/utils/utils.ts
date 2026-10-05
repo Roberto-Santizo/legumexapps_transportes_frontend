@@ -18,7 +18,7 @@
  */
 
 import { can, type Option } from "@/features/shared/shared";
-import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
+import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripEmergencyExpense, TripEmergencyExpenseForm, TripEmergencyExpenseFormValues, TripEmergencyExpenseUpdateForm, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 import { formatDistanceKilometers, formatDurationHours } from "@/features/places/places";
 import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
 import { TRIP_CLIENT_LOCKED_MESSAGE, buildTripProductLines } from "@/features/trip-finished-products/trip-finished-products";
@@ -441,8 +441,8 @@ export const buildTripUpdatePayload = (form: TripFormValues): TripUpdateForm => 
 });
 
 /**
- * Los **cuatro** campos de `/assignment`, con los tres numéricos como números:
- * una cadena en los ids es 422.
+ * Los **seis** campos obligatorios de `/assignment`, con los numéricos como
+ * números: una cadena en los ids es 422.
  *
  * Los galones sí admiten decimales —el input los da como cadena— y van con
  * `Number`, no con `parseInt`: `45.5` es una carga legítima.
@@ -456,6 +456,10 @@ export const buildTripAssignmentPayload = (form: TripAssignmentFormValues): Trip
         fuelGallons: Number(form.fuelGallons),
         /** Vacío no llega aquí: el `required` del select lo para antes. */
         fuelType: form.fuelType!,
+        /** Obligatoria en **todas** las asignaciones, también al reasignar. `0` es válido. */
+        bonus: Number(form.bonus),
+        /** Igual que `bonus`: en **todas** las asignaciones, `0` incluido. */
+        cargoInsurance: Number(form.cargoInsurance),
         /**
          * El viático es opcional y **no se manda si no hay monto**: un input
          * numérico vacío da `NaN` con `valueAsNumber`, y mandarlo sería 422.
@@ -662,7 +666,7 @@ export const getTripAssignmentFieldErrors = (error: unknown): TripAssignmentFiel
 
     const { errors, message } = data as { errors?: unknown; message?: unknown };
 
-    const collected = collectFieldErrors(errors, ['pilotId', 'vehicleId', 'fuelGallons', 'fuelType', 'expenseAmount', 'expenseDescription'] as const);
+    const collected = collectFieldErrors(errors, ['pilotId', 'vehicleId', 'fuelGallons', 'fuelType', 'bonus', 'cargoInsurance', 'expenseAmount', 'expenseDescription'] as const);
 
     if (collected.length > 0) return collected;
 
@@ -913,6 +917,207 @@ export const getTripExpenseFieldErrors = (error: unknown): TripExpenseFieldError
 };
 
 /* ------------------------------------------------------------------ *
+ * Bonificación
+ * ------------------------------------------------------------------ */
+
+/** Techo que valida el backend en `bonus`. El piso es `0`, que sí es válido. */
+export const TRIP_BONUS_MAX_AMOUNT = 99999999.99;
+
+/**
+ * Leer la bonificación en el detalle: todos menos `shipment`, al que la API le
+ * manda siempre `null`. Fijarla es tomar el viaje (`canAssignTrips`): no hay
+ * otra vía, y el `PATCH` general del administrador la ignora.
+ */
+export const canReadTripBonus = (role?: string): boolean => can(role, 'readTripBonus');
+
+/* ------------------------------------------------------------------ *
+ * Seguro de la carga
+ * ------------------------------------------------------------------ */
+
+/** Techo que valida el backend en `cargoInsurance`. El piso es `0`, que sí es válido. */
+export const TRIP_CARGO_INSURANCE_MAX_AMOUNT = 99999999.99;
+
+/**
+ * Leer el seguro de la carga en el detalle: misma matriz que la bonificación
+ * (todos menos `shipment`). Fijarlo es tomar el viaje: no hay otra vía.
+ */
+export const canReadTripCargoInsurance = (role?: string): boolean => can(role, 'readTripCargoInsurance');
+
+/* ------------------------------------------------------------------ *
+ * Gastos emergentes
+ * ------------------------------------------------------------------ */
+
+/**
+ * Leer los gastos emergentes: todos menos `shipment`, que no ve dinero. El
+ * piloto asignado también los lee, pero no entra a la web.
+ */
+export const canReadTripEmergencyExpenses = (role?: string): boolean => can(role, 'readTripEmergencyExpenses');
+
+/**
+ * Registrar, corregir y borrar: `administrator` y `carrier` con empresa —sin
+ * ella el service responde 403 «No perteneces a ninguna empresa
+ * transportista»—. Que la empresa sea **la que tomó el viaje** solo lo sabe
+ * el servidor.
+ */
+export const canWriteTripEmergencyExpenses = (role?: string, carrierId?: number | null): boolean =>
+    can(role, 'writeTripEmergencyExpenses') && (role !== 'carrier' || typeof carrierId === 'number');
+
+/**
+ * Registrar solo con el viaje **en ruta**: `pending` y `finished` responden
+ * 400. Un viaje `in_route` ya está asignado por fuerza, así que basta el estado.
+ */
+export const canRegisterTripEmergencyExpense = (trip: Pick<TripListItem, 'status'>): boolean =>
+    trip.status === 'in_route';
+
+/**
+ * Corregir y borrar sí se puede con el viaje `finished` —la factura suele
+ * llegar después del cierre—. Solo un viaje `pending` lo impide.
+ */
+export const canManageTripEmergencyExpense = (trip: Pick<TripListItem, 'status'>): boolean =>
+    trip.status !== 'pending';
+
+/** Las dos fechas salen del mismo formato: si difieren, alguien lo corrigió. */
+export const isTripEmergencyExpenseCorrected = (expense: Pick<TripEmergencyExpense, 'createdAt' | 'updatedAt'>): boolean =>
+    expense.updatedAt !== expense.createdAt;
+
+/**
+ * Qué pintar se decide por `receiptType`, **no** por la extensión de la URL:
+ * la URL sale del bucket y puede cambiar de dominio sin que cambie el gasto.
+ */
+export const isTripEmergencyReceiptImage = (receiptType: TripEmergencyExpense['receiptType']): boolean =>
+    receiptType === 'jpg' || receiptType === 'png';
+
+export const TRIP_EMERGENCY_RECEIPT_ACCEPT: Record<string, string[]> = {
+    "image/jpeg": [".jpg", ".jpeg"],
+    "image/png": [".png"],
+    "application/pdf": [".pdf"]
+};
+
+/** 3 MB (3072 KB) e inclusive. */
+export const TRIP_EMERGENCY_RECEIPT_MAX_SIZE = 3 * 1024 * 1024;
+
+/**
+ * El tipo y el peso del comprobante. El backend deduce el tipo del contenido,
+ * así que esto no es la validación buena: solo ahorra una subida perdida.
+ */
+export const validateTripEmergencyReceipt = (file: File | null | undefined): true | string => {
+    if (!(file instanceof File)) return true;
+    if (!Object.keys(TRIP_EMERGENCY_RECEIPT_ACCEPT).includes(file.type)) return "El comprobante debe ser un archivo jpg, jpeg, png o pdf";
+    if (file.size > TRIP_EMERGENCY_RECEIPT_MAX_SIZE) return "El comprobante no puede pesar más de 3 MB";
+
+    return true;
+};
+
+/**
+ * El alta. Sin comprobante sale como JSON; con él, como `FormData` y el
+ * `Content-Type` no se fija a mano: el navegador añade el boundary.
+ */
+export const buildTripEmergencyExpensePayload = (form: TripEmergencyExpenseForm): FormData | { amount: number; description: string } => {
+    const fields = {
+        amount: Number(form.amount),
+        description: form.description.trim(),
+    };
+
+    if (!(form.receipt instanceof File)) return fields;
+
+    const formData = new FormData();
+
+    formData.append('amount', fields.amount.toString());
+    formData.append('description', fields.description);
+    formData.append('receipt', form.receipt);
+
+    return formData;
+};
+
+/**
+ * La corrección. Con archivo nuevo sale como `FormData` con `_method=PATCH`
+ * —PHP no lee archivos en un `PATCH` real— y el datasource la manda por
+ * `POST`; sin archivo, JSON. Un archivo nuevo nunca viaja con
+ * `removeReceipt: true`: juntos son 422.
+ */
+export const buildTripEmergencyExpenseUpdatePayload = (form: TripEmergencyExpenseUpdateForm): FormData | Record<string, unknown> => {
+    const fields: Record<string, string | number> = {
+        ...(form.amount !== undefined ? { amount: Number(form.amount) } : {}),
+        ...(form.description !== undefined ? { description: form.description.trim() } : {}),
+    };
+
+    if (!(form.receipt instanceof File)) {
+        return {
+            ...fields,
+            ...(form.removeReceipt ? { removeReceipt: true } : {}),
+        };
+    }
+
+    const formData = new FormData();
+
+    formData.append('_method', 'PATCH');
+    Object.entries(fields).forEach(([key, value]) => formData.append(key, value.toString()));
+    formData.append('receipt', form.receipt);
+
+    return formData;
+};
+
+/**
+ * Solo lo que cambió respecto al gasto original. Un cuerpo vacío responde 200
+ * sin escribir, así que la pantalla puede ahorrarse la petición si esto no
+ * trae nada.
+ */
+export const diffTripEmergencyExpense = (values: TripEmergencyExpenseFormValues, original: TripEmergencyExpense): TripEmergencyExpenseUpdateForm => {
+    const amount = Number(values.amount);
+    const description = values.description.trim();
+    const receipt = values.receipt instanceof File ? values.receipt : null;
+
+    return {
+        ...(amount !== parseAmount(original.amount) ? { amount } : {}),
+        ...(description !== original.description ? { description } : {}),
+        ...(receipt ? { receipt } : {}),
+        ...(!receipt && values.removeReceipt && original.receiptUrl ? { removeReceipt: true } : {}),
+    };
+};
+
+/** La corrección trae al menos un campo: si no, no vale la pena pedirla. */
+export const hasTripEmergencyExpenseChanges = (update: TripEmergencyExpenseUpdateForm): boolean =>
+    Object.keys(update).length > 0;
+
+/** El 403 del alta, la corrección y el borrado sobre un viaje ajeno: dice «registrar» en los tres. */
+export const TRIP_EMERGENCY_EXPENSE_FOREIGN_MESSAGE = "No puedes registrar gastos emergentes en un viaje que no tomó tu empresa transportista";
+
+/** El 400 del alta con el viaje `pending` o `finished`. */
+export const TRIP_EMERGENCY_EXPENSE_NOT_IN_ROUTE_MESSAGE = "Solo se pueden registrar gastos emergentes en un viaje en ruta";
+
+/** El 400 del alta del administrador sobre un viaje sin asignar. */
+export const TRIP_NOT_ASSIGNED_MESSAGE = "El viaje aún no fue asignado";
+
+/** El 400 de corregir o borrar con el viaje devuelto a `pending`. */
+export const TRIP_EMERGENCY_EXPENSE_PENDING_MESSAGE = "No se pueden modificar los gastos emergentes de un viaje pendiente";
+
+/** El 404 de corregir o borrar un gasto que ya no existe. */
+export const TRIP_EMERGENCY_EXPENSE_NOT_FOUND_MESSAGE = "El gasto emergente no existe";
+
+export type TripEmergencyExpenseFieldError = {
+    field: keyof TripEmergencyExpenseFormValues;
+    message: string;
+}
+
+/**
+ * Reparte el 422 entre los campos del formulario. `removeReceipt` se ancla al
+ * comprobante: en pantalla es el mismo control. El resto —403, 400, 404— no
+ * pertenece a ningún campo y se muestra como notificación.
+ */
+export const getTripEmergencyExpenseFieldErrors = (error: unknown): TripEmergencyExpenseFieldError[] => {
+    const data = toAxiosError(error)?.response?.data;
+
+    if (!data || typeof data !== 'object') return [];
+
+    const errors = (data as { errors?: unknown }).errors;
+
+    return [
+        ...collectFieldErrors(errors, ['amount', 'description', 'receipt'] as const),
+        ...collectFieldErrors(errors, ['removeReceipt'] as const).map(({ message }) => ({ field: 'receipt' as const, message })),
+    ];
+};
+
+/* ------------------------------------------------------------------ *
  * Paradas (tiempos muertos)
  * ------------------------------------------------------------------ */
 
@@ -1036,12 +1241,15 @@ export const hasTripCost = (trip: Pick<TripListItem, 'status'>): boolean => trip
 /** El mes del prorrateo: 30 × 24 horas, no una jornada laboral. */
 export const TRIP_COST_MONTH_HOURS = 720;
 
-/** Los cuatro componentes del costo directo, en el orden en que se pintan. */
-export type TripCostComponent = 'fuel' | 'expenses' | 'pilot' | 'vehicle';
+/** Los siete componentes del costo directo, en el orden en que se pintan. */
+export type TripCostComponent = 'fuel' | 'expenses' | 'emergencyExpenses' | 'bonus' | 'cargoInsurance' | 'pilot' | 'vehicle';
 
 export const TRIP_COST_COMPONENT_LABELS: Record<TripCostComponent, string> = {
     fuel: "Combustible",
     expenses: "Viáticos",
+    emergencyExpenses: "Gastos emergentes",
+    bonus: "Bonificación",
+    cargoInsurance: "Seguro de la carga",
     pilot: "Salario del piloto",
     vehicle: "Seguro del vehículo",
 };
@@ -1050,6 +1258,9 @@ export const TRIP_COST_COMPONENT_LABELS: Record<TripCostComponent, string> = {
 export const tripCostShares = (cost: TripCost): { component: TripCostComponent; amount: number }[] => [
     { component: 'fuel', amount: parseAmount(cost.fuel.subtotal) },
     { component: 'expenses', amount: parseAmount(cost.expenses.subtotal) },
+    { component: 'emergencyExpenses', amount: parseAmount(cost.emergencyExpenses.subtotal) },
+    { component: 'bonus', amount: parseAmount(cost.bonus.subtotal) },
+    { component: 'cargoInsurance', amount: parseAmount(cost.cargoInsurance.subtotal) },
     { component: 'pilot', amount: parseAmount(cost.pilot.subtotal) },
     { component: 'vehicle', amount: parseAmount(cost.vehicle.subtotal) },
 ];
@@ -1066,6 +1277,8 @@ export const tripCostMissingInputs = (cost: TripCost): string[] => {
         ? "El viaje no tiene piloto asignado: no hay salario que prorratear."
         : "No hay salario vigente para el piloto: puede estar desvinculado de la empresa o no tener salario asignado.");
     if (cost.vehicle.monthlyInsuranceCost === null) holes.push("El viaje no tiene vehículo asignado: no hay seguro que prorratear.");
+    if (cost.bonus.amount === null) holes.push("El viaje se asignó antes de que existiera la bonificación: no hay dato y vale Q0.00.");
+    if (cost.cargoInsurance.amount === null) holes.push("El viaje se asignó antes de que existiera el seguro de la carga: no hay dato y vale Q0.00.");
     if (cost.fuel.byType.some((type) => type.pricePerGallon === null)) holes.push("Hay combustible sin precio capturado para la fecha de su carga: sus galones cuentan, pero su importe vale Q0.00.");
 
     return holes;
@@ -1079,8 +1292,24 @@ export const tripCostMissingInputs = (cost: TripCost): string[] => {
 /** Todos menos el piloto, que recibe 403. */
 export const canDownloadTripsReport = (role?: string): boolean => can(role, 'downloadTripsReport');
 
-/** `carrier` y `user` reciben 22 columnas; el resto, además «Productos» y «Total de cajas». */
+/** «Productos» y «Total de cajas»: `administrator`, `manager`, `export` y `shipment`. */
 export const tripsReportIncludesProducts = (role?: string): boolean => can(role, 'readTripsReportProducts');
+
+/** «Bonificación (Q)», tras las 22 base y antes de los productos: todos menos `shipment`. */
+export const tripsReportIncludesBonus = (role?: string): boolean => can(role, 'readTripBonus');
+
+/** «Seguro de carga (Q)», justo tras «Bonificación (Q)» y antes de los productos: todos menos `shipment`. */
+export const tripsReportIncludesCargoInsurance = (role?: string): boolean => can(role, 'readTripCargoInsurance');
+
+/**
+ * Cuántas columnas trae el Excel para el rol: 22 base + bonificación +
+ * seguro de la carga + productos y cajas según la matriz (26, 24 o 24).
+ */
+export const tripsReportColumnCount = (role?: string): number =>
+    22
+    + (tripsReportIncludesBonus(role) ? 1 : 0)
+    + (tripsReportIncludesCargoInsurance(role) ? 1 : 0)
+    + (tripsReportIncludesProducts(role) ? 2 : 0);
 
 /** Prefijo del 400 por tope: se muestra como aviso para acotar, no como fallo. */
 export const TRIPS_REPORT_TOO_LARGE_MESSAGE = "El reporte excede 5000 viajes";

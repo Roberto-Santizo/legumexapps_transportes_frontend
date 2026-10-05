@@ -1,8 +1,9 @@
 import { z } from "zod";
 
 /**
- * Lo que devuelven `export_trips` y `export_vehicle_expenses` dentro del part
- * `tool-output-available`. `totalAmount` solo viene en el segundo.
+ * Lo que devuelven `export_trips`, `export_vehicle_expenses` y
+ * `export_trip_emergency_expenses` dentro del part `tool-output-available`.
+ * `totalAmount` solo viene en los dos últimos.
  */
 export const AssistantReportSchema = z.object({
     fileName: z.string(),
