@@ -66,6 +66,8 @@ export const PERMISSIONS = {
     readTripEmergencyExpenses: except('shipment'),
     /** Registrar, corregir y borrar. El administrador solo sobre viajes asignados; el `carrier`, con empresa. */
     writeTripEmergencyExpenses: ['administrator', 'carrier'],
+    /** La bonificación del viaje en el detalle y su columna del Excel: `shipment` recibe `null` y no tiene columna. Se fija con `assignTrip`. */
+    readTripBonus: except('shipment'),
 
     /* Vehículos */
     readVehicles: ['administrator', 'manager', 'carrier', 'export'],

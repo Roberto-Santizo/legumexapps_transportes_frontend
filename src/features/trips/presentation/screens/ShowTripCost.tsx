@@ -1,9 +1,9 @@
 /**
  * Cuánto le costó **directamente** el viaje a quien lo corrió.
  *
- * La cifra es costo directo y se rotula así a propósito: son cinco
- * componentes —combustible, viáticos, gastos emergentes, salario y seguro prorrateados— y ninguno
- * más. Llamarla «costo total» sería prometer depreciación, mantenimiento y
+ * La cifra es costo directo y se rotula así a propósito: son seis
+ * componentes —combustible, viáticos, gastos emergentes, bonificación, salario
+ * y seguro prorrateados— y ninguno más. Llamarla «costo total» sería prometer depreciación, mantenimiento y
  * peajes que la API no calcula.
  *
  * Tres decisiones de la pantalla:
@@ -12,7 +12,7 @@
  *   la opción en ese estado. Quien llega a la URL a mano con otro estado se
  *   topa con el 400 del servidor, que se pinta tal cual.
  * - **El piloto no entra**, ni siquiera al suyo: el desglose revela su salario.
- * - **El total no se recalcula.** `totalCost` ya cuadra con los cinco
+ * - **El total no se recalcula.** `totalCost` ya cuadra con los seis
  *   subtotales tal como salen; la barra solo reparte ese mismo total.
  */
 
@@ -45,6 +45,8 @@ const SWATCHES: Record<TripCostComponent, string> = {
     fuel: "bg-primary",
     expenses: "bg-canvas",
     emergencyExpenses: "bg-danger",
+    /** Se pinta sobre la chapa oscura: `ink` desaparecería ahí. */
+    bonus: "bg-primary/50",
     pilot: "bg-success",
     vehicle: "bg-ink-subtle",
 };
@@ -157,7 +159,7 @@ export function ShowTripCost() {
         <div className="flex flex-col gap-8">
             <TripPageHeader
                 title="Costo directo"
-                subtitle="Lo que el viaje consumió en combustible y viáticos, más la parte del salario y del seguro que le corresponde por sus horas."
+                subtitle="Lo que el viaje consumió en combustible, viáticos y gastos emergentes, su bonificación, más la parte del salario y del seguro que le corresponde por sus horas."
             >
                 <button
                     type="button"
@@ -210,7 +212,7 @@ export function ShowTripCost() {
                                 </span>
                             </div>
 
-                            {/* Los cinco subtotales como tramos de una sola barra: ancho = parte del total. */}
+                            {/* Los seis subtotales como tramos de una sola barra: ancho = parte del total. */}
                             <div className="flex flex-col gap-3">
                                 <div
                                     role="img"
@@ -304,6 +306,20 @@ export function ShowTripCost() {
 
                                 <p className="text-xs text-ink-subtle">
                                     Imprevistos pagados en ruta. Suman desde que se registran y se pueden corregir después del cierre: si alguien los edita, este subtotal cambia.
+                                </p>
+                            </CostBlock>
+
+                            <CostBlock component="bonus" subtotal={cost.bonus.subtotal} share={shareOf('bonus')}>
+                                <dl className="flex flex-col gap-2.5">
+                                    <Row
+                                        label="Bonificación del viaje"
+                                        value={cost.bonus.amount === null ? MISSING : formatAmount(cost.bonus.amount)}
+                                        missing={cost.bonus.amount === null}
+                                    />
+                                </dl>
+
+                                <p className="text-xs text-ink-subtle">
+                                    La fija la empresa al tomar el viaje y entra entera: no se prorratea por horas.
                                 </p>
                             </CostBlock>
 

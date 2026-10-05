@@ -24,10 +24,15 @@
  * Desde SPEC 31 puede llevar, además, el **primer viático**: opcional, en la
  * misma transacción, y sin condicionar nada —el viaje arranca con o sin
  * viáticos—. Reasignar con monto añade otro viático, igual que la carga.
+ *
+ * Y lleva la **bonificación**: obligatoria, un solo monto por viaje que, al
+ * revés que la carga y el viático, **se sobrescribe** al reasignar. Por eso
+ * esa sí se precarga con el valor actual.
  */
 
 import type { TripAssignmentFormValues, TripSummary } from "@/features/trips/trips";
 import {
+    TRIP_BONUS_MAX_AMOUNT,
     TRIP_CREW_LIMIT,
     TRIP_EXPENSE_MAX_AMOUNT,
     TRIP_FUEL_TYPES,
@@ -38,6 +43,7 @@ import {
     TripOrder,
     buildTripAssignmentPayload,
     getTripAssignmentFieldErrors,
+    parseAmount,
     tripProvider
 } from "@/features/trips/trips";
 import { CardSelectFormField } from "@/features/pilots/pilots";
@@ -102,13 +108,21 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
      * del primer render, y mientras no se sepa el formulario arranca vacío.
      */
     const currentCrew = crew && crew.pilotId != null && crew.vehicleId != null
-        ? { pilotId: crew.pilotId, vehicleId: crew.vehicleId }
+        ? {
+            pilotId: crew.pilotId,
+            vehicleId: crew.vehicleId,
+            /** `null` = asignado antes de existir el campo: se deja vacío, no en cero. */
+            ...(crew.bonus != null ? { bonus: parseAmount(crew.bonus) } : {}),
+        }
         : undefined;
 
+    const isReassigning = Boolean(trip.pilotName);
+
     /**
-     * Solo la tripulación se precarga. Los galones nacen vacíos siempre: cada
-     * asignación crea **su propia carga** y heredar la cifra de la anterior
-     * invitaría a guardar sin mirar un número que no se puede corregir.
+     * Se precargan la tripulación y la bonificación, que se sobrescriben. Los
+     * galones nacen vacíos siempre: cada asignación crea **su propia carga** y
+     * heredar la cifra de la anterior invitaría a guardar sin mirar un número
+     * que no se puede corregir.
      *
      * `keepDirtyValues` protege justo eso. La tripulación llega del detalle y
      * puede resolverse **después** de que el usuario empiece a teclear; sin él,
@@ -286,6 +300,50 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                 </div>
             </div>
 
+            {/* Obligatoria en cada asignación: sin `bonus` la API responde 422. */}
+            <div className="flex flex-col gap-4 border-t border-line pt-6">
+                <div className="flex flex-col gap-1">
+                    <h3 className="font-display text-base font-semibold tracking-tight text-ink">
+                        Bonificación
+                    </h3>
+
+                    <p className="text-sm text-ink-muted">
+                        Lo que el viaje paga de bonificación, en quetzales. Si no hay,
+                        escribe <span className="font-mono text-ink">0</span>. No requiere
+                        confirmación del piloto y{' '}
+                        <span className="text-ink">no se puede cambiar una vez que el viaje arranque</span>.
+                        {isReassigning && (
+                            <>
+                                {' '}Al cambiar la tripulación, el monto que guardes{' '}
+                                <span className="text-ink">reemplaza al anterior</span>: no se suma.
+                            </>
+                        )}
+                    </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <TextFormField<TripAssignmentFormValues>
+                        label="Bonificación (Q)"
+                        name="bonus"
+                        type="number"
+                        placeholder="250.00"
+                        register={register}
+                        errorMessage={errors.bonus?.message}
+                        validation={{
+                            valueAsNumber: true,
+                            /** Vacío es `NaN`: aquí sí es error, porque `0` es la forma de decir «sin bonificación». */
+                            validate: (value) => {
+                                if (typeof value !== 'number' || Number.isNaN(value)) return "La bonificación es obligatoria";
+                                if (value < 0) return "La bonificación no puede ser negativa";
+                                if (value > TRIP_BONUS_MAX_AMOUNT) return `La bonificación no puede superar ${TRIP_BONUS_MAX_AMOUNT}`;
+                                return true;
+                            }
+                        }}
+                        disabled={isPending}
+                    />
+                </div>
+            </div>
+
             {/* El viático es opcional: sin monto no se manda nada y la asignación sigue igual. */}
             <div className="flex flex-col gap-4 border-t border-line pt-6">
                 <div className="flex flex-col gap-1">
@@ -356,7 +414,7 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                     disabled={isPending || isLoadingCrew}
                     className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-ink-deep px-4 py-2 text-sm font-semibold text-canvas shadow-sm transition-all duration-200 hover:bg-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-ink-subtle disabled:shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
                 >
-                    {isPending ? <SpinnerComponent /> : trip.pilotName ? "Cambiar la tripulación" : "Tomar el viaje"}
+                    {isPending ? <SpinnerComponent /> : isReassigning ? "Cambiar la tripulación" : "Tomar el viaje"}
                 </button>
             </div>
         </CustomForm>

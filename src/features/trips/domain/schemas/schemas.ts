@@ -179,6 +179,14 @@ export const TripSchema = z.object({
      * Opcional por el mismo motivo que las otras dos sumas.
      */
     totalEmergencyExpensesAmount: z.string().optional(),
+    /**
+     * La bonificación del viaje en GTQ, como cadena de dos decimales. Un solo
+     * monto que fija la empresa en `/assignment` y que reasignar **sobrescribe**.
+     * `null` **no es cero**: viaje en la bolsa, asignado antes de existir el
+     * campo (no hubo backfill) o rol `shipment`, que no ve dinero. Opcional
+     * por el mismo motivo que las sumas: un backend anterior no la manda.
+     */
+    bonus: z.string().nullable().optional(),
     createdAt: z.string().nullable(),
     updatedAt: z.string().nullable(),
     /**
@@ -524,8 +532,8 @@ export const TripCostFuelTypeSchema = z.object({
 
 /**
  * El desglose de `GET /api/trips/{trip}/cost`. Es **costo directo**, no «lo
- * que costó el viaje»: combustible, viáticos, gastos emergentes, salario y seguro prorrateados, y
- * nada más —ni depreciación, ni mantenimiento, ni peajes—.
+ * que costó el viaje»: combustible, viáticos, gastos emergentes, bonificación, salario y seguro
+ * prorrateados, y nada más —ni depreciación, ni mantenimiento, ni peajes—.
  *
  * Todos los importes son **cadenas** de dos decimales; los únicos números de
  * verdad son los dos `count`. Un insumo que falta llega en `null` y su
@@ -555,6 +563,16 @@ export const TripCostSchema = z.object({
         count: z.number(),
         subtotal: z.string(),
     }).default({ count: 0, subtotal: "0.00" }),
+    /**
+     * La bonificación del viaje: entra **entera**, no se prorratea por horas.
+     * `amount` en `null` = viaje asignado antes de existir el campo; el
+     * `subtotal` nunca es `null` (`"0.00"` en ese caso). El `default` cubre a
+     * un backend anterior que todavía no lo manda.
+     */
+    bonus: z.object({
+        amount: z.string().nullable(),
+        subtotal: z.string(),
+    }).default({ amount: null, subtotal: "0.00" }),
     pilot: z.object({
         pilotId: z.number().nullable(),
         pilotName: z.string().nullable(),
@@ -569,6 +587,6 @@ export const TripCostSchema = z.object({
         monthlyInsuranceCost: z.string().nullable(),
         subtotal: z.string(),
     }),
-    /** Suma exacta de los cinco subtotales tal como salen. No se recalcula. */
+    /** Suma exacta de los seis subtotales tal como salen. No se recalcula. */
     totalCost: z.string(),
 });

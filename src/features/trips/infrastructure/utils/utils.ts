@@ -441,8 +441,8 @@ export const buildTripUpdatePayload = (form: TripFormValues): TripUpdateForm => 
 });
 
 /**
- * Los **cuatro** campos de `/assignment`, con los tres numéricos como números:
- * una cadena en los ids es 422.
+ * Los **cinco** campos obligatorios de `/assignment`, con los numéricos como
+ * números: una cadena en los ids es 422.
  *
  * Los galones sí admiten decimales —el input los da como cadena— y van con
  * `Number`, no con `parseInt`: `45.5` es una carga legítima.
@@ -456,6 +456,8 @@ export const buildTripAssignmentPayload = (form: TripAssignmentFormValues): Trip
         fuelGallons: Number(form.fuelGallons),
         /** Vacío no llega aquí: el `required` del select lo para antes. */
         fuelType: form.fuelType!,
+        /** Obligatoria en **todas** las asignaciones, también al reasignar. `0` es válido. */
+        bonus: Number(form.bonus),
         /**
          * El viático es opcional y **no se manda si no hay monto**: un input
          * numérico vacío da `NaN` con `valueAsNumber`, y mandarlo sería 422.
@@ -662,7 +664,7 @@ export const getTripAssignmentFieldErrors = (error: unknown): TripAssignmentFiel
 
     const { errors, message } = data as { errors?: unknown; message?: unknown };
 
-    const collected = collectFieldErrors(errors, ['pilotId', 'vehicleId', 'fuelGallons', 'fuelType', 'expenseAmount', 'expenseDescription'] as const);
+    const collected = collectFieldErrors(errors, ['pilotId', 'vehicleId', 'fuelGallons', 'fuelType', 'bonus', 'expenseAmount', 'expenseDescription'] as const);
 
     if (collected.length > 0) return collected;
 
@@ -911,6 +913,20 @@ export const getTripExpenseFieldErrors = (error: unknown): TripExpenseFieldError
 
     return collectFieldErrors((data as { errors?: unknown }).errors, ['amount', 'description'] as const);
 };
+
+/* ------------------------------------------------------------------ *
+ * Bonificación
+ * ------------------------------------------------------------------ */
+
+/** Techo que valida el backend en `bonus`. El piso es `0`, que sí es válido. */
+export const TRIP_BONUS_MAX_AMOUNT = 99999999.99;
+
+/**
+ * Leer la bonificación en el detalle: todos menos `shipment`, al que la API le
+ * manda siempre `null`. Fijarla es tomar el viaje (`canAssignTrips`): no hay
+ * otra vía, y el `PATCH` general del administrador la ignora.
+ */
+export const canReadTripBonus = (role?: string): boolean => can(role, 'readTripBonus');
 
 /* ------------------------------------------------------------------ *
  * Gastos emergentes
@@ -1210,13 +1226,14 @@ export const hasTripCost = (trip: Pick<TripListItem, 'status'>): boolean => trip
 /** El mes del prorrateo: 30 × 24 horas, no una jornada laboral. */
 export const TRIP_COST_MONTH_HOURS = 720;
 
-/** Los cinco componentes del costo directo, en el orden en que se pintan. */
-export type TripCostComponent = 'fuel' | 'expenses' | 'emergencyExpenses' | 'pilot' | 'vehicle';
+/** Los seis componentes del costo directo, en el orden en que se pintan. */
+export type TripCostComponent = 'fuel' | 'expenses' | 'emergencyExpenses' | 'bonus' | 'pilot' | 'vehicle';
 
 export const TRIP_COST_COMPONENT_LABELS: Record<TripCostComponent, string> = {
     fuel: "Combustible",
     expenses: "Viáticos",
     emergencyExpenses: "Gastos emergentes",
+    bonus: "Bonificación",
     pilot: "Salario del piloto",
     vehicle: "Seguro del vehículo",
 };
@@ -1226,6 +1243,7 @@ export const tripCostShares = (cost: TripCost): { component: TripCostComponent; 
     { component: 'fuel', amount: parseAmount(cost.fuel.subtotal) },
     { component: 'expenses', amount: parseAmount(cost.expenses.subtotal) },
     { component: 'emergencyExpenses', amount: parseAmount(cost.emergencyExpenses.subtotal) },
+    { component: 'bonus', amount: parseAmount(cost.bonus.subtotal) },
     { component: 'pilot', amount: parseAmount(cost.pilot.subtotal) },
     { component: 'vehicle', amount: parseAmount(cost.vehicle.subtotal) },
 ];
@@ -1242,6 +1260,7 @@ export const tripCostMissingInputs = (cost: TripCost): string[] => {
         ? "El viaje no tiene piloto asignado: no hay salario que prorratear."
         : "No hay salario vigente para el piloto: puede estar desvinculado de la empresa o no tener salario asignado.");
     if (cost.vehicle.monthlyInsuranceCost === null) holes.push("El viaje no tiene vehículo asignado: no hay seguro que prorratear.");
+    if (cost.bonus.amount === null) holes.push("El viaje se asignó antes de que existiera la bonificación: no hay dato y vale Q0.00.");
     if (cost.fuel.byType.some((type) => type.pricePerGallon === null)) holes.push("Hay combustible sin precio capturado para la fecha de su carga: sus galones cuentan, pero su importe vale Q0.00.");
 
     return holes;
@@ -1255,8 +1274,18 @@ export const tripCostMissingInputs = (cost: TripCost): string[] => {
 /** Todos menos el piloto, que recibe 403. */
 export const canDownloadTripsReport = (role?: string): boolean => can(role, 'downloadTripsReport');
 
-/** `carrier` y `user` reciben 22 columnas; el resto, además «Productos» y «Total de cajas». */
+/** «Productos» y «Total de cajas»: `administrator`, `manager`, `export` y `shipment`. */
 export const tripsReportIncludesProducts = (role?: string): boolean => can(role, 'readTripsReportProducts');
+
+/** «Bonificación (Q)», tras las 22 base y antes de los productos: todos menos `shipment`. */
+export const tripsReportIncludesBonus = (role?: string): boolean => can(role, 'readTripBonus');
+
+/**
+ * Cuántas columnas trae el Excel para el rol: 22 base + bonificación +
+ * productos y cajas según la matriz (25, 23 o 24).
+ */
+export const tripsReportColumnCount = (role?: string): number =>
+    22 + (tripsReportIncludesBonus(role) ? 1 : 0) + (tripsReportIncludesProducts(role) ? 2 : 0);
 
 /** Prefijo del 400 por tope: se muestra como aviso para acotar, no como fallo. */
 export const TRIPS_REPORT_TOO_LARGE_MESSAGE = "El reporte excede 5000 viajes";

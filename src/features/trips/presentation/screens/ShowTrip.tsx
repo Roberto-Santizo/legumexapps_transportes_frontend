@@ -27,6 +27,7 @@ import {
     canAssignTrip,
     canAssignTrips,
     canFinishTrip,
+    canReadTripBonus,
     canReadTripEmergencyExpenses,
     canReadTripExpenses,
     canReadTripFuels,
@@ -100,6 +101,8 @@ export function ShowTrip() {
     /** Gastos emergentes: mismos lectores que los viáticos; escriben el administrador y la empresa. */
     const canReadEmergencyExpenses = canReadTripEmergencyExpenses(role);
     const canWriteEmergencyExpenses = canWriteTripEmergencyExpenses(role, user?.carrierId);
+    /** A `shipment` la API le manda `null`: no se pinta. */
+    const canReadBonus = canReadTripBonus(role);
     /** Las paradas las ven los mismos que el rastro: todos menos el piloto. */
     const canReadTimeouts = canReadTripTimeouts(role);
     const canReadFinishedProducts = canReadTripFinishedProducts(role);
@@ -392,6 +395,15 @@ export function ShowTrip() {
                                                 <span className="font-mono text-[13px] tabular-nums">
                                                     {formatAmount(trip.totalEmergencyExpensesAmount ?? "0.00")}
                                                 </span>
+                                            </Field>
+                                        )}
+
+                                        {/* Un solo monto que fija la empresa al tomarlo. `null` no es cero: falta el dato. */}
+                                        {canReadBonus && (
+                                            <Field label="Bonificación">
+                                                {trip.bonus != null
+                                                    ? <span className="font-mono text-[13px] tabular-nums">{formatAmount(trip.bonus)}</span>
+                                                    : <span className="text-ink-subtle">Sin bonificación registrada</span>}
                                             </Field>
                                         )}
                                     </dl>
