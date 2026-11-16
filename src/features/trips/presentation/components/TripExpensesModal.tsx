@@ -24,6 +24,7 @@ import type { TripExpense, TripExpenseForm, TripSummary } from "@/features/trips
 import {
     TRIP_EXPENSE_FOREIGN_MESSAGE,
     TRIP_EXPENSE_MAX_AMOUNT,
+    TRIP_CANCELLED_MESSAGE,
     TRIP_FINISHED_MESSAGE,
     TRIP_FUEL_NO_CARRIER_MESSAGE,
     TRIP_TEXT_MAX_LENGTH,
@@ -138,7 +139,8 @@ function TripExpensesPanel({ trip, canRegister, onClose }: PanelProps) {
             const isBlocked = [
                 TRIP_EXPENSE_FOREIGN_MESSAGE,
                 TRIP_FUEL_NO_CARRIER_MESSAGE,
-                TRIP_FINISHED_MESSAGE
+                TRIP_FINISHED_MESSAGE,
+                TRIP_CANCELLED_MESSAGE
             ].some((blocking) => err.message.startsWith(blocking));
 
             if (isBlocked) {

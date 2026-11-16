@@ -19,6 +19,7 @@ import type { TripEmergencyExpense, TripEmergencyExpenseFormValues, TripSummary 
 import {
     TRIP_ALREADY_DELETED_MESSAGE,
     TRIP_EMERGENCY_EXPENSE_FOREIGN_MESSAGE,
+    TRIP_CANCELLED_MESSAGE,
     TRIP_EMERGENCY_EXPENSE_NOT_FOUND_MESSAGE,
     TRIP_EMERGENCY_EXPENSE_NOT_IN_ROUTE_MESSAGE,
     TRIP_EMERGENCY_EXPENSE_PENDING_MESSAGE,
@@ -58,6 +59,7 @@ const BLOCKING_MESSAGES = [
     TRIP_EMERGENCY_EXPENSE_PENDING_MESSAGE,
     TRIP_NOT_ASSIGNED_MESSAGE,
     TRIP_ALREADY_DELETED_MESSAGE,
+    TRIP_CANCELLED_MESSAGE,
 ];
 
 type Props = {
@@ -281,6 +283,7 @@ function TripEmergencyExpensesPanel({ trip, canWrite, onClose }: PanelProps) {
                     <p className="text-sm text-ink-muted">
                         {canWrite && editingId === null && trip.status === 'pending' && "Los gastos emergentes se registran cuando el viaje está en ruta."}
                         {canWrite && editingId === null && trip.status === 'finished' && "El viaje ya finalizó: no admite gastos nuevos, pero los registrados se pueden corregir o eliminar."}
+                        {canWrite && editingId === null && trip.status === 'cancelled' && "El viaje está cancelado: sus gastos se conservan, pero ya no admiten cambios."}
                     </p>
 
                     <button

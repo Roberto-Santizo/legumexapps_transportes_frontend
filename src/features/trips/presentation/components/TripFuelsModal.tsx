@@ -24,6 +24,7 @@
 
 import type { TripFuel, TripFuelForm, TripSummary } from "@/features/trips/trips";
 import {
+    TRIP_CANCELLED_MESSAGE,
     TRIP_FINISHED_MESSAGE,
     TRIP_FUEL_FOREIGN_MESSAGE,
     TRIP_FUEL_NO_CARRIER_MESSAGE,
@@ -143,7 +144,8 @@ function TripFuelsPanel({ trip, canRegister, onClose }: PanelProps) {
             const isBlocked = [
                 TRIP_FUEL_FOREIGN_MESSAGE,
                 TRIP_FUEL_NO_CARRIER_MESSAGE,
-                TRIP_FINISHED_MESSAGE
+                TRIP_FINISHED_MESSAGE,
+                TRIP_CANCELLED_MESSAGE
             ].some((blocking) => err.message.startsWith(blocking));
 
             if (isBlocked) {

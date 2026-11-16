@@ -19,6 +19,7 @@
 import {
     TRIP_ALREADY_DELETED_MESSAGE,
     TripAssignmentModal,
+    TripCancelDialog,
     TripDeleteDialog,
     TripEmergencyExpensesModal,
     TripExpensesModal,
@@ -31,7 +32,10 @@ import {
     TripsReportModal,
     canAssignTrip,
     canAssignTrips,
+    canCancelTrip,
+    canCancelTrips,
     canDownloadTripsReport,
+    canEditTrip,
     canFinishTrip,
     canReadTripCost,
     canReadTripEmergencyExpenses,
@@ -55,7 +59,7 @@ import {
     type TripListItem
 } from "@/features/trips/trips";
 import { ActionsMenu, CustomFilledButton, ErrorComponent, FadeInUp, Pagination, Table, Tbody, Td, Th, Thead, Title, Tr, useNotification, usePagination } from "@/features/shared/shared";
-import { Calculator, CircleCheckBig, Download, Eye, Fuel, Pencil, Play, Plus, Radar, Siren, Trash2, Truck, Wallet } from "lucide-react";
+import { Ban, Calculator, CircleCheckBig, Download, Eye, Fuel, Pencil, Play, Plus, Radar, Siren, Trash2, Truck, Wallet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -81,6 +85,8 @@ export function IndexTrips() {
     const role = user?.role;
 
     const canWrite = canWriteTrips(role);
+    /** Cancelar (SPEC 42): los mismos que publican, y solo sobre un viaje pendiente. */
+    const canCancel = canCancelTrips(role);
     const canAssign = canAssignTrips(role, user?.carrierId);
     const canRun = canRunTrips(role);
     const canTrack = canTrackTrips(role);
@@ -105,6 +111,8 @@ export function IndexTrips() {
 
     /** El viaje pendiente de confirmar el borrado, o `null` sin diálogo abierto. */
     const [tripToDelete, setTripToDelete] = useState<TripListItem | null>(null);
+    /** El viaje pendiente de confirmar la cancelación, o `null` sin diálogo abierto. */
+    const [tripToCancel, setTripToCancel] = useState<TripListItem | null>(null);
     /** El viaje que se está tomando, o `null` con el diálogo cerrado. */
     const [tripToAssign, setTripToAssign] = useState<TripListItem | null>(null);
     /** El viaje cuyas cargas de combustible se están mirando. */
@@ -146,6 +154,24 @@ export function IndexTrips() {
             if (err.message.startsWith(TRIP_ALREADY_DELETED_MESSAGE)) invalidateTrips();
 
             setTripToDelete(null);
+        }
+    });
+
+    /**
+     * Cancelar no lleva cuerpo. Un 400 (ya cancelado, ya no pendiente) delata
+     * una tabla obsoleta, así que se recarga también al fallar.
+     */
+    const { mutate: cancel, isPending: isCancelling } = useMutation({
+        mutationFn: (id: string) => tripProvider.cancelTripById(id),
+        onSuccess: (message) => {
+            notification.success(message);
+            invalidateTrips();
+            setTripToCancel(null);
+        },
+        onError: (err) => {
+            notification.error(err.message);
+            invalidateTrips();
+            setTripToCancel(null);
         }
     });
 
@@ -226,12 +252,20 @@ export function IndexTrips() {
             icon: <CircleCheckBig />,
             onClick: () => finish(trip.id.toString())
         }] : []),
+        /** Un cancelado es de solo lectura: el `PATCH` responde 400 aun con el cuerpo vacío. */
+        ...(canWrite && canEditTrip(trip) ? [{
+            label: "Editar",
+            icon: <Pencil />,
+            onClick: () => navigate(`/viajes/${trip.id}/editar`)
+        }] : []),
+        ...(canCancel && canCancelTrip(trip) ? [{
+            label: "Cancelar viaje",
+            icon: <Ban />,
+            onClick: () => setTripToCancel(trip),
+            danger: true
+        }] : []),
+        /** Eliminar sigue permitido sobre un cancelado: limpia un viaje creado por error. */
         ...(canWrite ? [
-            {
-                label: "Editar",
-                icon: <Pencil />,
-                onClick: () => navigate(`/viajes/${trip.id}/editar`)
-            },
             {
                 label: "Eliminar",
                 icon: <Trash2 />,
@@ -474,6 +508,13 @@ export function IndexTrips() {
                 isPending={isRemoving}
                 onClose={() => setTripToDelete(null)}
                 onConfirm={() => tripToDelete && remove(tripToDelete.id.toString())}
+            />
+
+            <TripCancelDialog
+                trip={tripToCancel}
+                isPending={isCancelling}
+                onClose={() => setTripToCancel(null)}
+                onConfirm={() => tripToCancel && cancel(tripToCancel.id.toString())}
             />
 
             <TripAssignmentModal

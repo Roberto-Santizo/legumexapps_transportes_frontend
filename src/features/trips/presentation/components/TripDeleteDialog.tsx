@@ -3,10 +3,9 @@
  * `/restore`, no hay `?trashed=true` y ningún endpoint vuelve a alcanzar la
  * fila. Recuperarla exige entrar a la base de datos.
  *
- * Y es, además, la **única salida** cuando un viaje se atasca: el
- * administrador no puede asignar, nadie puede desasignar, y un viaje que nadie
- * toma —o que tomó la empresa equivocada— no se arregla, se borra y se vuelve a
- * publicar. Por eso el diálogo lo dice en lugar de limitarse a preguntar
+ * Es para el viaje **creado por error**. El viaje real que no se hará se
+ * **cancela** (SPEC 42, `TripCancelDialog`): queda como registro en lugar de
+ * desaparecer. Por eso el diálogo lo dice en lugar de limitarse a preguntar
  * «¿seguro?».
  *
  * Hay que teclear la orden para confirmar. La orden **no es única**, así que no
@@ -98,8 +97,8 @@ function TripDeleteConfirmation({ trip, isPending, onClose, onConfirm }: Confirm
                 )}
 
                 <p className="text-sm text-ink-muted">
-                    Si lo que quieres es volver a publicarlo, tendrás que capturarlo de
-                    nuevo: borrar es la única forma de devolver un viaje a la bolsa.
+                    Elimina solo un viaje creado por error. Si el viaje era real y no se
+                    hará, cancélalo: se conserva como registro.
                 </p>
             </div>
 
