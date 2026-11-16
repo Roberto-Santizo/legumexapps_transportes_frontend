@@ -43,6 +43,8 @@ export const PERMISSIONS = {
     /* Viajes */
     readTrips: ALL,
     manageTrips: ['administrator', 'export'],
+    /** `PATCH /trips/{trip}/cancel` (SPEC 42): solo desde `pending` e irreversible. */
+    cancelTrip: ['administrator', 'export'],
     /** `GET /api/reports/trips`: mismo ámbito que el listado. El piloto recibe 403. */
     downloadTripsReport: except('pilot'),
     /** Las columnas «Productos» y «Total de cajas» del Excel: su propia matriz, no la de `trip-finished-products`. */
