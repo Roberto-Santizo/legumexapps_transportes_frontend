@@ -18,7 +18,7 @@
  */
 
 import { can, type Option } from "@/features/shared/shared";
-import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripEmergencyExpense, TripEmergencyExpenseForm, TripEmergencyExpenseFormValues, TripEmergencyExpenseUpdateForm, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
+import type { LatLng, Trip, TripAssignmentForm, TripEditableStatus, TripCost, TripAssignmentFormValues, TripEmergencyExpense, TripEmergencyExpenseForm, TripEmergencyExpenseFormValues, TripEmergencyExpenseUpdateForm, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 import { formatDistanceKilometers, formatDurationHours } from "@/features/places/places";
 import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
 import { TRIP_CLIENT_LOCKED_MESSAGE, buildTripProductLines } from "@/features/trip-finished-products/trip-finished-products";
@@ -41,11 +41,23 @@ export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
     pending: "Pendiente",
     in_route: "En ruta",
     finished: "Finalizado",
+    cancelled: "Cancelado",
 };
 
-/** Para el `select` de estado del filtro y de la edición. */
+/** Para el `select` de estado del filtro y del reporte: los cuatro, `cancelled` incluido. */
 export const TRIP_STATUSES: Option[] = (Object.keys(TRIP_STATUS_LABELS) as TripStatus[])
     .map((value) => ({ value, label: TRIP_STATUS_LABELS[value] }));
+
+/**
+ * Para el `select` de la edición: sin `cancelled`, que en el `PATCH` general es
+ * 422 —solo se cancela con `/cancel`—.
+ */
+export const TRIP_EDITABLE_STATUSES: Option[] = TRIP_STATUSES.filter(
+    (option): boolean => option.value !== 'cancelled'
+);
+
+/** Estrecha el estado a uno que el `PATCH` general acepta. */
+export const isTripEditableStatus = (status: TripStatus): status is TripEditableStatus => status !== 'cancelled';
 
 /** Publicar, editar y dar de baja: `administrator` y `export`. Los siete roles leen (con su ámbito). */
 export const canWriteTrips = (role?: string): boolean => can(role, 'manageTrips');

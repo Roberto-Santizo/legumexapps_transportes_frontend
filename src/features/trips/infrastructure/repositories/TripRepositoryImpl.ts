@@ -38,6 +38,10 @@ export class TripRepositoryImpl extends TripRepository {
         return this.datasource.finishTripById(id);
     }
 
+    cancelTripById(id: string): Promise<string> {
+        return this.datasource.cancelTripById(id);
+    }
+
     getTripPositions(id: string): Promise<TripPosition[]> {
         return this.datasource.getTripPositions(id);
     }

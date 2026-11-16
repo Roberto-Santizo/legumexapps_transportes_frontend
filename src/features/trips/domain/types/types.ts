@@ -1,4 +1,4 @@
-import type { FuelTypeSchema, PaginatedTripsSchema, TripCostFuelTypeSchema, TripCostSchema, TripEmergencyExpenseSchema, TripEmergencyExpensesSchema, TripExpenseSchema, TripExpensesSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
+import type { FuelTypeSchema, PaginatedTripsSchema, TripCostFuelTypeSchema, TripCostSchema, TripEmergencyExpenseSchema, TripEmergencyExpensesSchema, TripExpenseSchema, TripExpensesSchema, TripFuelSchema, TripFuelsSchema, TripListItemSchema, TripPositionEventSchema, TripPositionSchema, TripSchema, TripEditableStatusSchema, TripStatusSchema, TripTimeoutSchema } from "@/features/trips/trips";
 import type { TripProductLine, TripProductLineValues } from "@/features/trip-finished-products/trip-finished-products";
 import type { z } from "zod";
 
@@ -18,6 +18,8 @@ export type TripListItem = z.infer<typeof TripListItemSchema>;
 export type TripSummary = TripListItem & Partial<Omit<Trip, keyof TripListItem>>;
 /** Cadena cruda del enum, en inglés: se traduce solo al pintarla. */
 export type TripStatus = z.infer<typeof TripStatusSchema>;
+/** Lo que acepta el `PATCH` general: todos menos `cancelled`, que ahí es 422 (SPEC 42). */
+export type TripEditableStatus = z.infer<typeof TripEditableStatusSchema>;
 
 /** Par `[latitud, longitud]`, en ese orden. */
 export type LatLng = [number, number];
@@ -93,7 +95,7 @@ export type TripForm = TripRouteForm & {
  */
 export type TripUpdateForm = Partial<Omit<TripForm, keyof TripRouteForm | 'products'>>
     & (TripRouteForm | { polyline?: never; estimatedKilometers?: never; estimatedHours?: never })
-    & { status?: TripStatus };
+    & { status?: TripEditableStatus };
 
 /**
  * El estado del formulario de alta y edición, que **no es el payload**: la
@@ -104,7 +106,7 @@ export type TripUpdateForm = Partial<Omit<TripForm, keyof TripRouteForm | 'produ
  * `status` solo se pinta al editar.
  */
 export type TripFormValues = Omit<TripForm, keyof TripRouteForm | 'products'> & Partial<TripRouteForm> & {
-    status?: TripStatus;
+    status?: TripEditableStatus;
     /** Solo en el alta: las líneas del viaje ya creado se editan desde el detalle. */
     products?: TripProductLineValues[];
 }

@@ -7,6 +7,7 @@ import {
     canWriteTrips,
     getTripFieldErrors,
     hasTripEstimates,
+    isTripEditableStatus,
     parseTripEstimate,
     toInputDateTime,
     tripProvider,
@@ -83,7 +84,7 @@ export function UpdateTrip() {
         setValue('recolectionDate', toInputDateTime(trip.recolectionDate));
         setValue('shipDate', toInputDateTime(trip.shipDate));
         setValue('observations', trip.observations);
-        setValue('status', trip.status);
+        if (isTripEditableStatus(trip.status)) setValue('status', trip.status);
 
         const kilometers = parseTripEstimate(trip.estimatedKilometers);
         const hours = parseTripEstimate(trip.estimatedHours);

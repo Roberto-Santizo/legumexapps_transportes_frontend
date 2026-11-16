@@ -37,6 +37,10 @@ export class TripProvider {
         return this.repository.finishTripById(id);
     }
 
+    cancelTripById(id: string) {
+        return this.repository.cancelTripById(id);
+    }
+
     getTripPositions(id: string) {
         return this.repository.getTripPositions(id);
     }

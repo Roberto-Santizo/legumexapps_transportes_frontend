@@ -16,6 +16,7 @@ export abstract class TripRepository {
     abstract assignTripById(id: string, payload: TripAssignmentForm): Promise<string>;
     abstract startTripById(id: string): Promise<string>;
     abstract finishTripById(id: string): Promise<string>;
+    abstract cancelTripById(id: string): Promise<string>;
     abstract getTripPositions(id: string): Promise<TripPosition[]>;
     abstract getTripFuels(id: string): Promise<TripFuels>;
     abstract createTripFuel(id: string, payload: TripFuelForm): Promise<string>;

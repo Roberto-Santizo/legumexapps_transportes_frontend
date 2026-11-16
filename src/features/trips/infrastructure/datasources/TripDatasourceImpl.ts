@@ -225,6 +225,32 @@ export class TripDatasourceImpl extends TripDatasource {
     }
 
     /**
+     * Cancelar (SPEC 42). Sin cuerpo: `cancelledAt` la pone el servidor y
+     * `cancelledByName` sale del token. Solo `administrator` y `export`, y solo
+     * desde `pending` —libre o asignado—; `in_route` o `finished` son 400.
+     *
+     * **Irreversible** y no es un borrado: el viaje sigue visible con su
+     * tripulación, cargas y viáticos, pero desde aquí toda escritura responde
+     * 400 «El viaje está cancelado». No vuelve a la bolsa.
+     */
+    async cancelTripById(id: string): Promise<string> {
+        try {
+            const { data } = await this.api.patch(`${this.url}/${id}/cancel`);
+            const response = ApiResponseSchema.safeParse(data);
+
+            if (response.success) {
+                return response.data.message;
+            }
+
+            throw new Error("Información no válida");
+        } catch (error) {
+            if (isAxiosError(error)) throw new Error(getTripErrorMessage(error), { cause: error });
+
+            throw new Error("Error no controlado.", { cause: error });
+        }
+    }
+
+    /**
      * El recorrido **real** del viaje, que no es la `polyline`: esa es la ruta
      * prevista y no se recalcula nunca. Aquí están los puntos que fue
      * reportando el piloto.
