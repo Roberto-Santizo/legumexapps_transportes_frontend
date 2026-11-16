@@ -15,8 +15,8 @@ type Tile = {
 };
 
 /**
- * Los cinco contadores de `/dashboard/trips`. `total` es la suma de las tres
- * claves de `byStatus`; `unassigned` es la bolsa libre —`pending` sin piloto
+ * Los seis contadores de `/dashboard/trips`. `total` es la suma de las cuatro
+ * claves de `byStatus` —cancelados incluidos (SPEC 42)—; `unassigned` es la bolsa libre —`pending` sin piloto
  * ni vehículo— y con una empresa seleccionada es siempre 0.
  */
 export function TripsKpiStrip({ summary, isLoading, error, onRetry }: Props) {
@@ -28,14 +28,15 @@ export function TripsKpiStrip({ summary, isLoading, error, onRetry }: Props) {
             { label: "Pendientes", value: summary.byStatus.pending, detail: `${percentOf(summary.byStatus.pending, summary.total)} % del periodo` },
             { label: "En ruta", value: summary.byStatus.inRoute, detail: `${percentOf(summary.byStatus.inRoute, summary.total)} % del periodo` },
             { label: "Finalizados", value: summary.byStatus.finished, detail: `${percentOf(summary.byStatus.finished, summary.total)} % del periodo` },
+            { label: "Cancelados", value: summary.byStatus.cancelled, detail: `${percentOf(summary.byStatus.cancelled, summary.total)} % del periodo` },
             { label: "Sin asignar", value: summary.unassigned, detail: "Pendientes sin piloto ni unidad", accent: summary.unassigned > 0 },
         ]
         : [];
 
     return (
-        <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 xl:grid-cols-5">
+        <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {isLoading && !summary
-                ? Array.from({ length: 5 }, (_, index) => (
+                ? Array.from({ length: 6 }, (_, index) => (
                     <div key={index} className="bg-surface px-6 py-5" aria-busy>
                         <div className="h-3 w-24 animate-pulse rounded-full bg-line" />
                         <div className="mt-4 h-8 w-16 animate-pulse rounded-lg bg-line" />

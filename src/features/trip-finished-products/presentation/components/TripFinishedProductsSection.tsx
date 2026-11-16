@@ -155,7 +155,9 @@ export function TripFinishedProductsSection({ tripId, clientId, tripStatus }: Pr
 
                     {!isTripFinishedProductsEditable(tripStatus) && (
                         <p className="text-xs text-ink-subtle">
-                            Los productos solo se modifican mientras el viaje está pendiente.
+                            {tripStatus === 'cancelled'
+                                ? "El viaje está cancelado: sus productos se conservan, pero ya no se modifican."
+                                : "Los productos solo se modifican mientras el viaje está pendiente."}
                         </p>
                     )}
                 </>

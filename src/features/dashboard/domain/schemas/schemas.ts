@@ -14,13 +14,16 @@ import { z } from "zod";
 const CountedRowSchema = z.object({ total: z.number() });
 
 /**
- * `byStatus` trae **siempre** las tres claves, a `0` sin filas, y en camelCase
- * (`inRoute`), no el valor crudo del enum. `total` es la suma de las tres.
+ * `byStatus` trae **siempre** las cuatro claves, a `0` sin filas, y en camelCase
+ * (`inRoute`), no el valor crudo del enum. `total` es la suma de las cuatro:
+ * los cancelados (SPEC 42) siguen contando en el total y en todos los
+ * desgloses. `cancelled` lleva `default` para un backend anterior que no la manda.
  */
 export const TripsByStatusSchema = z.object({
     pending: z.number(),
     inRoute: z.number(),
     finished: z.number(),
+    cancelled: z.number().default(0),
 });
 
 /**

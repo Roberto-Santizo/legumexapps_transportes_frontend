@@ -54,7 +54,7 @@ export const canReadTripFinishedProducts = (role?: string): boolean => can(role,
 /** Agregar, editar cajas y quitar líneas es de `administrator` y `export`: los que publican viajes. */
 export const canWriteTripFinishedProducts = (role?: string): boolean => can(role, 'manageTrips');
 
-/** En `in_route` o `finished` las tres escrituras responden 400: modo solo lectura. */
+/** En `in_route`, `finished` o `cancelled` (SPEC 42) las tres escrituras responden 400: modo solo lectura. */
 export const isTripFinishedProductsEditable = (status: string): boolean => status === 'pending';
 
 /* ------------------------------------------------------------------ *
