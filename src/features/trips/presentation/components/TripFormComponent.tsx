@@ -1,5 +1,6 @@
 /**
- * Los catorce campos del viaje —más sus productos terminados, en el alta—,
+ * Los catorce campos del viaje —más sus productos terminados, el booking y la
+ * referencia, en el alta—,
  * agrupados como se dicta un viaje por teléfono: qué carga es y de quién,
  * cuándo sale, por dónde va y qué hay que saber al llevarla.
  *
@@ -85,6 +86,23 @@ const CONTAINER_VALIDATION = {
     }
 } as const;
 
+/** SPEC 41: sin booking el `POST` es 422. No se valida contra la naviera: cualquier texto vale. */
+const BOOKING_VALIDATION = {
+    validate: (value: unknown) => String(value ?? '').trim() !== '' || "El booking es obligatorio",
+    maxLength: {
+        value: TRIP_TEXT_MAX_LENGTH,
+        message: `El booking no puede superar los ${TRIP_TEXT_MAX_LENGTH} caracteres`
+    }
+} as const;
+
+/** SPEC 41: opcional. Vacía o en blanco se guarda `null`. */
+const REFERENCE_VALIDATION = {
+    maxLength: {
+        value: TRIP_TEXT_MAX_LENGTH,
+        message: `La referencia no puede superar los ${TRIP_TEXT_MAX_LENGTH} caracteres`
+    }
+} as const;
+
 function Fieldset({ legend, hint, children }: { legend: string; hint: string; children: React.ReactNode }) {
     return (
         <fieldset className="flex flex-col gap-4">
@@ -151,7 +169,9 @@ export function TripFormComponent({
         <>
             <Fieldset
                 legend="La carga"
-                hint="La orden y el contenedor se guardan en mayúsculas. Ninguno de los dos es único: dos viajes pueden compartirlos."
+                hint={isUpdate
+                    ? "La orden y el contenedor se guardan en mayúsculas. Ninguno de los dos es único: dos viajes pueden compartirlos."
+                    : "La orden, el contenedor, el booking y la referencia se guardan en mayúsculas. Ninguno es único: un mismo booking puede cubrir varios viajes."}
             >
                 {enablePackingListLookup && (
                     <>
@@ -214,6 +234,31 @@ export function TripFormComponent({
                             register={register}
                             errorMessage={errors.container?.message}
                             validation={CONTAINER_VALIDATION}
+                        />
+                    </div>
+                )}
+
+                {/* SPEC 41, solo en el alta: la edición de booking y referencia aún no está en el `PATCH` del front. */}
+                {!isUpdate && (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <TextFormField<TripFormValues>
+                            label="Booking"
+                            name="booking"
+                            type="text"
+                            placeholder="BK-2026 001"
+                            register={register}
+                            errorMessage={errors.booking?.message}
+                            validation={BOOKING_VALIDATION}
+                        />
+
+                        <TextFormField<TripFormValues>
+                            label="Referencia (opcional)"
+                            name="reference"
+                            type="text"
+                            placeholder="REF-ACME 77"
+                            register={register}
+                            errorMessage={errors.reference?.message}
+                            validation={REFERENCE_VALIDATION}
                         />
                     </div>
                 )}
