@@ -62,7 +62,7 @@ export function CreateClient() {
         <div className="flex flex-col gap-8">
             <ClientPageHeader
                 title="Agregar cliente"
-                subtitle="Dos datos y nada más: el código con el que ya se factura al cliente y su razón social."
+                subtitle="Dos datos y nada más: el código con el que ya se factura al cliente y su nombre."
             />
 
             {!canWrite && (

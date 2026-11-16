@@ -287,7 +287,7 @@ export function TripFormComponent({
 
             <Fieldset
                 legend="Las fechas"
-                hint="Lo planificado. El arranque y el cierre reales los pone el servidor cuando el piloto los marca."
+                hint="Fechas según lo planificado"
             >
                 <div className="grid gap-4 sm:grid-cols-2">
                     <TextFormField<TripFormValues>
@@ -306,7 +306,7 @@ export function TripFormComponent({
                     />
 
                     <TextFormField<TripFormValues>
-                        label="Embarque"
+                        label="Carga a Barco"
                         name="shipDate"
                         type="datetime-local"
                         placeholder=""
