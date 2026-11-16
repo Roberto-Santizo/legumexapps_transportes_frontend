@@ -15,8 +15,9 @@ import { can, type Option } from "@/features/shared/shared";
 import { isAxiosError } from "axios";
 
 /**
- * `administrator`, `manager`, `export` y `carrier` (este acotado a su empresa:
- * el filtro `carrierId` se le ignora). `pilot`, `user` y `shipment` reciben 403.
+ * `administrator`, `export` y `carrier` (este acotado a su empresa: el filtro
+ * `carrierId` se le ignora). `pilot`, `user` y `shipment` reciben 403; `manager`
+ * tiene acceso en la API, pero el front no le muestra el tablero.
  */
 export const canReadDashboard = (role?: string): boolean => can(role, 'dashboard');
 

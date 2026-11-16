@@ -89,7 +89,8 @@ export const PERMISSIONS = {
     readCarriers: ['administrator', 'manager'],
 
     /* Tablero y asistente */
-    dashboard: ['administrator', 'manager', 'carrier', 'export'],
+    /** La API también deja pasar a `manager`; el front se lo oculta y lo manda a `/viajes`. */
+    dashboard: ['administrator', 'carrier', 'export'],
     assistant: ['administrator', 'manager', 'carrier', 'export'],
 } satisfies Record<string, readonly UserRole[]>;
 
