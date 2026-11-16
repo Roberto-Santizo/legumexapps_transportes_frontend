@@ -193,7 +193,7 @@ export function TripFormComponent({
                         />
 
                         <TextFormField<TripFormValues>
-                            label="Referencia (opcional)"
+                            label="Referencia/PO#"
                             name="reference"
                             type="text"
                             placeholder="REF-ACME 77"
