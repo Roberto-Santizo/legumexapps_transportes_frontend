@@ -53,6 +53,13 @@ export const TripSchema = z.object({
     destination: z.string(),
     /** MAYÚSCULAS con espacios colapsados, como `order`. **Tampoco es único.** */
     container: z.string(),
+    /**
+     * Booking de la naviera (SPEC 41). MAYÚSCULAS con espacios colapsados, no
+     * es único. `null` solo en viajes creados antes de la spec (sin backfill).
+     */
+    booking: z.string().nullable().default(null),
+    /** Referencia comercial opcional (SPEC 41). `null` = sin referencia; nunca `""`. */
+    reference: z.string().nullable().default(null),
     /** Medio de transporte, descriptivo. No tiene relación con el `vehicleId` asignado. */
     transport: z.string(),
     /** Lo planificado. Formato `d-m-Y h:i:s A`. */
@@ -240,6 +247,9 @@ export const TripListItemSchema = z.object({
     locationName: z.string().nullable(),
     /** MAYÚSCULAS con espacios colapsados, como `order`. **Tampoco es único.** */
     container: z.string(),
+    /** SPEC 41: mismo valor y mismo `null` que en el detalle, justo después del contenedor. */
+    booking: z.string().nullable().default(null),
+    reference: z.string().nullable().default(null),
     /** Lo planificado. Formato `d-m-Y h:i:s A`. */
     recolectionDate: z.string(),
     shipDate: z.string(),
