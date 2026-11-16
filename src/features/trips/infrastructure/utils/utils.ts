@@ -390,7 +390,7 @@ const appendTripFilters = (query: URLSearchParams, filters?: TripFilters): URLSe
  * **número** y sin convertir —kilómetros y horas decimales, tal como las dio
  * `/directions`—: la API las guarda con dos decimales y no las coteja.
  */
-const buildTripBasePayload = (form: TripFormValues): Omit<TripForm, 'products'> => ({
+const buildTripBasePayload = (form: TripFormValues): Omit<TripForm, 'products' | 'booking' | 'reference'> => ({
     order: form.order.trim(),
     clientId: Number(form.clientId),
     shippingLineId: Number(form.shippingLineId),
@@ -408,13 +408,22 @@ const buildTripBasePayload = (form: TripFormValues): Omit<TripForm, 'products'> 
 });
 
 /**
- * El alta lleva además las líneas de producto terminado (SPEC 37): sin
- * `products` todo `POST /api/trips` es 422.
+ * El alta lleva además las líneas de producto terminado (SPEC 37) y el
+ * booking (SPEC 41): sin cualquiera de los dos todo `POST /api/trips` es 422.
+ *
+ * La referencia es opcional y **no se manda vacía**: la API guardaría `null`
+ * igual, pero omitirla deja el cuerpo limpio.
  */
-export const buildTripPayload = (form: TripFormValues): TripForm => ({
-    ...buildTripBasePayload(form),
-    products: buildTripProductLines(form.products),
-});
+export const buildTripPayload = (form: TripFormValues): TripForm => {
+    const reference = form.reference?.trim();
+
+    return {
+        ...buildTripBasePayload(form),
+        booking: form.booking.trim(),
+        ...(reference ? { reference } : {}),
+        products: buildTripProductLines(form.products),
+    };
+};
 
 /**
  * El cuerpo de la edición. Se mandan **los quince campos siempre**, y es
@@ -587,6 +596,8 @@ const TRIP_FIELDS: readonly TripField[] = [
     'locationId',
     'destination',
     'container',
+    'booking',
+    'reference',
     'transport',
     'recolectionDate',
     'shipDate',

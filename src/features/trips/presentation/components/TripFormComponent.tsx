@@ -1,5 +1,6 @@
 /**
- * Los catorce campos del viaje —más sus productos terminados, en el alta—,
+ * Los catorce campos del viaje —más sus productos terminados, el booking y la
+ * referencia, en el alta—,
  * agrupados como se dicta un viaje por teléfono: qué carga es y de quién,
  * cuándo sale, por dónde va y qué hay que saber al llevarla.
  *
@@ -17,7 +18,7 @@
  *   cuando las dos fechas viajan en el mismo cuerpo.
  */
 
-import { Controller, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
+import { useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from "react-hook-form";
 import type { TripFormValues } from "@/features/trips/trips";
 import {
     TRIP_CATALOG_LIMIT,
@@ -29,7 +30,6 @@ import {
     nowForInput
 } from "@/features/trips/trips";
 import { SelectFormField, TextAreaFormField, TextFormField } from "@/features/shared/shared";
-import { PackingListSummaryField } from "@/features/packing-lists/packing-lists";
 import { clientProvider } from "@/features/clients/clients";
 import { departurePointProvider } from "@/features/departure-points/departure-points";
 import { locationProvider } from "@/features/locations/locations";
@@ -48,15 +48,6 @@ type Props = {
      */
     isUpdate?: boolean;
     /**
-     * Cambia el campo de la orden por el buscador de packing list, que rellena
-     * el contenedor y el destino final. Solo en el alta: en la edición el viaje
-     * ya tiene esos tres campos decididos y volver a buscar la orden los
-     * pisaría sin que nadie lo haya pedido.
-     */
-    enablePackingListLookup?: boolean;
-    /** Los fallos del buscador no tienen campo al que anclarse: los avisa la pantalla. */
-    onError?: (message: string) => void;
-    /**
      * El viaje ya tiene productos terminados: cambiarle el cliente es 400. El
      * cliente se muestra fijo y se reenvía el mismo, que no cuenta como cambio.
      */
@@ -65,10 +56,6 @@ type Props = {
     lockedClientName?: string | null;
 }
 
-/**
- * La orden y el contenedor se validan igual se tecleen a mano o los traiga el
- * packing list, así que las reglas viven fuera del marcado y no se duplican.
- */
 const ORDER_VALIDATION = {
     required: "La orden es obligatoria",
     maxLength: {
@@ -82,6 +69,23 @@ const CONTAINER_VALIDATION = {
     maxLength: {
         value: TRIP_TEXT_MAX_LENGTH,
         message: `El contenedor no puede superar los ${TRIP_TEXT_MAX_LENGTH} caracteres`
+    }
+} as const;
+
+/** SPEC 41: sin booking el `POST` es 422. No se valida contra la naviera: cualquier texto vale. */
+const BOOKING_VALIDATION = {
+    validate: (value: unknown) => String(value ?? '').trim() !== '' || "El booking es obligatorio",
+    maxLength: {
+        value: TRIP_TEXT_MAX_LENGTH,
+        message: `El booking no puede superar los ${TRIP_TEXT_MAX_LENGTH} caracteres`
+    }
+} as const;
+
+/** SPEC 41: opcional. Vacía o en blanco se guarda `null`. */
+const REFERENCE_VALIDATION = {
+    maxLength: {
+        value: TRIP_TEXT_MAX_LENGTH,
+        message: `La referencia no puede superar los ${TRIP_TEXT_MAX_LENGTH} caracteres`
     }
 } as const;
 
@@ -107,8 +111,6 @@ export function TripFormComponent({
     errors,
     setValue,
     isUpdate = false,
-    enablePackingListLookup = false,
-    onError,
     lockClient = false,
     lockedClientName
 }: Props) {
@@ -151,69 +153,53 @@ export function TripFormComponent({
         <>
             <Fieldset
                 legend="La carga"
-                hint="La orden y el contenedor se guardan en mayúsculas. Ninguno de los dos es único: dos viajes pueden compartirlos."
+                hint={isUpdate
+                    ? "La orden y el contenedor se guardan en mayúsculas. Ninguno de los dos es único: dos viajes pueden compartirlos."
+                    : "La orden, el contenedor, el booking y la referencia se guardan en mayúsculas. Ninguno es único: un mismo booking puede cubrir varios viajes."}
             >
-                {enablePackingListLookup && (
-                    <>
-                        {/* El buscador es el campo de la orden, no un extra al lado. */}
-                        <Controller
-                            control={control}
-                            name="order"
-                            rules={ORDER_VALIDATION}
-                            render={({ field }) => (
-                                <PackingListSummaryField
-                                    order={field.value ?? ''}
-                                    onOrderChange={field.onChange}
-                                    onSummaryFound={(summary) => {
-                                        /* La orden que vale es la guardada, no la tecleada. */
-                                        field.onChange(summary.order);
-                                        setValue('container', summary.container, { shouldDirty: true, shouldValidate: true });
-                                        setValue('destination', summary.destination, { shouldDirty: true, shouldValidate: true });
-                                    }}
-                                    onError={onError}
-                                    errorMessage={errors.order?.message}
-                                />
-                            )}
-                        />
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <TextFormField<TripFormValues>
+                        label="Orden"
+                        name="order"
+                        type="text"
+                        placeholder="ORD-2026 0148"
+                        register={register}
+                        errorMessage={errors.order?.message}
+                        validation={ORDER_VALIDATION}
+                    />
 
-                        <div className="flex flex-col gap-2">
-                            <TextFormField<TripFormValues>
-                                label="Contenedor"
-                                name="container"
-                                type="text"
-                                placeholder="MSKU 483920 1"
-                                register={register}
-                                errorMessage={errors.container?.message}
-                                validation={CONTAINER_VALIDATION}
-                            />
+                    <TextFormField<TripFormValues>
+                        label="Contenedor"
+                        name="container"
+                        type="text"
+                        placeholder="MSKU 483920 1"
+                        register={register}
+                        errorMessage={errors.container?.message}
+                        validation={CONTAINER_VALIDATION}
+                    />
+                </div>
 
-                            <p className="text-xs text-ink-muted">
-                                Se rellena al buscar la orden. Puedes corregirlo.
-                            </p>
-                        </div>
-                    </>
-                )}
-
-                {!enablePackingListLookup && (
+                {/* SPEC 41, solo en el alta: la edición de booking y referencia aún no está en el `PATCH` del front. */}
+                {!isUpdate && (
                     <div className="grid gap-4 sm:grid-cols-2">
                         <TextFormField<TripFormValues>
-                            label="Orden"
-                            name="order"
+                            label="Booking"
+                            name="booking"
                             type="text"
-                            placeholder="ORD-2026 0148"
+                            placeholder="BK-2026 001"
                             register={register}
-                            errorMessage={errors.order?.message}
-                            validation={ORDER_VALIDATION}
+                            errorMessage={errors.booking?.message}
+                            validation={BOOKING_VALIDATION}
                         />
 
                         <TextFormField<TripFormValues>
-                            label="Contenedor"
-                            name="container"
+                            label="Referencia/PO#"
+                            name="reference"
                             type="text"
-                            placeholder="MSKU 483920 1"
+                            placeholder="REF-ACME 77"
                             register={register}
-                            errorMessage={errors.container?.message}
-                            validation={CONTAINER_VALIDATION}
+                            errorMessage={errors.reference?.message}
+                            validation={REFERENCE_VALIDATION}
                         />
                     </div>
                 )}
@@ -394,13 +380,6 @@ export function TripFormComponent({
                         }
                     }}
                 />
-
-                {/* El destino se rellena arriba, en otro fieldset: conviene decirlo. */}
-                {enablePackingListLookup && (
-                    <p className="text-xs text-ink-muted">
-                        Se rellena al buscar la orden, con el destino del CTPAT. Puedes corregirlo.
-                    </p>
-                )}
             </Fieldset>
 
             <Fieldset
