@@ -905,6 +905,26 @@ export const getTripFuelFieldErrors = (error: unknown): TripFuelFieldError[] => 
 export const TRIP_EXPENSE_MAX_AMOUNT = 99999999.99;
 
 /**
+ * Conceptos de un viático. La API no tiene categorías —`description` es texto
+ * libre—, así que el catálogo vive en el front y viaja como `description`: el
+ * `value` es la propia etiqueta, la que se guarda y se vuelve a pintar. El
+ * combustible no está porque tiene su propio dominio (cargas), ni las averías,
+ * que son gastos de emergencia.
+ */
+export const TRIP_EXPENSE_CONCEPTS: Option[] = [
+    'Alimentación',
+    'Hospedaje',
+    'Peaje',
+    'Estacionamiento',
+    'Pesaje en báscula',
+    'Trámites aduanales',
+    'Pasaje de regreso',
+    'Comunicación (saldo telefónico)',
+    'Lavado de la unidad',
+    'Otros gastos de ruta',
+].map((concept) => ({ value: concept, label: concept }));
+
+/**
  * Registrar viáticos: la misma regla que las cargas —`administrator` y
  * `carrier` con empresa—. Confirmarlos es solo del piloto asignado.
  */

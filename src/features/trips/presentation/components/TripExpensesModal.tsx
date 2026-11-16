@@ -26,8 +26,8 @@ import {
     TRIP_EXPENSE_MAX_AMOUNT,
     TRIP_CANCELLED_MESSAGE,
     TRIP_FINISHED_MESSAGE,
+    TRIP_EXPENSE_CONCEPTS,
     TRIP_FUEL_NO_CARRIER_MESSAGE,
-    TRIP_TEXT_MAX_LENGTH,
     TripContainer,
     TripMoment,
     TripOrder,
@@ -38,7 +38,7 @@ import {
     sumPendingAmount,
     tripProvider
 } from "@/features/trips/trips";
-import { Modal, SpinnerComponent, TextAreaFormField, TextFormField, useNotification } from "@/features/shared/shared";
+import { Modal, SelectFormField, SpinnerComponent, TextFormField, useNotification } from "@/features/shared/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
@@ -99,6 +99,7 @@ function TripExpensesPanel({ trip, canRegister, onClose }: PanelProps) {
 
     const {
         register,
+        control,
         handleSubmit,
         reset,
         setError,
@@ -113,7 +114,7 @@ function TripExpensesPanel({ trip, canRegister, onClose }: PanelProps) {
             queryClient.invalidateQueries({ queryKey: ['getTripExpenses', tripId] });
             queryClient.invalidateQueries({ queryKey: ['getTripById', tripId] });
             setPendingExpense(null);
-            reset({ amount: undefined, description: '' });
+            reset({ amount: undefined, description: null });
         },
         /**
          * Tres fallos no son del formulario y cierran el diálogo, porque
@@ -284,19 +285,14 @@ function TripExpensesPanel({ trip, canRegister, onClose }: PanelProps) {
                                     }}
                                 />
 
-                                <TextAreaFormField<TripExpenseForm>
-                                    label="Descripción (opcional)"
+                                {/* El concepto viaja como `description`: la API no tiene categorías. */}
+                                <SelectFormField<TripExpenseForm>
+                                    label="Concepto"
                                     name="description"
-                                    placeholder="Alimentación y peajes"
-                                    rows={2}
-                                    register={register}
+                                    options={TRIP_EXPENSE_CONCEPTS}
+                                    control={control}
                                     errorMessage={errors.description?.message}
-                                    validation={{
-                                        maxLength: {
-                                            value: TRIP_TEXT_MAX_LENGTH,
-                                            message: `La descripción no puede superar los ${TRIP_TEXT_MAX_LENGTH} caracteres`
-                                        }
-                                    }}
+                                    validation={{ required: "Elige el concepto del viático" }}
                                 />
                             </div>
 
