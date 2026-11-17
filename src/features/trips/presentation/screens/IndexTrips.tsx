@@ -297,6 +297,13 @@ export function IndexTrips() {
                                 <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-subtle">
                                     {trip.container}
                                 </span>
+
+                                {/* SPEC 43: `null` es «sin OV», legítimo; no se pinta nada. */}
+                                {trip.ov && (
+                                    <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted">
+                                        OV {trip.ov}
+                                    </span>
+                                )}
                             </div>
                         </Td>
 

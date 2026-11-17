@@ -43,8 +43,8 @@ export type TripRouteForm = {
 }
 
 /**
- * Los diecisiete campos del alta: dieciséis obligatorios y `reference`
- * opcional (catorce hasta SPEC 37 y quince hasta SPEC 41: un `POST` sin
+ * Los dieciocho campos del alta: dieciséis obligatorios y dos opcionales,
+ * `reference` y `ov` (catorce hasta SPEC 37 y quince hasta SPEC 41: un `POST` sin
  * `products` o sin `booking` es 422). Otras cinco claves —`status`, `pilotId`,
  * `vehicleId`, `assignedBy` y `registeredBy`— se descartan en el servidor sin
  * error: el viaje nace `pending`, sin tripulación y con el autor sacado del
@@ -71,6 +71,12 @@ export type TripForm = TripRouteForm & {
      * `null` se guarda `null`.
      */
     reference?: string | null;
+    /**
+     * SPEC 43: orden de venta opcional, máx 255, misma normalización que
+     * `reference`. Vacía, en blanco o `null` se guarda `null`; en el `PATCH`,
+     * `null` la borra y omitirla no la toca.
+     */
+    ov?: string | null;
     transport: string;
     /** `Y-m-d H:i:s`. En el alta debe ser futura. **Nunca el formato de salida.** */
     recolectionDate: string;

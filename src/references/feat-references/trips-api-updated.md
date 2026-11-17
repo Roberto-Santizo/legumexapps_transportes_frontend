@@ -2,13 +2,15 @@
 
 Referencia completa del dominio **Trips** de la API de Legumex Transportes: nueve endpoints REST bajo `/api/trips` (más `GET /api/trips/current`) para publicar viajes de exportación, que una empresa transportista toma y un piloto ejecuta.
 
-Todo lo que hay aquí está verificado contra la implementación real de la rama `spec-24-trips` (rutas, FormRequests, Resource, Service y su suite de 244 tests), actualizado en la rama `spec-28-trip-traveled-polyline` con la ruta real del viaje, en la rama `spec-30-trip-estimates` con la distancia y la duración estimadas, en la rama `spec-32-trip-traveled-metrics` con la distancia y la duración **reales** en la rama `spec-41-trip-booking-and-reference` con el booking y la referencia y **actualizado en la rama `spec-42-trip-cancellation`** con la cancelación (446 tests en `TripTest`, 144 en `TripServiceTest`). Los mensajes de error son literales: se pueden mostrar tal cual al usuario.
+Todo lo que hay aquí está verificado contra la implementación real de la rama `spec-24-trips` (rutas, FormRequests, Resource, Service y su suite de 244 tests), actualizado en la rama `spec-28-trip-traveled-polyline` con la ruta real del viaje, en la rama `spec-30-trip-estimates` con la distancia y la duración estimadas, en la rama `spec-32-trip-traveled-metrics` con la distancia y la duración **reales** en la rama `spec-41-trip-booking-and-reference` con el booking y la referencia en la rama `spec-42-trip-cancellation` con la cancelación y **actualizado en la rama `spec-43-trip-sales-order`** con la orden de venta (477 tests en `TripTest`, 156 en `TripServiceTest`). Los mensajes de error son literales: se pueden mostrar tal cual al usuario.
 
 > **Qué cambió después de SPEC 24 y dónde está documentado.** El objeto `Trip` pasó de 32 a **42 claves** en seis specs aditivas, ninguna con ruta nueva: SPEC 25 añadió `pilotDpiImage` y `pilotLicenseImage` (→ `references/pilot-documents-api.md`), SPEC 27 añadió `totalFuelGallons` (→ `references/trip-fuels-api.md`), SPEC 28 añadió `traveledPolyline` y `traveledPoints`, la ruta real del viaje (§1.11, §4.1, §6.8), SPEC 30 añadió `estimatedKilometers` y `estimatedHours` (§1.12, §4, §6.2, §6.4), SPEC 31 añadió `totalExpensesAmount` (→ `references/trip-expenses-api.md`) y **SPEC 32 añade `traveledKilometers` y `traveledHours`, documentadas aquí** (§1.13, §4, §6.8). `TripListItem` pasa de 17 a **19 claves**: las dos nuevas también salen en el listado, como las estimaciones.
 
-> ⚠️ **SPEC 42 añade un cuarto estado, `cancelled`, y una ruta nueva, `PATCH /api/trips/{trip}/cancel`** (solo `administrator` y `export`, solo desde `pending`). Un viaje cancelado **sigue visible** en el listado, el detalle, el tablero y el Excel, pero **cualquier escritura posterior responde 400 «El viaje está cancelado»** —incluidas las cargas, los viáticos, los gastos emergentes y las líneas de productos—; el `DELETE` sigue permitido. `Trip` gana `cancelledAt` y `cancelledByName` tras `endDate`: **49 claves** (50 en el detalle). `TripListItem` sigue en **22**. El `PATCH` general con `status: "cancelled"` es **422**. ⚠️ **Un `switch` sobre `status` sin rama `cancelled` cae en su rama por defecto**: despliega el front junto al back. Detalle en §1.15, §4, §6.9 y §8.
+> **SPEC 43 añade la orden de venta, `ov`, y no rompe nada.** Es **opcional** en el `POST` (sigue en 16 campos obligatorios) y en el `PATCH`, donde `null`, `""` o solo espacios **la borran** con 200. Se normaliza como `reference` (MAYÚSCULAS, espacios colapsados), no es única y `null` significa «sin OV». Sale en el detalle **y** en el listado justo después de `reference`: `Trip` pasa a **50 claves** (51 en el detalle) y `TripListItem` a **23**. `search` busca también en ella. ⚠️ **El Excel de `GET /api/reports/trips` gana la columna «OV» en la B, para todos los roles**, y corre una posición todas las demás: quien lea el reporte por posición de columna debe ajustarse. Detalle en §1.16, §4, §6.1, §6.2, §6.4 y §6.10.
 
-> ⚠️ **SPEC 41 es un cambio incompatible en el body del alta, sin periodo de gracia.** El `POST` pasa de **15 a 16 campos obligatorios**: `booking` (el booking de la naviera) es obligatorio y `reference` (referencia comercial) es opcional. Un `POST` sin `booking` es **422 «El booking es obligatorio»**. Las dos claves salen en el detalle **y** en el listado, justo después de `container`, y `search` las barre. Tras SPEC 41 `Trip` tenía **47 claves** (48 en el detalle); desde SPEC 42 tiene **49** (50) y `TripListItem` sigue en **22**. El despliegue del front debe ir junto al del back. Detalle en §1.14, §4, §6.1, §6.2 y §6.4.
+> ⚠️ **SPEC 42 añade un cuarto estado, `cancelled`, y una ruta nueva, `PATCH /api/trips/{trip}/cancel`** (solo `administrator` y `export`, solo desde `pending`). Un viaje cancelado **sigue visible** en el listado, el detalle, el tablero y el Excel, pero **cualquier escritura posterior responde 400 «El viaje está cancelado»** —incluidas las cargas, los viáticos, los gastos emergentes y las líneas de productos—; el `DELETE` sigue permitido. `Trip` gana `cancelledAt` y `cancelledByName` tras `endDate`: 49 claves (50 en el detalle; **50/51 desde SPEC 43**). `TripListItem` sigue en 22 (**23 desde SPEC 43**). El `PATCH` general con `status: "cancelled"` es **422**. ⚠️ **Un `switch` sobre `status` sin rama `cancelled` cae en su rama por defecto**: despliega el front junto al back. Detalle en §1.15, §4, §6.9 y §8.
+
+> ⚠️ **SPEC 41 es un cambio incompatible en el body del alta, sin periodo de gracia.** El `POST` pasa de **15 a 16 campos obligatorios**: `booking` (el booking de la naviera) es obligatorio y `reference` (referencia comercial) es opcional. Un `POST` sin `booking` es **422 «El booking es obligatorio»**. Las dos claves salen en el detalle **y** en el listado, justo después de `container`, y `search` las barre. Tras SPEC 41 `Trip` tenía **47 claves** (48 en el detalle); desde SPEC 42 tiene 49 (50), desde SPEC 43 **50** (51), y `TripListItem` **23**. El despliegue del front debe ir junto al del back. Detalle en §1.14, §4, §6.1, §6.2 y §6.4.
 
 > **Claves que llegaron entre SPEC 32 y SPEC 41 y se documentan en su propia referencia:** `statusLabel` en el listado, `positions` en el detalle (`references/trip-positions-api.md`), `totalEmergencyExpensesAmount` (`references/trip-emergency-expenses-api.md`), `bonus` (`references/trip-bonus-api.md`), `cargoInsurance` (`references/trip-cargo-insurance-api.md`) y el campo `products` del alta (`references/trip-finished-products-api.md`). Aquí salen en los objetos y tipos para que los conteos cuadren.
 
@@ -31,12 +33,13 @@ Todo lo que hay aquí está verificado contra la implementación real de la rama
 7. **Toda respuesta viaja en un sobre** `{ statusCode, message, data }`… **salvo el 422**, que usa el formato de Laravel `{ message, errors }`.
 8. **`DELETE` borra de verdad** (baja lógica irreversible): el viaje desaparece del listado y del detalle, **no hay `/restore`** y no existe ningún parámetro que devuelva los borrados. Es para el viaje **creado por error**; el viaje real que no se hará se **cancela** (§1.15).
 9. **El cuerpo va en camelCase y las fechas vuelven en `d-m-Y h:i:s A`, no en ISO 8601.** Lo que envías y lo que recibes **no tienen el mismo formato de fecha** (§4).
-10. **El listado y el detalle NO devuelven el mismo objeto.** `GET /api/trips` devuelve un `TripListItem` de **22 claves** —una vista de tabla—; los otros ocho endpoints devuelven el `Trip` completo de **49** (50 en `GET /api/trips/{trip}` con `positions`, salvo para el piloto). En el listado no vienen los **ids de las relaciones**, ni `polyline`, ni `points`, ni las dos claves de la ruta real, ni las marcas de tiempo: para el mapa y para cualquier id hay que pedir el detalle (§4).
+10. **El listado y el detalle NO devuelven el mismo objeto.** `GET /api/trips` devuelve un `TripListItem` de **23 claves** —una vista de tabla—; los otros ocho endpoints devuelven el `Trip` completo de **50** (51 en `GET /api/trips/{trip}` con `positions`, salvo para el piloto). En el listado no vienen los **ids de las relaciones**, ni `polyline`, ni `points`, ni las dos claves de la ruta real, ni las marcas de tiempo: para el mapa y para cualquier id hay que pedir el detalle (§4).
 11. **Hay dos polilíneas y no son la misma (SPEC 28).** `polyline`/`points` es la ruta **prevista** que mandó el front; `traveledPolyline`/`traveledPoints` es la ruta **real**, el rastro de `GET /api/trips/{trip}/positions` codificado por el servidor **una sola vez, al cerrar el viaje con `/finish`**. Mientras el viaje no esté finalizado valen `null` y `[]` **aunque esté `in_route` con miles de puntos reportados**: para el rastro en vivo siguen el websocket y las posiciones. Nadie manda esas claves en ningún body: se ignoran en silencio.
 12. **Los kilómetros y las horas estimadas salen como cadena, valen `null` solo en viajes viejos, y en el `PATCH` viajan con la polilínea o no viajan (SPEC 30).** `estimatedKilometers` (`"104.32"`) y `estimatedHours` (`"1.75"`, **horas decimales**, no minutos) son strings de dos decimales que hay que parsear para operar. **`null` significa exactamente «viaje creado antes de SPEC 30»**: no hubo backfill y por la API no se puede crear ni editar un viaje que quede sin ellos. En el `PATCH`, mandar uno solo o dos de los tres campos de la ruta es **422**, con un mensaje por cada campo que falta. La API **no** calcula, recalcula ni coteja los números con `polyline` ni con el recorrido real: si mandas 1000 km con una línea de 5 km, se guardan. Tampoco son un ETA. Sí salen en el listado.
 13. **Los kilómetros y las horas reales los calcula el servidor al cerrar, son datos brutos, y `null` y `"0.00"` no significan lo mismo (SPEC 32).** `traveledKilometers` (`"111.40"`) y `traveledHours` (`"2.10"`, **horas decimales**) son el espejo real de las dos estimaciones: mismo formato de cadena de dos decimales, misma escala, para pintar «estimado 104.32 km · 1.75 h — real 111.40 km · 2.10 h» sin convertir nada. **Nadie los manda**: se calculan **una sola vez**, en `PATCH /api/trips/{trip}/finish`, y mandarlos en cualquier body se ignora en silencio con 200/201. `traveledKilometers` es la **suma Haversine en crudo** de todos los segmentos consecutivos del rastro de `GET /api/trips/{trip}/positions`: **no filtra el ruido GPS** de un camión parado (el jitter de 2-4 m cada 15 s suma) ni un salto espurio del dispositivo, así que puede venir inflado. `traveledHours` es `endDate − startDate`, **tiempo bruto**: no descuenta las paradas de `GET /api/trips/{trip}/timeouts`. **`null` significa «el viaje no ha terminado» o «terminó antes de SPEC 32»** (sin backfill); un viaje que terminó **sin puntos o con uno solo** vale **`"0.00"`**, a diferencia de `traveledPolyline`, que ahí queda `null`. La API **no compara** estimado con real: el desvío o el retraso es una resta tuya. Sí salen en el listado y en `GET /api/trips/current` (siempre `null` ahí: un viaje en curso no ha terminado).
-14. **El booking es obligatorio al crear, la referencia no, y los dos se normalizan como la orden (SPEC 41).** `booking` es el número de booking de la naviera: **obligatorio en el `POST`** (16 campos obligatorios desde SPEC 41) y **no vaciable** en el `PATCH` (`null`, `""` o solo espacios son 422). `reference` es una referencia comercial **opcional**: en el `POST` se puede omitir, y vacía, de solo espacios o `null` se guarda **`null`**; en el `PATCH` mandarla en `null`, `""` o en blanco **la borra** con 200 —es la **única** clave del `PATCH` que se puede vaciar—. Los dos se guardan como `order` y `container`: **MAYÚSCULAS con espacios colapsados** (`"  bk-2026   001  "` → `"BK-2026 001"`), y **ninguno es único**: un booking puede cubrir varios contenedores y, por tanto, varios viajes. ⚠️ **`booking: null` significa exactamente «viaje creado antes de SPEC 41»** (sin backfill); un administrador puede completarlo por `PATCH`. `reference: null` es «sin referencia», legítimo en cualquier viaje. `search` del listado busca también en los dos.
+14. **El booking es obligatorio al crear, la referencia no, y los dos se normalizan como la orden (SPEC 41).** `booking` es el número de booking de la naviera: **obligatorio en el `POST`** (16 campos obligatorios desde SPEC 41) y **no vaciable** en el `PATCH` (`null`, `""` o solo espacios son 422). `reference` es una referencia comercial **opcional**: en el `POST` se puede omitir, y vacía, de solo espacios o `null` se guarda **`null`**; en el `PATCH` mandarla en `null`, `""` o en blanco **la borra** con 200 —junto con `ov` (§1.16), son las **dos únicas** claves del `PATCH` que se pueden vaciar—. Los dos se guardan como `order` y `container`: **MAYÚSCULAS con espacios colapsados** (`"  bk-2026   001  "` → `"BK-2026 001"`), y **ninguno es único**: un booking puede cubrir varios contenedores y, por tanto, varios viajes. ⚠️ **`booking: null` significa exactamente «viaje creado antes de SPEC 41»** (sin backfill); un administrador puede completarlo por `PATCH`. `reference: null` es «sin referencia», legítimo en cualquier viaje. `search` del listado busca también en los dos.
 15. **Cancelar no es borrar, y un cancelado es de solo lectura (SPEC 42).** `PATCH /api/trips/{trip}/cancel` (solo `administrator` y `export`, sin cuerpo) lleva un viaje **`pending`** —libre o asignado— a `status: "cancelled"` y escribe `cancelledAt` (hora del servidor) y `cancelledByName` (el usuario del token). **No toca nada más**: la tripulación, `bonus`, `cargoInsurance`, las cargas, los viáticos y las líneas de productos se quedan como registro, y el viaje **no vuelve a la bolsa**. Es **irreversible** (no hay descancelar). Desde ese momento **toda escritura** sobre el viaje responde **400 «El viaje está cancelado»**: el `PATCH` general (aunque el cuerpo venga vacío), `/assignment`, `/start`, `/finish`, `POST /fuels`, `POST /expenses`, las dos confirmaciones (también la reconfirmación, que antes era 200), `POST`/`PATCH`/`DELETE` de gastos emergentes y `POST`/`PATCH`/`DELETE` de líneas de productos terminados. Las lecturas siguen igual y **el `DELETE` del viaje sigue permitido**. Quien no alcanza el viaje (otra empresa, otro piloto) sigue recibiendo su **403**, no el 400. El `PATCH` general **no cancela**: `status: "cancelled"` ahí es **422**.
+16. **La orden de venta (`ov`) es opcional, se normaliza como la referencia y se puede borrar (SPEC 43).** En el `POST` se puede omitir —el alta **sigue en 16 campos obligatorios**—, y omitida, `""`, de solo espacios o `null` se guarda **`null`** con 201. En el `PATCH` mandarla en `null`, `""` o en blanco **la borra** con 200; omitirla **no** la toca. Se guarda en **MAYÚSCULAS con espacios colapsados** (`"  ov-2026   15  "` → `"OV-2026 15"`), **no es única** (una OV puede cubrir varios viajes, de cualquier cliente) y no se valida su formato. `ov: null` es «sin OV», legítimo en cualquier viaje, anterior o posterior a la spec: no hubo backfill. Sale en el detalle y en el listado, la ve también `shipment` (no es dinero), `search` busca en ella y el Excel de `GET /api/reports/trips` la pinta en la **columna B**. `/assignment`, `/start`, `/finish` y `/cancel` no la leen ni la escriben.
 
 ---
 
@@ -116,15 +119,15 @@ El dominio pinta **dos formas distintas** y conviene tipar las dos:
 
 | Dónde | Objeto | Claves |
 |---|---|---|
-| `GET /api/trips` y `GET /api/trips/current` (cada elemento de `data`) | `TripListItem` | **22** |
-| `GET /api/trips/{trip}` (`data`) | `Trip` + `positions` | **50** (49 para el piloto asignado, que no recibe `positions`) |
-| Los otros siete endpoints (`data`), `/cancel` incluido | `Trip` | **49** |
+| `GET /api/trips` y `GET /api/trips/current` (cada elemento de `data`) | `TripListItem` | **23** |
+| `GET /api/trips/{trip}` (`data`) | `Trip` + `positions` | **51** (50 para el piloto asignado, que no recibe `positions`) |
+| Los otros siete endpoints (`data`), `/cancel` incluido | `Trip` | **50** |
 
 > ⚠️ **No asumas que una fila del listado se puede pasar a la pantalla de detalle.** Le faltan los ids de las relaciones y la ruta: al abrir un viaje hay que pedir `GET /api/trips/{trip}`.
 
 ### 4.1 El objeto `Trip` (detalle y escrituras)
 
-Es lo que devuelve `data` en los ocho endpoints que no son el listado. **49 claves**, siempre en camelCase y siempre en este orden (`GET /api/trips/{trip}` añade al final una 50.ª, `positions`, salvo para el piloto):
+Es lo que devuelve `data` en los ocho endpoints que no son el listado. **50 claves**, siempre en camelCase y siempre en este orden (`GET /api/trips/{trip}` añade al final una 51.ª, `positions`, salvo para el piloto):
 
 ```json
 {
@@ -143,6 +146,7 @@ Es lo que devuelve `data` en los ocho endpoints que no son el listado. **49 clav
   "container": "MSKU 483920 1",
   "booking": "BK-2026 001",
   "reference": "PEDIDO CLIENTE-77",
+  "ov": "OV-2026 15",
   "transport": "Rastra 40 pies",
   "recolectionDate": "02-09-2026 06:00:00 AM",
   "shipDate": "04-09-2026 11:30:00 PM",
@@ -193,6 +197,7 @@ Es lo que devuelve `data` en los ocho endpoints que no son el listado. **49 clav
 | `container` | `string` | **MAYÚSCULAS** con espacios colapsados, como `order`. **Tampoco es único.** |
 | `booking` | `string \| null` | **Booking de la naviera (SPEC 41).** MAYÚSCULAS con espacios colapsados, como `order`. **No es único**: un booking cubre varios viajes. Obligatorio por la API, así que ⚠️ **`null` solo en viajes creados antes de SPEC 41** (sin backfill). Visible para todos los roles, `shipment` incluido. |
 | `reference` | `string \| null` | **Referencia comercial opcional (SPEC 41).** Misma normalización. `null` = «sin referencia»: **nunca** sale como cadena vacía. No es única. Visible para todos los roles. |
+| `ov` | `string \| null` | **Orden de venta opcional (SPEC 43).** MAYÚSCULAS con espacios colapsados, como `reference`. `null` = «sin OV», legítimo en cualquier viaje: **nunca** sale como cadena vacía. **No es única**: una OV puede cubrir varios viajes. Visible para todos los roles, `shipment` incluido. |
 | `transport` | `string` | Medio o empresa de transporte, **tal como se teclea**. Descriptivo: no tiene relación con el `vehicleId` que asigne después el transportista. |
 | `recolectionDate` / `shipDate` | `string` | Lo **planificado**. ⚠️ Formato `d-m-Y h:i:s A`, ver abajo. |
 | `startDate` / `endDate` | `string \| null` | Lo **ejecutado**. `null` hasta que el piloto llama a `/start` y `/finish`. Los pone el servidor. |
@@ -223,7 +228,7 @@ Es lo que devuelve `data` en los ocho endpoints que no son el listado. **49 clav
 
 ### 4.2 El objeto `TripListItem` (solo el listado)
 
-Cada elemento de `data` en `GET /api/trips` (y el `data` de `GET /api/trips/current`). **22 claves**, en este orden:
+Cada elemento de `data` en `GET /api/trips` (y el `data` de `GET /api/trips/current`). **23 claves**, en este orden:
 
 ```json
 {
@@ -237,6 +242,7 @@ Cada elemento de `data` en `GET /api/trips` (y el `data` de `GET /api/trips/curr
   "container": "MSKU 483920 1",
   "booking": "BK-2026 001",
   "reference": null,
+  "ov": "OV-2026 15",
   "recolectionDate": "02-09-2026 06:00:00 AM",
   "shipDate": "04-09-2026 11:30:00 PM",
   "startDate": null,
@@ -256,7 +262,7 @@ Los campos que sí vienen significan **exactamente lo mismo** que en `Trip` (mis
 
 > **SPEC 30 es la primera spec aditiva que toca el listado.** `estimatedKilometers` y `estimatedHours` sí vienen aquí —al revés que `polyline`/`points`— porque son dos escalares baratos: bastan para pintar «104.32 km · 1.75 h» en cada fila sin pedir el detalle. Van entre `endDate` y `observations`, y también en `GET /api/trips/current`, que usa este mismo objeto.
 
-> **SPEC 41 añade `booking` y `reference` justo después de `container`**, con el mismo valor y el mismo `null` que en el detalle: en la tabla se leen al lado del contenedor. `statusLabel` (justo después de `status`) es el estado ya traducido —`Pendiente`, `En ruta`, `Finalizado` y, desde SPEC 42, `Cancelado`— y solo sale en el listado. **SPEC 42 no añade claves al listado**: `cancelledAt` y `cancelledByName` solo vienen en el detalle.
+> **SPEC 41 añade `booking` y `reference` justo después de `container`**, con el mismo valor y el mismo `null` que en el detalle: en la tabla se leen al lado del contenedor. `statusLabel` (justo después de `status`) es el estado ya traducido —`Pendiente`, `En ruta`, `Finalizado` y, desde SPEC 42, `Cancelado`— y solo sale en el listado. **SPEC 42 no añade claves al listado**: `cancelledAt` y `cancelledByName` solo vienen en el detalle. **SPEC 43 añade `ov` justo después de `reference`**, con el mismo valor y el mismo `null` que en el detalle, también en `GET /api/trips/current`.
 
 > **SPEC 32 hace lo mismo con la ruta real.** `traveledKilometers` y `traveledHours` van justo después de `estimatedHours` y antes de `observations`, con el mismo formato: cuatro cadenas seguidas para pintar «estimado vs real» en cada fila de un viaje `finished`. En todo viaje `pending` o `in_route` —incluido el de `GET /api/trips/current`— son `null`; en uno `finished` sin puntos, `"0.00"`.
 
@@ -291,7 +297,7 @@ export type TripStatus = 'pending' | 'in_route' | 'finished' | 'cancelled';
 /** Par [latitud, longitud]. */
 export type LatLng = [number, number];
 
-/** Lo que devuelve GET /api/trips: 22 claves, sin ids de relación y sin ruta (pero con las dos estimaciones y las dos métricas reales). */
+/** Lo que devuelve GET /api/trips: 23 claves, sin ids de relación y sin ruta (pero con las dos estimaciones y las dos métricas reales). */
 export interface TripListItem {
   id: number;
   order: string;
@@ -306,6 +312,8 @@ export interface TripListItem {
   booking: string | null;
   /** SPEC 41 — opcional; null = sin referencia. */
   reference: string | null;
+  /** SPEC 43 — orden de venta opcional, MAYÚSCULAS; null = sin OV. */
+  ov: string | null;
   /** Formato d-m-Y h:i:s A, NO ISO 8601. */
   recolectionDate: string;
   shipDate: string;
@@ -324,7 +332,7 @@ export interface TripListItem {
   registeredByName: string | null;
 }
 
-/** Lo que devuelven los otros ocho endpoints: 49 claves. */
+/** Lo que devuelven los otros ocho endpoints: 50 claves. */
 export interface Trip {
   id: number;
   order: string;
@@ -343,6 +351,8 @@ export interface Trip {
   booking: string | null;
   /** SPEC 41 — opcional; null = sin referencia. */
   reference: string | null;
+  /** SPEC 43 — orden de venta opcional, MAYÚSCULAS; null = sin OV. */
+  ov: string | null;
   transport: string;
   /** Formato d-m-Y h:i:s A, NO ISO 8601. */
   recolectionDate: string;
@@ -391,7 +401,7 @@ export interface Trip {
   deletedAt: string | null;
 }
 
-/** GET /api/trips/{trip}: las 49 claves más el rastro (salvo para el piloto). */
+/** GET /api/trips/{trip}: las 50 claves más el rastro (salvo para el piloto). */
 export interface TripDetail extends Trip {
   positions?: LatLng[];
 }
@@ -408,6 +418,8 @@ export interface StoreTripBody {
   booking: string;
   /** SPEC 41 — opcional; vacía, en blanco o null se guarda null. */
   reference?: string | null;
+  /** SPEC 43 — opcional; vacía, en blanco o null se guarda null. */
+  ov?: string | null;
   transport: string;
   /** Futura. ISO 8601 o Y-m-d H:i:s. */
   recolectionDate: string;
@@ -434,7 +446,7 @@ export interface TripRouteBody {
 /**
  * El PATCH acepta lo mismo del alta, todo opcional, MÁS status y SIN pilotId/vehicleId ni products,
  * con la salvedad de que la ruta es todo o nada: o van los tres campos o no va ninguno.
- * booking no se puede vaciar; reference sí: null, "" o en blanco la borran (SPEC 41).
+ * booking no se puede vaciar; reference (SPEC 41) y ov (SPEC 43) sí: null, "" o en blanco las borran.
  */
 export type UpdateTripBody = Partial<Omit<StoreTripBody, keyof TripRouteBody | 'products'>>
   & (TripRouteBody | { polyline?: never; estimatedKilometers?: never; estimatedHours?: never })
@@ -468,7 +480,7 @@ Todo lo que no sea un 422 viaja así:
 
 ### Listado sin paginar (sin `limit`)
 
-`data` es el array completo de **`TripListItem`** —22 claves por elemento, no las 47 del detalle— y **no viajan metadatos**:
+`data` es el array completo de **`TripListItem`** —23 claves por elemento, no las 50 del detalle— y **no viajan metadatos**:
 
 ```json
 { "statusCode": 200, "message": "Viajes obtenidos correctamente", "data": [ { }, { } ] }
@@ -532,16 +544,16 @@ Cualquier autenticado. Devuelve lo que el ámbito del rol permita (§3).
 | `vehicleId` | numérico | |
 | `dateFrom` | `Y-m-d` **estricto** | Sobre `recolectionDate`, por día completo. `31-12-2026` se ignora. |
 | `dateTo` | `Y-m-d` **estricto** | Incluye el día entero: un viaje de las 18:00 entra en el `dateTo` de ese día. |
-| `search` | texto | `LIKE` sobre `order`, `container`, `booking` **y** `reference` (las dos últimas desde SPEC 41), en un solo grupo. Insensible a mayúsculas (el término se normaliza como una referencia: recorte, espacios colapsados, MAYÚSCULAS). Un viaje con `reference: null` se sigue encontrando por los otros tres campos. |
+| `search` | texto | `LIKE` sobre `order`, `container`, `booking`, `reference` **y** `ov` (`booking` y `reference` desde SPEC 41, `ov` desde SPEC 43), en un solo grupo. Insensible a mayúsculas (el término se normaliza como una referencia: recorte, espacios colapsados, MAYÚSCULAS): `search=ov-2026` encuentra `OV-2026 15`. Un viaje con `reference` u `ov` en `null` se sigue encontrando por los demás campos. |
 | `limit` | numérico | **Activa la paginación.** Acotado a `[1, 100]` —la única paginación del proyecto sin piso de 10—: `limit=5` → páginas de cinco y `limit=500` → 100. Sin él, colección completa. |
 
 - **Orden fijo:** `recolectionDate` descendente y, a igualdad, `id` descendente. **No hay `sortBy` ni `sortDir`.**
 - **Los borrados no salen nunca**, con filtro o sin él, y no hay parámetro que los devuelva. **Los cancelados sí salen por defecto** (SPEC 42), con `statusLabel: "Cancelado"`: si la pantalla no los quiere, filtra por estado.
 - Sin coincidencias es **200 con `data: []`**, no 404.
-- ⚠️ **El ámbito se aplica antes que `search`**: un `carrier` que busca el booking de un viaje que tomó otra empresa recibe `data: []`, no el viaje.
-- **No hay filtro exacto `?booking=` ni `?reference=`**, ni orden por ellos: el término de `search` es un `LIKE %…%`, así que `search=B` puede casar con muchos viajes.
+- ⚠️ **El ámbito se aplica antes que `search`**: un `carrier` que busca el booking o la OV de un viaje que tomó otra empresa recibe `data: []`, no el viaje.
+- **No hay filtro exacto `?booking=`, `?reference=` ni `?ov=`**, ni orden por ellos: el término de `search` es un `LIKE %…%`, así que `search=B` puede casar con muchos viajes.
 
-⚠️ **La salida no es el objeto completo.** Cada elemento es un `TripListItem` de **22 claves** (§4.2): sin `clientId`/`clientName`, sin los ids de las demás relaciones, sin `destination`, sin `transport`, sin `polyline`, **sin `points`** y sin `createdAt`/`updatedAt`/`deletedAt`. Sí trae `estimatedKilometers` y `estimatedHours` (SPEC 30) y `booking` y `reference` (SPEC 41). Para pintar el mapa o navegar a cualquier catálogo hay que pedir el detalle. **No hay filtro ni orden por distancia o duración.**
+⚠️ **La salida no es el objeto completo.** Cada elemento es un `TripListItem` de **23 claves** (§4.2): sin `clientId`/`clientName`, sin los ids de las demás relaciones, sin `destination`, sin `transport`, sin `polyline`, **sin `points`** y sin `createdAt`/`updatedAt`/`deletedAt`. Sí trae `estimatedKilometers` y `estimatedHours` (SPEC 30) `booking` y `reference` (SPEC 41) y `ov` (SPEC 43). Para pintar el mapa o navegar a cualquier catálogo hay que pedir el detalle. **No hay filtro ni orden por distancia o duración.**
 
 ⚠️ **Los filtros por id siguen existiendo aunque los ids no salgan.** `?clientId=`, `?shippingLineId=`, `?locationId=`, `?pilotId=` y `?vehicleId=` se aplican igual; lo que no se puede es sacar esos ids de una fila del propio listado — vienen de sus catálogos.
 
@@ -549,7 +561,7 @@ Cualquier autenticado. Devuelve lo que el ámbito del rol permita (§3).
 
 ### 6.2 `POST /api/trips` — publicar
 
-Solo `administrator` (y `export`). **Dieciséis campos obligatorios y uno opcional** (catorce hasta SPEC 37 y quince hasta SPEC 41; un `POST` sin `booking` es **422 «El booking es obligatorio»**).
+Solo `administrator` (y `export`). **Dieciséis campos obligatorios y dos opcionales** (`reference` y, desde SPEC 43, `ov`; catorce obligatorios hasta SPEC 37 y quince hasta SPEC 41; un `POST` sin `booking` es **422 «El booking es obligatorio»**).
 
 | Campo | Reglas |
 |---|---|
@@ -562,6 +574,7 @@ Solo `administrator` (y `export`). **Dieciséis campos obligatorios y uno opcion
 | `container` | texto, máx. 255. MAYÚSCULAS con espacios colapsados. |
 | `booking` | **Obligatorio (SPEC 41).** Texto, máx. 255. MAYÚSCULAS con espacios colapsados: `"  bk-2026   001  "` → `"BK-2026 001"`. De solo espacios o `null` → **422** `El booking es obligatorio`. **No es único.** |
 | `reference` | **Opcional (SPEC 41).** Texto, máx. 255, misma normalización. Omitida, `""`, de solo espacios o `null` → se guarda **`null`** con 201, sin 422. **No es única.** |
+| `ov` | **Opcional (SPEC 43).** Texto, máx. 255, misma normalización: `"  ov-2026   15  "` → `"OV-2026 15"`. Omitida, `""`, de solo espacios o `null` → se guarda **`null`** con 201, sin 422. No texto → **422** `La orden de venta debe ser texto`; más de 255 → **422** `La orden de venta no puede superar los 255 caracteres`. **No es única**: dos viajes con la misma OV se crean los dos. |
 | `transport` | texto, máx. 255. Solo `trim`. |
 | `recolectionDate` | fecha válida y **futura**. |
 | `shipDate` | fecha válida, **futura** y **>= `recolectionDate`**. |
@@ -575,11 +588,11 @@ Solo `administrator` (y `export`). **Dieciséis campos obligatorios y uno opcion
 
 **201** · `Viaje registrado correctamente` · **422** falta un campo, fecha inválida o estimación negativa / no numérica / por encima del tope · **400** catálogo inservible.
 
-La respuesta ya trae `estimatedKilometers` y `estimatedHours` como cadena de dos decimales (`104.32` → `"104.32"`, `4` → `"4.00"`), y `booking`/`reference` ya normalizados.
+La respuesta ya trae `estimatedKilometers` y `estimatedHours` como cadena de dos decimales (`104.32` → `"104.32"`, `4` → `"4.00"`), y `booking`/`reference`/`ov` ya normalizados.
 
 ### 6.3 `GET /api/trips/{trip}` — detalle
 
-Cualquier autenticado, **dentro de su ámbito**. Es el **único endpoint de lectura que devuelve el `Trip` completo** (§4.1): **50 claves** con `positions` (49 para el piloto asignado); el listado se queda en 22, así que abrir un viaje siempre cuesta esta llamada. Es también donde se lee la ruta real de un viaje ya cerrado: `traveledPoints` con valor solo aquí y en las respuestas de escritura posteriores al `/finish` (`PATCH` y `DELETE`).
+Cualquier autenticado, **dentro de su ámbito**. Es el **único endpoint de lectura que devuelve el `Trip` completo** (§4.1): **51 claves** con `positions` (50 para el piloto asignado); el listado se queda en 23, así que abrir un viaje siempre cuesta esta llamada. Es también donde se lee la ruta real de un viaje ya cerrado: `traveledPoints` con valor solo aquí y en las respuestas de escritura posteriores al `/finish` (`PATCH` y `DELETE`).
 
 **200** · `Viaje obtenido correctamente` · **403** fuera de ámbito · **404** id inexistente **o borrado** (indistinguibles).
 
@@ -588,10 +601,11 @@ Cualquier autenticado, **dentro de su ámbito**. Es el **único endpoint de lect
 Solo `administrator`. Acepta también `PUT`, pero **no reemplaza el recurso completo**: se comporta igual que el `PATCH`.
 
 - **Todos los campos son opcionales**; un **cuerpo vacío responde 200** sin cambiar nada (ni `updatedAt`).
-- Opcional **no** es vaciable: mandar una clave con `null` o en blanco es **422** —con **una** excepción, `reference` (abajo)—.
+- Opcional **no** es vaciable: mandar una clave con `null` o en blanco es **422** —con **dos** excepciones, `reference` y `ov` (abajo)—.
 - Son los mismos del alta **más `status`** y **menos `pilotId`, `vehicleId` y `products`** (este último se ignora en silencio).
 - **`booking` (SPEC 41)**: si viaja, obligatorio, texto y máx. 255, normalizado como en el alta. `null`, `""` o solo espacios → **422** `El booking es obligatorio`: **no se puede vaciar**.
 - **`reference` (SPEC 41)**: si viaja con valor, se normaliza y se reescribe; si viaja en `null`, `""` o de solo espacios, **se borra** (queda `null`) con **200**. Si no viaja, no se toca —omitirla **no** es borrarla—.
+- **`ov` (SPEC 43)**: exactamente igual que `reference`. Con valor se normaliza y se reescribe; en `null`, `""` o de solo espacios **se borra** con **200**; sin la clave, no se toca. No texto o más de 255 caracteres → **422**.
 - ⚠️ **La ruta es todo o nada (SPEC 30).** `polyline`, `estimatedKilometers` y `estimatedHours` se exigen entre sí: mandar **uno solo o dos de los tres** es **422**, con un mensaje en cada campo que falta (`Si se envía la ruta deben enviarse también la distancia y la duración estimadas` en los dos números; `Si se envían la distancia o la duración estimadas debe enviarse también la ruta` en `polyline`). Con los tres, **200** y se reescriben los tres; sin ninguno, **200** y no se tocan. Un `PATCH` con solo `polyline` —válido hasta SPEC 30— ya no pasa. Los tres, si viajan, siguen sin poder ir vacíos ni en `null` (`La ruta es obligatoria`, `La distancia estimada es obligatoria`, `La duración estimada es obligatoria`).
 - **Las dos fechas dejan de exigir futuro** aquí: editar un viaje ya arrancado no obliga a reprogramarlo.
 - **Los catálogos se revalidan siempre**, aunque solo muevas una fecha: si el puerto se desactivó desde el alta, el `PATCH` responde **400** aunque no toques `locationId`.
@@ -666,7 +680,7 @@ Solo el **piloto asignado**. Sin cuerpo. Deja `endDate` con la hora del servidor
 
 Los dos salen en la respuesta del `/finish` como cadena de dos decimales, **nunca `null`** tras un cierre. Cada `/finish` recalcula y sobrescribe los dos —pero por la API no hay segundo cierre: el segundo es 400 «El viaje ya fue finalizado», salvo que el administrador limpie el viaje a mano por fuera—. `/finish` **no gana guardas ni mensajes nuevos** por esto: un viaje sin rastro se cierra igual.
 
-`/assignment`, `/start` y `/finish` **no tocan** `estimatedKilometers`, `estimatedHours`, `booking` ni `reference`: las devuelven tal como estaban. `/assignment` y `/start` tampoco tocan `traveledKilometers` ni `traveledHours` (siguen en `null`), y mandarlas en cualquier body —`POST`, `PATCH` general, `/assignment`, `/start`— **se ignora en silencio** con 200/201.
+`/assignment`, `/start` y `/finish` **no tocan** `estimatedKilometers`, `estimatedHours`, `booking`, `reference` ni `ov`: las devuelven tal como estaban. `/assignment` y `/start` tampoco tocan `traveledKilometers` ni `traveledHours` (siguen en `null`), y mandarlas en cualquier body —`POST`, `PATCH` general, `/assignment`, `/start`— **se ignora en silencio** con 200/201.
 
 **200** · `Viaje finalizado correctamente` · **403** no eres su piloto · **400** ya finalizado, sin iniciar, viaje borrado o **cancelado** (`El viaje está cancelado`, SPEC 42, después del 403) · **404** no existe.
 
@@ -680,6 +694,7 @@ Solo `administrator` y `export` (los demás roles, **403** del middleware). **No
 - **Irreversible.** No hay ruta para descancelar; si el viaje vuelve a hacerse, se crea uno nuevo.
 - Si el viaje tenía piloto, se le envía la push `trip.cancelled` (`references/trip-notifications-api.md`).
 - Desde aquí el viaje es de **solo lectura** (§1.15).
+- Tampoco toca `ov` (SPEC 43): mandarla en el cuerpo se ignora.
 
 **Orden de las guardas:** no existe (**404** `El viaje no existe`) → borrado (**400** `El viaje ya fue eliminado`) → ya cancelado (**400** `El viaje ya fue cancelado`) → no está pendiente (**400** `Solo se puede cancelar un viaje pendiente`).
 
@@ -687,7 +702,7 @@ Solo `administrator` y `export` (los demás roles, **403** del middleware). **No
 {
   "statusCode": 200,
   "message": "Viaje cancelado correctamente",
-  "data": { "id": 1, "status": "cancelled", "endDate": null, "cancelledAt": "16-11-2026 03:12:40 PM", "cancelledByName": "Ana López", "...": "las 49 claves de Trip" }
+  "data": { "id": 1, "status": "cancelled", "endDate": null, "cancelledAt": "16-11-2026 03:12:40 PM", "cancelledByName": "Ana López", "...": "las 50 claves de Trip" }
 }
 ```
 
@@ -696,6 +711,23 @@ Solo `administrator` y `export` (los demás roles, **403** del middleware). **No
 **Efecto en los dominios hijos (SPEC 42).** Sobre un viaje cancelado responden **400 `El viaje está cancelado`**: `POST /api/trips/{trip}/fuels`, `PATCH /api/trip-fuels/{id}/confirm`, `POST /api/trips/{trip}/expenses`, `PATCH /api/trip-expenses/{id}/confirm`, `POST /api/trips/{trip}/emergency-expenses`, `PATCH`/`DELETE /api/trip-emergency-expenses/{id}` y `POST`/`PATCH`/`DELETE /api/trip-finished-products`. La guarda va **después** del 403 de cada ruta (empresa que no tomó el viaje, piloto no asignado) y **antes** de la reconfirmación idempotente: reconfirmar una carga o un viático de un viaje cancelado es 400, no 200. Las lecturas (`/fuels`, `/expenses`, `/emergency-expenses`, `/positions`, `/timeouts`, `trip-finished-products`) no cambian, y `GET /api/trips/{trip}/cost` responde el 400 de siempre: `El costo solo está disponible para viajes finalizados`.
 
 **Efecto en el tablero y en el Excel.** `GET /api/dashboard/trips` gana `byStatus.cancelled`, la cuarta clave fija (con `0`), y los cancelados siguen contando en `total` y en todos los demás desgloses (`references/dashboard-api.md`). La columna «Estado» de `GET /api/reports/trips` muestra «Cancelado», sin columnas nuevas.
+
+
+### 6.10 Excel de `GET /api/reports/trips` — la columna «OV» (SPEC 43)
+
+El reporte descargable de viajes (SPEC 38) gana la columna **«OV»** en la **segunda posición (columna B) para todos los roles**, entre «Orden» y «Cliente». No depende del rol porque no es dinero ni producto.
+
+| Rol | Columnas | Orden de las primeras |
+|---|---|---|
+| `administrator`, `manager`, `export`, `shipment` | **15** (antes 14) | Orden · **OV** · Cliente · Producto · Cajas · Naviera · … |
+| `carrier`, `user` | **13** (antes 12) | Orden · **OV** · Cliente · Naviera · … |
+
+Las 15 columnas, en orden: Orden, OV, Cliente, Producto, Cajas, Naviera, Destino, Contenedor, Punto de Partida, Fecha de recolección, Fecha de embarque, Booking, Punto de llegada, Transporte, Status. `carrier` y `user` reciben las mismas sin Producto ni Cajas.
+
+- Un viaje con N líneas de producto ocupa N filas y **la OV se repite en las N**, como el resto de datos del viaje.
+- Un viaje sin OV deja la celda **vacía** (no «null» ni guion).
+- ⚠️ Todas las columnas desde «Cliente» se corrieron **una posición a la derecha**. Quien lea el archivo por letra de columna (macros, `BUSCARV`, importaciones) debe ajustarse; el reporte nunca prometió posiciones fijas (ya variaba entre roles).
+- El Excel de la tool `export_trips` del asistente **no** cambia: no trae OV.
 
 ---
 
@@ -729,6 +761,7 @@ Listos para mostrarse al usuario, tal como los devuelve la API.
 | `container` | `El contenedor es obligatorio` · `El contenedor debe ser texto` · `El contenedor no puede superar los 255 caracteres` |
 | `booking` | `El booking es obligatorio` · `El booking debe ser texto` · `El booking no puede superar los 255 caracteres` |
 | `reference` | `La referencia debe ser texto` · `La referencia no puede superar los 255 caracteres` (vacía o en blanco **no** es error: se guarda `null`) |
+| `ov` | `La orden de venta debe ser texto` · `La orden de venta no puede superar los 255 caracteres` (vacía o en blanco **no** es error: se guarda `null`) |
 | `transport` | `El transporte es obligatorio` · `El transporte debe ser texto` · `El transporte no puede superar los 255 caracteres` |
 | `recolectionDate` | `La fecha de recolección es obligatoria` · `La fecha de recolección no es válida` · `La fecha de recolección debe ser futura` |
 | `shipDate` | `La fecha de embarque es obligatoria` · `La fecha de embarque no es válida` · `La fecha de embarque debe ser futura` · `La fecha de embarque no puede ser anterior a la de recolección` |
@@ -788,7 +821,7 @@ Listos para mostrarse al usuario, tal como los devuelve la API.
 
 - [ ] Enviar el header `Authorization: Bearer {token}` en las diez llamadas.
 - [ ] Distinguir los dos formatos de error: `errors` presente → 422 por campo; si no → `message`.
-- [ ] **Tipar dos objetos, no uno:** `TripListItem` (22 claves) para la tabla y `Trip` (49; 50 con `positions` en el detalle) para el resto. No reutilizar una fila del listado como si fuera el viaje completo.
+- [ ] **Tipar dos objetos, no uno:** `TripListItem` (23 claves) para la tabla y `Trip` (50; 51 con `positions` en el detalle) para el resto. No reutilizar una fila del listado como si fuera el viaje completo.
 - [ ] **Pedir `GET /api/trips/{trip}` al abrir un viaje**, siempre: el mapa (`points`) y todos los ids de relación solo existen ahí.
 - [ ] **Pintar una interfaz distinta por rol.** El `carrier` necesita dos listas (la bolsa y lo suyo; en el listado se separan por `pilotName === null && vehiclePlate === null`, porque `assignedById` **no viene**, y en el detalle por `assignedById === null`); el `pilot`, solo su agenda, **sin buscador de viajes disponibles**; el `administrator`, el CRUD completo **sin** botones de asignar, arrancar ni cerrar.
 - [ ] Resolver la ruta con `GET /api/places/directions` **antes** de mandar el alta, y reenviar **los tres valores de esa misma respuesta**: `polyline`, `distanceKilometers` → `estimatedKilometers` y `durationHours` → `estimatedHours`, sin convertir unidades. Volver a resolverla y **remandar los tres en el mismo `PATCH`** cada vez que cambies `locationId` o `departurePointId`.
@@ -823,12 +856,15 @@ Listos para mostrarse al usuario, tal como los devuelve la API.
 - [ ] Confirmar el `DELETE` con un aviso claro de que **no se puede deshacer**.
 - [ ] Invalidar el viaje en caché tras un `/assignment` ajeno: puede haber salido de tu ámbito.
 - [ ] No confiar en un 200 del `PATCH` como prueba de que se aplicó `pilotId` o `vehicleId`: se ignoran en silencio.
-- [ ] Recordar que `order`, `container`, `booking` y `reference` **no son únicos**: no los uses como clave en una lista, usa `id`.
+- [ ] Recordar que `order`, `container`, `booking`, `reference` y `ov` **no son únicos**: no los uses como clave en una lista, usa `id`.
 - [ ] **Añadir `booking` (obligatorio) y `reference` (opcional) al formulario de alta** (SPEC 41): sin `booking` el `POST` es 422. Pintar lo que devuelve la respuesta (en MAYÚSCULAS), no lo tecleado.
 - [ ] En la edición, **no mandar `booking` vacío** (422) y ofrecer «quitar referencia» mandando `reference: null`; si el campo no cambió, omitirlo —omitir `reference` no la borra—.
 - [ ] Tratar `booking === null` como «sin booking» (viaje anterior a SPEC 41), igual que `estimatedKilometers: null`; un `administrator` o `export` puede completarlo por `PATCH`.
 - [ ] Añadir las columnas «Booking» y «Referencia» a la tabla junto al contenedor: ya vienen en el listado, sin pedir el detalle.
-- [ ] Indicar en el buscador que `search` cubre orden, contenedor, booking y referencia.
+- [ ] Indicar en el buscador que `search` cubre orden, contenedor, booking, referencia y OV.
+- [ ] **Añadir `ov` (opcional) a los formularios de alta y edición** (SPEC 43), etiquetada «Orden de venta» u «OV»; pintar lo que devuelve la respuesta (en MAYÚSCULAS). Para «quitar OV» mandar `ov: null`; si no cambió, omitirla —omitirla no la borra—.
+- [ ] Añadir la columna «OV» a la tabla junto a la referencia: ya viene en el listado. Tratar `ov === null` como «sin OV», no como error.
+- [ ] **Avisar a quien consuma el Excel de `GET /api/reports/trips` por posición de columna** (macros, fórmulas, importaciones): desde SPEC 43 la B es «OV» y todo lo demás se corrió una columna.
 - [ ] Pedir `limit` solo cuando quieras paginar, y leer `total`/`currentPage`/`lastPage` **de la raíz**, no de `meta`.
 
 ---
@@ -849,8 +885,9 @@ Listos para mostrarse al usuario, tal como los devuelve la API.
 - **La distancia y el tiempo reales son brutos y no se comparan con nada (SPEC 32).** `traveledKilometers` **no filtra** el ruido GPS (segmentos por debajo de los 5 m que sí usan las paradas), **no descarta** saltos espurios ni simplifica el rastro; `traveledHours` **no descuenta** las paradas de `trip_timeouts`. No hay desvío, retraso, porcentaje ni ETA calculado en el servidor; no hay filtro ni orden por distancia o tiempo real en `GET /api/trips`; no hubo backfill (los viajes cerrados antes de la spec quedan en `null` en las dos); `TripInRouteResource` del tablero, `TripPositionResource` y el payload de `TripPositionUpdated` **no** las traen; `GET /api/trips/current` las trae **siempre en `null`**; y ningún body las acepta. El asistente del tablero (`POST /api/assistant/chat`) sí las ve en su tool `trip`, sin cambios en esa API.
 - **El administrador no puede filtrar por empresa asignataria.** No hay `?assignedBy=` ni `?carrierId=`: el ámbito lo aplica el rol, no un parámetro.
 - **El listado no trae la ruta ni los ids de las relaciones**, y no hay parámetro que los añada: no existe `?include=`, ni `?fields=`, ni una versión «completa» del listado. Una tabla que necesite el cliente de cada viaje tiene que pedir el detalle de cada fila.
-- **`order`, `container`, `booking` y `reference` no son únicos**, y no hay forma de exigir que lo sean.
-- **El booking no se valida contra la naviera (SPEC 41)**: ni prefijo, ni longitud fija, ni dígito verificador; cualquier texto de hasta 255 caracteres vale. No hubo backfill (los viajes viejos quedan con `booking: null`), no hay filtros exactos `?booking=`/`?reference=` ni orden por ellos, y **no salen** en el Excel de `GET /api/reports/trips`, en `export_trips` del asistente, en `GET /api/dashboard/trips/in-route` ni en los textos de las notificaciones push.
+- **`order`, `container`, `booking`, `reference` y `ov` no son únicos**, y no hay forma de exigir que lo sean.
+- **El booking no se valida contra la naviera (SPEC 41)**: ni prefijo, ni longitud fija, ni dígito verificador; cualquier texto de hasta 255 caracteres vale. No hubo backfill (los viajes viejos quedan con `booking: null`), no hay filtros exactos `?booking=`/`?reference=` ni orden por ellos, y `reference` **no sale** en el Excel de `GET /api/reports/trips` (el `booking` sí, en su columna «Booking»); ninguno de los dos sale en `export_trips` del asistente, en `GET /api/dashboard/trips/in-route` ni en los textos de las notificaciones push.
+- **La OV no se valida ni se cruza con nada (SPEC 43)**: ni formato, ni unicidad (ni global ni por cliente), ni relación con un sistema de ventas. No hubo backfill, no hay filtro exacto `?ov=` ni orden por ella, y **no sale** en `GET /api/dashboard/trips/in-route`, en `export_trips` del asistente ni en los textos de las notificaciones push. `/assignment`, `/start`, `/finish` y `/cancel` no la tocan.
 
 ### Hueco conocido, aceptado a propósito
 

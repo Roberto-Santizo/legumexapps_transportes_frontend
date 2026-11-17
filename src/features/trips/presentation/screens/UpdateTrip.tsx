@@ -76,6 +76,7 @@ export function UpdateTrip() {
 
         setValue('order', trip.order);
         setValue('container', trip.container);
+        setValue('ov', trip.ov ?? '');
         setValue('transport', trip.transport);
         setValue('destination', trip.destination);
         setValue('clientId', trip.clientId);

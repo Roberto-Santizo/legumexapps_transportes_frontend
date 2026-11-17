@@ -164,7 +164,7 @@ function TripsReportForm({ onClose, role, search, status, dateFrom, dateTo }: Fo
                 {statusLabel || search ? (
                     <div className="flex flex-wrap gap-2">
                         {statusLabel && <FilterChip label="Estado" value={statusLabel} />}
-                        {search && <FilterChip label="Orden o contenedor" value={search} />}
+                        {search && <FilterChip label="Búsqueda" value={search} />}
                     </div>
                 ) : (
                     <p className="text-sm text-ink-muted">
