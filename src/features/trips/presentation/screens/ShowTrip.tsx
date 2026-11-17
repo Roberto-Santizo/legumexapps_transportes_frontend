@@ -11,6 +11,7 @@
 import {
     TRIP_ALREADY_DELETED_MESSAGE,
     TripAssignmentModal,
+    TripCancelDialog,
     TripContainer,
     TripDeleteDialog,
     TripEmergencyExpensesModal,
@@ -26,6 +27,9 @@ import {
     TripTimeoutsSection,
     canAssignTrip,
     canAssignTrips,
+    canCancelTrip,
+    canCancelTrips,
+    canEditTrip,
     canFinishTrip,
     canReadTripBonus,
     canReadTripCargoInsurance,
@@ -50,6 +54,7 @@ import {
     hasTraveledMetrics,
     tripTraveledPoints,
     hasTripEstimates,
+    isTripCancelled,
     parseGallons,
     parseTripEstimate,
     tripDeviation,
@@ -57,7 +62,7 @@ import {
 } from "@/features/trips/trips";
 import { TripFinishedProductsSection, canReadTripFinishedProducts } from "@/features/trip-finished-products/trip-finished-products";
 import { CustomFilledButton, ErrorComponent, FadeInUp, useNotification } from "@/features/shared/shared";
-import { CircleCheckBig, Fuel, Pencil, Play, Radar, Siren, Trash2, Truck, Wallet } from "lucide-react";
+import { Ban, CircleCheckBig, Fuel, Pencil, Play, Radar, Siren, Trash2, Truck, Wallet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -90,6 +95,8 @@ export function ShowTrip() {
     const role = user?.role;
 
     const canWrite = canWriteTrips(role);
+    /** Cancelar (SPEC 42): los mismos que publican, y solo sobre un viaje pendiente. */
+    const canCancel = canCancelTrips(role);
     const canAssign = canAssignTrips(role, user?.carrierId);
     const canRun = canRunTrips(role);
     const canTrack = canTrackTrips(role);
@@ -110,6 +117,7 @@ export function ShowTrip() {
     const canReadFinishedProducts = canReadTripFinishedProducts(role);
 
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
     const [isAssigning, setIsAssigning] = useState(false);
     const [isLoadingFuel, setIsLoadingFuel] = useState(false);
     const [isViewingExpenses, setIsViewingExpenses] = useState(false);
@@ -143,6 +151,24 @@ export function ShowTrip() {
                 queryClient.invalidateQueries({ queryKey: ['getTrips'] });
                 navigate('/viajes');
             }
+        }
+    });
+
+    /**
+     * Sin cuerpo: `cancelledAt` y `cancelledByName` los pone el servidor. Se
+     * recarga también al fallar: un 400 delata una ficha obsoleta.
+     */
+    const { mutate: cancel, isPending: isCancelPending } = useMutation({
+        mutationFn: () => tripProvider.cancelTripById(id!),
+        onSuccess: (message) => {
+            notification.success(message);
+            invalidate();
+            setIsCancelling(false);
+        },
+        onError: (err) => {
+            notification.error(err.message);
+            invalidate();
+            setIsCancelling(false);
         }
     });
 
@@ -267,12 +293,26 @@ export function ShowTrip() {
 
                         {canWrite && (
                             <>
-                                <CustomFilledButton
-                                    label="Editar"
-                                    type="button"
-                                    icon={<Pencil size={16} />}
-                                    onClick={() => navigate(`/viajes/${trip.id}/editar`)}
-                                />
+                                {/* Un cancelado es de solo lectura: solo queda «Eliminar». */}
+                                {canEditTrip(trip) && (
+                                    <CustomFilledButton
+                                        label="Editar"
+                                        type="button"
+                                        icon={<Pencil size={16} />}
+                                        onClick={() => navigate(`/viajes/${trip.id}/editar`)}
+                                    />
+                                )}
+
+                                {canCancel && canCancelTrip(trip) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCancelling(true)}
+                                        className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/20"
+                                    >
+                                        <Ban size={16} />
+                                        Cancelar viaje
+                                    </button>
+                                )}
 
                                 <button
                                     type="button"
@@ -320,6 +360,27 @@ export function ShowTrip() {
                                 <span>{trip.destination}</span>
                             </p>
                         </div>
+
+                        {/* `cancelledAt` y `cancelledByName` solo vienen en el detalle, nunca en el listado. */}
+                        {isTripCancelled(trip) && (
+                            <div className="flex items-start gap-3 rounded-2xl border border-danger/30 bg-danger/5 px-6 py-5">
+                                <Ban size={18} aria-hidden className="mt-0.5 shrink-0 text-danger" />
+
+                                <div className="flex flex-col gap-1">
+                                    <p className="font-display text-base font-semibold tracking-tight text-ink">
+                                        Viaje cancelado
+                                    </p>
+
+                                    <p className="text-sm text-ink-muted">
+                                        {trip.cancelledByName
+                                            ? <>Lo canceló <span className="text-ink">{trip.cancelledByName}</span></>
+                                            : "Se canceló"}
+                                        {trip.cancelledAt && <> el <TripMoment value={trip.cancelledAt} withTime /></>}.
+                                        {' '}Se conserva como registro: ya no admite cambios, cargas, viáticos, gastos ni productos.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="grid gap-6 lg:grid-cols-2">
                             <TripTimeline trip={trip} />
@@ -630,6 +691,13 @@ export function ShowTrip() {
                 isPending={isRemoving}
                 onClose={() => setIsDeleting(false)}
                 onConfirm={() => remove()}
+            />
+
+            <TripCancelDialog
+                trip={isCancelling ? trip ?? null : null}
+                isPending={isCancelPending}
+                onClose={() => setIsCancelling(false)}
+                onConfirm={() => cancel()}
             />
 
             <TripAssignmentModal

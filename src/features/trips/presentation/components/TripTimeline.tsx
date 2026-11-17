@@ -33,6 +33,9 @@ type Stop = {
  * versiones coinciden, que es lo normal.
  */
 const describeContradiction = ({ status, startDate, endDate }: Trip): string | null => {
+    /** Un cancelado salió de `pending`: sus fechas de ejecución son de antes y no contradicen nada. */
+    if (status === 'cancelled') return null;
+
     if (status === 'finished' && endDate === null) {
         return "Está marcado como finalizado, pero no tiene cierre registrado: nadie pulsó «Finalizar viaje».";
     }
@@ -57,6 +60,8 @@ type Props = {
 }
 
 export function TripTimeline({ trip }: Props) {
+    const isCancelled = trip.status === 'cancelled';
+
     const stops: Stop[] = [
         {
             label: "Recolección",
@@ -74,14 +79,21 @@ export function TripTimeline({ trip }: Props) {
             label: "Arranque",
             kind: "executed",
             value: trip.startDate,
-            pending: "El piloto todavía no lo ha iniciado"
+            pending: isCancelled ? "No se inició: el viaje se canceló" : "El piloto todavía no lo ha iniciado"
         },
         {
             label: "Cierre",
             kind: "executed",
             value: trip.endDate,
-            pending: "El piloto todavía no lo ha cerrado"
+            pending: isCancelled ? "No se cerró: el viaje se canceló" : "El piloto todavía no lo ha cerrado"
         },
+        /** SPEC 42: la cancelación es un hecho con fecha del servidor, y cierra el relato. */
+        ...(isCancelled ? [{
+            label: "Cancelación",
+            kind: "executed" as const,
+            value: trip.cancelledAt,
+            pending: "Sin fecha registrada"
+        }] : []),
     ];
 
     const contradiction = describeContradiction(trip);

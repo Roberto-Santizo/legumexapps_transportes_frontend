@@ -134,7 +134,7 @@ export function IndexClients() {
                     <Table>
                         <Thead>
                             <Th text="Código" />
-                            <Th text="Razón social" />
+                            <Th text="Nombre" />
                             <Th text="Registró" />
                             <Th text="Alta" />
                             <Th text="" />

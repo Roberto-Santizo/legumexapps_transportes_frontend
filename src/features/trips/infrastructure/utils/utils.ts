@@ -18,7 +18,7 @@
  */
 
 import { can, type Option } from "@/features/shared/shared";
-import type { LatLng, Trip, TripAssignmentForm, TripCost, TripAssignmentFormValues, TripEmergencyExpense, TripEmergencyExpenseForm, TripEmergencyExpenseFormValues, TripEmergencyExpenseUpdateForm, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
+import type { LatLng, Trip, TripAssignmentForm, TripEditableStatus, TripCost, TripAssignmentFormValues, TripEmergencyExpense, TripEmergencyExpenseForm, TripEmergencyExpenseFormValues, TripEmergencyExpenseUpdateForm, TripExpense, TripExpenseForm, TripField, TripFilters, TripForm, TripFormValues, TripFuel, TripFuelForm, TripListItem, TripPosition, TripStatus, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 import { formatDistanceKilometers, formatDurationHours } from "@/features/places/places";
 import { FUEL_TYPES, FUEL_TYPE_LABELS } from "@/features/fuel-prices/fuel-prices";
 import { TRIP_CLIENT_LOCKED_MESSAGE, buildTripProductLines } from "@/features/trip-finished-products/trip-finished-products";
@@ -41,14 +41,46 @@ export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
     pending: "Pendiente",
     in_route: "En ruta",
     finished: "Finalizado",
+    cancelled: "Cancelado",
 };
 
-/** Para el `select` de estado del filtro y de la edición. */
+/** Para el `select` de estado del filtro y del reporte: los cuatro, `cancelled` incluido. */
 export const TRIP_STATUSES: Option[] = (Object.keys(TRIP_STATUS_LABELS) as TripStatus[])
     .map((value) => ({ value, label: TRIP_STATUS_LABELS[value] }));
 
+/**
+ * Para el `select` de la edición: sin `cancelled`, que en el `PATCH` general es
+ * 422 —solo se cancela con `/cancel`—.
+ */
+export const TRIP_EDITABLE_STATUSES: Option[] = TRIP_STATUSES.filter(
+    (option): boolean => option.value !== 'cancelled'
+);
+
+/** Estrecha el estado a uno que el `PATCH` general acepta. */
+export const isTripEditableStatus = (status: TripStatus): status is TripEditableStatus => status !== 'cancelled';
+
 /** Publicar, editar y dar de baja: `administrator` y `export`. Los siete roles leen (con su ámbito). */
 export const canWriteTrips = (role?: string): boolean => can(role, 'manageTrips');
+
+/**
+ * Un viaje cancelado (SPEC 42) es de **solo lectura**: toda escritura —editar,
+ * asignar, arrancar, cerrar, cargas, viáticos, gastos emergentes, líneas de
+ * productos— responde 400 «El viaje está cancelado». Solo el `DELETE` sigue
+ * permitido. Cada `can*` de escritura sobre un viaje pasa por aquí.
+ */
+export const isTripCancelled = (trip: Pick<TripListItem, 'status'>): boolean => trip.status === 'cancelled';
+
+/** Editar con el `PATCH` general: cualquier estado salvo `cancelled`, que responde 400 aun con el cuerpo vacío. */
+export const canEditTrip = (trip: Pick<TripListItem, 'status'>): boolean => !isTripCancelled(trip);
+
+/** Cancelar es de `administrator` y `export`, los mismos que publican. Ni `carrier` ni el piloto. */
+export const canCancelTrips = (role?: string): boolean => can(role, 'cancelTrip');
+
+/**
+ * Solo un viaje `pending` —libre o asignado— se cancela: `in_route` o
+ * `finished` son 400 y un segundo `/cancel` también.
+ */
+export const canCancelTrip = (trip: Pick<TripListItem, 'status'>): boolean => trip.status === 'pending';
 
 /**
  * Tomar el viaje es solo de `carrier`, y además con empresa registrada: sin
@@ -75,12 +107,17 @@ export const isTripInBag = (trip: Pick<TripListItem, 'pilotName'>): boolean => t
 /** Reasignar solo mientras siga `pending`: `in_route` o `finished` responden 400. */
 export const canAssignTrip = (trip: Pick<TripListItem, 'status'>): boolean => trip.status === 'pending';
 
-/** Un segundo `/start` responde 400. */
-export const canStartTrip = (trip: Pick<TripListItem, 'startDate'>): boolean => trip.startDate === null;
+/** Un segundo `/start` responde 400, y sobre un cancelado también. */
+export const canStartTrip = (trip: Pick<TripListItem, 'status' | 'startDate'>): boolean =>
+    !isTripCancelled(trip) && trip.startDate === null;
 
-/** No se cierra un viaje que nunca arrancó: sin `startDate` la API responde 400. */
-export const canFinishTrip = (trip: Pick<TripListItem, 'startDate' | 'endDate'>): boolean =>
-    trip.startDate !== null && trip.endDate === null;
+/**
+ * No se cierra un viaje que nunca arrancó: sin `startDate` la API responde 400.
+ * Un cancelado tampoco, aunque traiga `startDate` —sin máquina de estados, un
+ * `in_route` pudo volver a `pending` y cancelarse—.
+ */
+export const canFinishTrip = (trip: Pick<TripListItem, 'status' | 'startDate' | 'endDate'>): boolean =>
+    !isTripCancelled(trip) && trip.startDate !== null && trip.endDate === null;
 
 /**
  * Mirar el rastro es de todos **menos del piloto**, que recibe 403 tanto en el
@@ -524,6 +561,15 @@ export const TRIP_TAKEN_MESSAGE = "No puedes asignar un viaje que ya tomó otra 
 /** El 400 de reasignar un viaje que ya arrancó. */
 export const TRIP_NOT_PENDING_MESSAGE = "Solo se puede asignar un viaje pendiente";
 
+/** El 400 de cualquier escritura sobre un viaje cancelado (SPEC 42), hijos incluidos. */
+export const TRIP_CANCELLED_MESSAGE = "El viaje está cancelado";
+
+/** El 400 del segundo `/cancel`. */
+export const TRIP_ALREADY_CANCELLED_MESSAGE = "El viaje ya fue cancelado";
+
+/** El 400 de `/cancel` sobre un viaje `in_route` o `finished`. */
+export const TRIP_CANCEL_NOT_PENDING_MESSAGE = "Solo se puede cancelar un viaje pendiente";
+
 /**
  * El error puede venir envuelto: el datasource lo relanza como `Error` con el
  * error de axios en `cause`, y así llega a la pantalla. Se desenvuelve hasta
@@ -787,11 +833,11 @@ export const canReadTripFuels = (role?: string): boolean => can(role, 'readTripF
  *   aunque el listado sí se lea: una carga que ningún piloto puede confirmar
  *   nacería atascada. Sin `pilotId` en el listado, la tripulación es lo que
  *   delata que el viaje ya tiene dueño.
- * - **No puede estar finalizado.** `pending` e `in_route` sí —una recarga en
- *   carretera es el caso real—; `finished` responde 400.
+ * - **No puede estar finalizado ni cancelado.** `pending` e `in_route` sí —una
+ *   recarga en carretera es el caso real—; `finished` y `cancelled` responden 400.
  */
 export const canRegisterTripFuel = (trip: Pick<TripListItem, 'status' | 'pilotName'>): boolean =>
-    trip.pilotName !== null && trip.status !== 'finished';
+    trip.pilotName !== null && trip.status !== 'finished' && !isTripCancelled(trip);
 
 /**
  * Los galones llegan como **cadena** de dos decimales, nunca como número. Este
@@ -859,6 +905,26 @@ export const getTripFuelFieldErrors = (error: unknown): TripFuelFieldError[] => 
 export const TRIP_EXPENSE_MAX_AMOUNT = 99999999.99;
 
 /**
+ * Conceptos de un viático. La API no tiene categorías —`description` es texto
+ * libre—, así que el catálogo vive en el front y viaja como `description`: el
+ * `value` es la propia etiqueta, la que se guarda y se vuelve a pintar. El
+ * combustible no está porque tiene su propio dominio (cargas), ni las averías,
+ * que son gastos de emergencia.
+ */
+export const TRIP_EXPENSE_CONCEPTS: Option[] = [
+    'Alimentación',
+    'Hospedaje',
+    'Peaje',
+    'Estacionamiento',
+    'Pesaje en báscula',
+    'Trámites aduanales',
+    'Pasaje de regreso',
+    'Comunicación (saldo telefónico)',
+    'Lavado de la unidad',
+    'Otros gastos de ruta',
+].map((concept) => ({ value: concept, label: concept }));
+
+/**
  * Registrar viáticos: la misma regla que las cargas —`administrator` y
  * `carrier` con empresa—. Confirmarlos es solo del piloto asignado.
  */
@@ -874,10 +940,10 @@ export const canReadTripExpenses = (role?: string): boolean => can(role, 'readTr
 /**
  * Sobre qué viaje se puede registrar un viático: las dos mismas condiciones
  * que el combustible. Tiene que estar tomado —sobre la bolsa el `POST` es
- * 403— y no puede estar `finished` —400—.
+ * 403— y no puede estar `finished` ni `cancelled` —400—.
  */
 export const canRegisterTripExpense = (trip: Pick<TripListItem, 'status' | 'pilotName'>): boolean =>
-    trip.pilotName !== null && trip.status !== 'finished';
+    trip.pilotName !== null && trip.status !== 'finished' && !isTripCancelled(trip);
 
 /**
  * El monto llega como **cadena** de dos decimales, nunca como número. Único
@@ -982,10 +1048,11 @@ export const canRegisterTripEmergencyExpense = (trip: Pick<TripListItem, 'status
 
 /**
  * Corregir y borrar sí se puede con el viaje `finished` —la factura suele
- * llegar después del cierre—. Solo un viaje `pending` lo impide.
+ * llegar después del cierre—. Lo impiden un viaje `pending` y uno `cancelled`
+ * (SPEC 42), aunque este traiga gastos de cuando estuvo en ruta.
  */
 export const canManageTripEmergencyExpense = (trip: Pick<TripListItem, 'status'>): boolean =>
-    trip.status !== 'pending';
+    trip.status !== 'pending' && !isTripCancelled(trip);
 
 /** Las dos fechas salen del mismo formato: si difieren, alguien lo corrigió. */
 export const isTripEmergencyExpenseCorrected = (expense: Pick<TripEmergencyExpense, 'createdAt' | 'updatedAt'>): boolean =>

@@ -22,7 +22,7 @@ import { useWatch, type Control, type FieldErrors, type UseFormRegister, type Us
 import type { TripFormValues } from "@/features/trips/trips";
 import {
     TRIP_CATALOG_LIMIT,
-    TRIP_STATUSES,
+    TRIP_EDITABLE_STATUSES,
     TRIP_TEXT_MAX_LENGTH,
     TripProductLinesField,
     TripRouteSection,
@@ -287,7 +287,7 @@ export function TripFormComponent({
 
             <Fieldset
                 legend="Las fechas"
-                hint="Lo planificado. El arranque y el cierre reales los pone el servidor cuando el piloto los marca."
+                hint="Fechas según lo planificado"
             >
                 <div className="grid gap-4 sm:grid-cols-2">
                     <TextFormField<TripFormValues>
@@ -306,7 +306,7 @@ export function TripFormComponent({
                     />
 
                     <TextFormField<TripFormValues>
-                        label="Embarque"
+                        label="Carga a Barco"
                         name="shipDate"
                         type="datetime-local"
                         placeholder=""
@@ -401,7 +401,7 @@ export function TripFormComponent({
                         <SelectFormField<TripFormValues>
                             label="Estado"
                             name="status"
-                            options={TRIP_STATUSES}
+                            options={TRIP_EDITABLE_STATUSES}
                             errorMessage={errors.status?.message}
                             control={control}
                             validation={{ required: "El estado del viaje es obligatorio" }}

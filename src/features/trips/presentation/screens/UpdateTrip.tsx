@@ -4,9 +4,11 @@ import {
     TripOrder,
     TripPageHeader,
     buildTripUpdatePayload,
+    canEditTrip,
     canWriteTrips,
     getTripFieldErrors,
     hasTripEstimates,
+    isTripEditableStatus,
     parseTripEstimate,
     toInputDateTime,
     tripProvider,
@@ -83,7 +85,7 @@ export function UpdateTrip() {
         setValue('recolectionDate', toInputDateTime(trip.recolectionDate));
         setValue('shipDate', toInputDateTime(trip.shipDate));
         setValue('observations', trip.observations);
-        setValue('status', trip.status);
+        if (isTripEditableStatus(trip.status)) setValue('status', trip.status);
 
         const kilometers = parseTripEstimate(trip.estimatedKilometers);
         const hours = parseTripEstimate(trip.estimatedHours);
@@ -161,7 +163,31 @@ export function UpdateTrip() {
                 </p>
             )}
 
-            {canWrite && !isLoading && !isLoadingProductLines && trip && (
+            {/* Un cancelado es de solo lectura: el `PATCH` responde 400 aun con el cuerpo vacío (SPEC 42). */}
+            {canWrite && !isLoading && trip && !canEditTrip(trip) && (
+                <FadeInUp>
+                    <div className="rounded-2xl border border-dashed border-line-strong bg-surface px-8 py-12 text-center">
+                        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-subtle">
+                            Viaje cancelado
+                        </p>
+
+                        <p className="mx-auto mt-3 max-w-[44ch] text-sm text-ink-muted">
+                            Un viaje cancelado se conserva como registro y ya no se puede
+                            editar. Si va a hacerse de todos modos, publica uno nuevo.
+                        </p>
+
+                        <div className="mt-6 flex justify-center">
+                            <CustomFilledButton
+                                label="Ver detalle"
+                                type="button"
+                                onClick={() => navigate(`/viajes/${trip.id}`)}
+                            />
+                        </div>
+                    </div>
+                </FadeInUp>
+            )}
+
+            {canWrite && !isLoading && !isLoadingProductLines && trip && canEditTrip(trip) && (
                 <FadeInUp>
                     <div className="flex max-w-3xl flex-col gap-6">
                         {trip.pilotName && (

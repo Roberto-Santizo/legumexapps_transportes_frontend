@@ -2,13 +2,21 @@ import { ApiPaginatedResponseSchema } from "@/features/shared/shared";
 import { z } from "zod";
 
 /**
- * Los tres estados del viaje, **crudos y en inglés**: la API no los traduce y
- * `"PENDING"` o `"pendiente"` son un 422. No existe `cancelled` —un viaje que
- * no se hará se borra— y **no hay máquina de estados**: el administrador los
- * mueve en cualquier orden, así que un `finished` puede volver a `pending`
- * conservando sus dos fechas de ejecución.
+ * Los cuatro estados del viaje, **crudos y en inglés**: la API no los traduce y
+ * `"PENDING"` o `"pendiente"` son un 422. Los tres primeros **no tienen
+ * máquina de estados**: el administrador los mueve en cualquier orden, así que
+ * un `finished` puede volver a `pending` conservando sus dos fechas de
+ * ejecución.
+ *
+ * `cancelled` (SPEC 42) es distinto: solo lo escribe `PATCH /trips/{trip}/cancel`,
+ * solo desde `pending`, y es **irreversible**. Un cancelado sigue visible pero
+ * es de **solo lectura**: toda escritura sobre él responde 400 «El viaje está
+ * cancelado» (salvo el `DELETE`).
  */
-export const TripStatusSchema = z.enum(['pending', 'in_route', 'finished']);
+export const TripStatusSchema = z.enum(['pending', 'in_route', 'finished', 'cancelled']);
+
+/** Los estados que acepta el `PATCH` general: `cancelled` ahí es 422. */
+export const TripEditableStatusSchema = TripStatusSchema.exclude(['cancelled']);
 
 /**
  * Un viaje de exportación: la carga que sale de una planta, pasa por un puerto
@@ -68,6 +76,14 @@ export const TripSchema = z.object({
     /** Lo ejecutado. `null` hasta que el piloto llama a `/start` y `/finish`. */
     startDate: z.string().nullable(),
     endDate: z.string().nullable(),
+    /**
+     * Cuándo se canceló (SPEC 42), hora del servidor en `d-m-Y h:i:s A`.
+     * `null` salvo en un viaje cancelado. Ningún body la acepta y no sale en
+     * el listado. `default` para un backend anterior que no la manda.
+     */
+    cancelledAt: z.string().nullable().default(null),
+    /** Quien canceló (SPEC 42), tomado del token. Sin id al lado. `null` salvo en un cancelado. */
+    cancelledByName: z.string().nullable().default(null),
     /**
      * Polilínea codificada de Google, tal como la mandó el front. **Puede
      * quedar obsoleta**: la API no la recalcula nunca y no avisa si los

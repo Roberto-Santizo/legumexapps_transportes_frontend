@@ -1,4 +1,5 @@
 export * from './TripAssignmentModal';
+export * from './TripCancelDialog';
 export * from './TripDeleteDialog';
 export * from './TripEmergencyExpensesModal';
 export * from './TripEmergencyReceiptField';

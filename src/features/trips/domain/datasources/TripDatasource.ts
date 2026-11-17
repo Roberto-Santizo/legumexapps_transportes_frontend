@@ -1,9 +1,9 @@
 import type { PaginatedTrips, Trip, TripAssignmentForm, TripCost, TripEmergencyExpenseForm, TripEmergencyExpenseUpdateForm, TripEmergencyExpenses, TripExpenseForm, TripExpenses, TripFilters, TripForm, TripFuelForm, TripFuels, TripPosition, TripTimeout, TripUpdateForm, TripsReportParams } from "@/features/trips/trips";
 
 /**
- * Los quince endpoints del dominio. Los nueve últimos no son un CRUD: son las
+ * Los dieciséis endpoints del dominio. Los diez últimos no son un CRUD: son las
  * acciones que mueven el viaje entre manos —la empresa lo toma, le carga
- * combustible y le entrega viáticos, el piloto lo arranca y lo cierra— y las
+ * combustible y le entrega viáticos, el piloto lo arranca y lo cierra, el administrador lo cancela— y las
  * lecturas que deja ese recorrido —el rastro, las cargas, los viáticos y las
  * paradas, y el costo directo del viaje cerrado—, cada una con su propio rol.
  */
@@ -16,6 +16,7 @@ export abstract class TripDatasource {
     abstract assignTripById(id: string, payload: TripAssignmentForm): Promise<string>;
     abstract startTripById(id: string): Promise<string>;
     abstract finishTripById(id: string): Promise<string>;
+    abstract cancelTripById(id: string): Promise<string>;
     abstract getTripPositions(id: string): Promise<TripPosition[]>;
     abstract getTripFuels(id: string): Promise<TripFuels>;
     abstract createTripFuel(id: string, payload: TripFuelForm): Promise<string>;

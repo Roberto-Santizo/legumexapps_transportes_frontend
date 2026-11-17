@@ -43,10 +43,10 @@ export function ClientFormComponent({ register, errors }: Props) {
             />
 
             <TextFormField<ClientForm>
-                label="Razón social"
+                label="Nombre del cliente"
                 name="name"
                 type="text"
-                placeholder="Agroexportadora del Sur"
+                placeholder="Ej: Walmart"
                 register={register}
                 errorMessage={errors.name?.message}
                 validation={{

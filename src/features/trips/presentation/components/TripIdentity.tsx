@@ -68,6 +68,7 @@ const STATUS_STYLES: Record<TripStatus, { dot: string; text: string }> = {
     pending: { dot: "bg-ink-subtle", text: "text-ink-muted" },
     in_route: { dot: "bg-primary", text: "text-ink" },
     finished: { dot: "bg-success", text: "text-success" },
+    cancelled: { dot: "bg-danger", text: "text-danger" },
 };
 
 type StatusProps = {
