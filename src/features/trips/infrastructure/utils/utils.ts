@@ -427,7 +427,7 @@ const appendTripFilters = (query: URLSearchParams, filters?: TripFilters): URLSe
  * **número** y sin convertir —kilómetros y horas decimales, tal como las dio
  * `/directions`—: la API las guarda con dos decimales y no las coteja.
  */
-const buildTripBasePayload = (form: TripFormValues): Omit<TripForm, 'products' | 'booking' | 'reference'> => ({
+const buildTripBasePayload = (form: TripFormValues): Omit<TripForm, 'products' | 'booking' | 'reference' | 'ov'> => ({
     order: form.order.trim(),
     clientId: Number(form.clientId),
     shippingLineId: Number(form.shippingLineId),
@@ -448,16 +448,18 @@ const buildTripBasePayload = (form: TripFormValues): Omit<TripForm, 'products' |
  * El alta lleva además las líneas de producto terminado (SPEC 37) y el
  * booking (SPEC 41): sin cualquiera de los dos todo `POST /api/trips` es 422.
  *
- * La referencia es opcional y **no se manda vacía**: la API guardaría `null`
- * igual, pero omitirla deja el cuerpo limpio.
+ * La referencia y la OV (SPEC 43) son opcionales y **no se mandan vacías**:
+ * la API guardaría `null` igual, pero omitirlas deja el cuerpo limpio.
  */
 export const buildTripPayload = (form: TripFormValues): TripForm => {
     const reference = form.reference?.trim();
+    const ov = form.ov?.trim();
 
     return {
         ...buildTripBasePayload(form),
         booking: form.booking.trim(),
         ...(reference ? { reference } : {}),
+        ...(ov ? { ov } : {}),
         products: buildTripProductLines(form.products),
     };
 };
@@ -480,9 +482,13 @@ export const buildTripPayload = (form: TripFormValues): TripForm => {
  * `pilotId` y `vehicleId` no aparecen: el `PATCH` los ignora en silencio y
  * responde 200 sin aplicarlos. `products` tampoco: las líneas se editan con
  * `/trip-finished-products`.
+ *
+ * La OV (SPEC 43) viaja siempre: con valor se reescribe y vacía va como
+ * `null`, que es como el `PATCH` la borra —omitirla no la tocaría—.
  */
 export const buildTripUpdatePayload = (form: TripFormValues): TripUpdateForm => ({
     ...buildTripBasePayload(form),
+    ov: form.ov?.trim() || null,
     ...(form.status ? { status: form.status } : {}),
 });
 
@@ -644,6 +650,7 @@ const TRIP_FIELDS: readonly TripField[] = [
     'container',
     'booking',
     'reference',
+    'ov',
     'transport',
     'recolectionDate',
     'shipDate',

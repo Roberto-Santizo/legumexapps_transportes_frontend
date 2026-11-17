@@ -1,6 +1,6 @@
 /**
  * Los catorce campos del viaje —más sus productos terminados, el booking y la
- * referencia, en el alta—,
+ * referencia, en el alta, y la orden de venta en el alta y la edición—,
  * agrupados como se dicta un viaje por teléfono: qué carga es y de quién,
  * cuándo sale, por dónde va y qué hay que saber al llevarla.
  *
@@ -89,6 +89,14 @@ const REFERENCE_VALIDATION = {
     }
 } as const;
 
+/** SPEC 43: opcional. Vacía o en blanco se guarda `null`; en la edición, vaciarla la borra. */
+const OV_VALIDATION = {
+    maxLength: {
+        value: TRIP_TEXT_MAX_LENGTH,
+        message: `La orden de venta no puede superar los ${TRIP_TEXT_MAX_LENGTH} caracteres`
+    }
+} as const;
+
 function Fieldset({ legend, hint, children }: { legend: string; hint: string; children: React.ReactNode }) {
     return (
         <fieldset className="flex flex-col gap-4">
@@ -154,8 +162,8 @@ export function TripFormComponent({
             <Fieldset
                 legend="La carga"
                 hint={isUpdate
-                    ? "La orden y el contenedor se guardan en mayúsculas. Ninguno de los dos es único: dos viajes pueden compartirlos."
-                    : "La orden, el contenedor, el booking y la referencia se guardan en mayúsculas. Ninguno es único: un mismo booking puede cubrir varios viajes."}
+                    ? "La orden, el contenedor y la orden de venta se guardan en mayúsculas. Ninguno es único: dos viajes pueden compartirlos. Deja la OV vacía para quitarla."
+                    : "La orden, el contenedor, el booking, la referencia y la orden de venta se guardan en mayúsculas. Ninguno es único: un mismo booking puede cubrir varios viajes."}
             >
                 <div className="grid gap-4 sm:grid-cols-2">
                     <TextFormField<TripFormValues>
@@ -203,6 +211,19 @@ export function TripFormComponent({
                         />
                     </div>
                 )}
+
+                {/* SPEC 43: opcional en el alta y en la edición; vacía, el `PATCH` la borra. */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <TextFormField<TripFormValues>
+                        label="Orden de venta (OV)"
+                        name="ov"
+                        type="text"
+                        placeholder="OV-2026 15"
+                        register={register}
+                        errorMessage={errors.ov?.message}
+                        validation={OV_VALIDATION}
+                    />
+                </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                     {lockClient ? (

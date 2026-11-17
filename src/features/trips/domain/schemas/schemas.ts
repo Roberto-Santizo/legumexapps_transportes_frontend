@@ -68,6 +68,11 @@ export const TripSchema = z.object({
     booking: z.string().nullable().default(null),
     /** Referencia comercial opcional (SPEC 41). `null` = sin referencia; nunca `""`. */
     reference: z.string().nullable().default(null),
+    /**
+     * Orden de venta opcional (SPEC 43). MAYÚSCULAS con espacios colapsados,
+     * como `reference`. `null` = sin OV; nunca `""`. No es única.
+     */
+    ov: z.string().nullable().default(null),
     /** Medio de transporte, descriptivo. No tiene relación con el `vehicleId` asignado. */
     transport: z.string(),
     /** Lo planificado. Formato `d-m-Y h:i:s A`. */
@@ -266,6 +271,8 @@ export const TripListItemSchema = z.object({
     /** SPEC 41: mismo valor y mismo `null` que en el detalle, justo después del contenedor. */
     booking: z.string().nullable().default(null),
     reference: z.string().nullable().default(null),
+    /** SPEC 43: mismo valor y mismo `null` que en el detalle, justo después de la referencia. */
+    ov: z.string().nullable().default(null),
     /** Lo planificado. Formato `d-m-Y h:i:s A`. */
     recolectionDate: z.string(),
     shipDate: z.string(),

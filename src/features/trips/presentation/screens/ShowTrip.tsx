@@ -400,6 +400,11 @@ export function ShowTrip() {
                                             {trip.shippingLineName ?? <span className="text-ink-subtle">No disponible</span>}
                                         </Field>
 
+                                        {/* SPEC 43: `null` es «sin OV», no un dato roto. */}
+                                        <Field label="Orden de venta">
+                                            {trip.ov ?? <span className="text-ink-subtle">Sin OV</span>}
+                                        </Field>
+
                                         <Field label="Transporte">{trip.transport}</Field>
 
                                         <Field label="Destino final">{trip.destination}</Field>

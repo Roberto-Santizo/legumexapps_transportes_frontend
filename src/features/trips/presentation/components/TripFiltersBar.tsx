@@ -72,7 +72,7 @@ export function TripFiltersBar({ search, status, dateFrom, dateTo, setSearchPara
             <div className="flex flex-wrap items-end gap-4">
                 <label className="flex flex-col gap-2">
                     <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-subtle">
-                        Orden o contenedor
+                        Buscar
                     </span>
 
                     <span className="relative block w-full sm:w-[22rem]">
@@ -86,7 +86,7 @@ export function TripFiltersBar({ search, status, dateFrom, dateTo, setSearchPara
                             type="search"
                             value={term}
                             onChange={(event) => setTerm(event.target.value)}
-                            placeholder="ORD-2026 0148, MSKU"
+                            placeholder="Orden, contenedor, booking, referencia u OV"
                             className="text_form_field w-full pl-9"
                         />
                     </span>
