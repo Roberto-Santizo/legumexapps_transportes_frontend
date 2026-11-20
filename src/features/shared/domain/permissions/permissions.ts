@@ -52,7 +52,7 @@ export const PERMISSIONS = {
     /** La sección «Productos terminados» del detalle del viaje. Restricción solo de UI. */
     readTripFinishedProducts: ['administrator', 'export', 'shipment'],
     /** Tomar de la bolsa: solo `carrier`, y con empresa (ver `canAssignTrips`). */
-    assignTrip: ['carrier'],
+    assignTrip: ['carrier', 'administrator'],
     /** Arrancar, cerrar, reportar posición y confirmar cargas/viáticos. */
     driveTrip: ['pilot'],
     /** Rastro, paradas y canal en vivo: el piloto emite pero no observa. */
