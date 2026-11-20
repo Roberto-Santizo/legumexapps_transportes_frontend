@@ -34,7 +34,7 @@ export const PERMISSIONS = {
     /* Catálogos: todos leen menos `user` y `shipment`, que ven los nombres ya embebidos en el viaje. */
     readCatalogs: except('user', 'shipment'),
     /** `products`, `zones`, `fuel-prices`, `freight-rates`, `accessories`, `accessory-characteristics`. */
-    writeCoreCatalogs: ['administrator'],
+    writeCoreCatalogs: ['administrator', 'carrier'],
     /** `clients`, `shipping-lines`, `locations`, `departure-points`. */
     writeTripCatalogs: ['administrator', 'export'],
     /** `finished-products`: al revés que el resto de catálogos, `user` y `shipment` leen y el `pilot` no. Escribe `writeTripCatalogs`. */

@@ -24,7 +24,7 @@ const CARRIER_FLEET: UserRole[] = ['administrator', 'carrier'];
 export const NAVIGATION: NavItem[] = [
     { to: "/dashboard", text: "Dashboard", icon: <LayoutDashboard />, roles: PERMISSIONS.dashboard },
     { to: "/vehiculos", text: "Vehículos", icon: <Car />, roles: CARRIER_FLEET },
-    { to: "/gasolina-precios", text: "Combustible", icon: <Fuel />, roles: ADMIN_ONLY },
+    { to: "/gasolina-precios", text: "Combustible", icon: <Fuel />, roles: ['administrator', 'carrier'] },
     { to: "/productos", text: "Productos", icon: <Apple />, roles: ADMIN_ONLY },
     // { to: "/zonas", text: "Zonas", icon: <MapPinned />, roles: ADMIN_ONLY },
     { to: "/puntos-de-partida", text: "Puntos de partida", icon: <Warehouse />, roles: TRIP_CATALOGS },

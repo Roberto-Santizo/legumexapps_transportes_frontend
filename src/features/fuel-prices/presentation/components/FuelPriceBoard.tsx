@@ -17,48 +17,60 @@ export function FuelPriceBoard({ prices }: Props) {
         prices.find((price) => price.fuelType === fuelType && price.status === 'active');
 
     return (
-        <section className="overflow-hidden rounded-2xl bg-ink-deep text-canvas shadow-sm">
-            <header className="flex items-center gap-2.5 border-b border-canvas/10 px-6 py-4">
-                <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary" />
+        <div data-impeccable-carbonize="545a2da6" style={{ display: "contents" }}>
+          {/* impeccable-carbonize-start 545a2da6 */}
+          <style data-impeccable-css="545a2da6">{`
+          @scope ([data-impeccable-variant="1"]) {
+          :scope .fp-price { font-size: calc(var(--p-price-scale, 1) * 1.875rem); }
+          }
+          @scope ([data-impeccable-variant="2"]) {
+          :scope .fp-row { padding-block: 0.875rem; }
+          :scope[data-p-density="compact"] .fp-row { padding-block: 0.5rem; }
+          :scope .fp-price { font-size: 1.125rem; }
+          :scope[data-p-density="compact"] .fp-price { font-size: 1rem; }
+          }
+          @scope ([data-impeccable-variant="3"]) {
+          :scope .fp-price { font-size: calc(var(--p-price-scale, 1) * 2.25rem); }
+          }
+          `}</style>
+          {/* impeccable-param-values 545a2da6: {"price-scale":1} */}
+          {/* impeccable-carbonize-end 545a2da6 */}
+          <div data-impeccable-variant="1" style={{ display: 'contents' }}>
+            <section className="overflow-hidden rounded-2xl border border-line bg-surface">
+                <header className="flex flex-wrap items-baseline justify-between gap-2 px-6 py-4">
+                    <h2 className="font-display text-base font-semibold tracking-tight text-ink">
+                        Precios vigentes
+                    </h2>
+                    <p className="text-xs text-ink-muted">Quetzales por galón</p>
+                </header>
 
-                <h2 className="font-mono text-[10px] uppercase tracking-[0.24em] text-canvas/60">
-                    Precios vigentes
-                </h2>
-            </header>
+                <dl className="grid grid-cols-1 gap-px border-t border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+                    {FUEL_GROUPS.flatMap((group) => group.types.map((fuelType) => {
+                        const current = currentPriceOf(fuelType);
+                        const label = FUEL_TYPE_LABELS[fuelType] ?? fuelType;
+                        const name = label.startsWith(group.label) ? label : `${group.label} ${label.toLowerCase()}`;
 
-            <div className="grid divide-canvas/10 sm:grid-cols-2 sm:divide-x">
-                {FUEL_GROUPS.map((group) => (
-                    <div key={group.label} className="border-b border-canvas/10 px-6 py-5 last:border-b-0 sm:border-b-0">
-                        <h3 className="font-mono text-[10px] uppercase tracking-[0.28em] text-canvas/40">
-                            {group.label}
-                        </h3>
-
-                        <dl className="mt-4 flex flex-col gap-4">
-                            {group.types.map((fuelType) => {
-                                const current = currentPriceOf(fuelType);
-
-                                return (
-                                    <div key={fuelType} className="flex flex-col gap-1">
-                                        <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-canvas/50">
-                                            {FUEL_TYPE_LABELS[fuelType] ?? fuelType}
-                                        </dt>
-
-                                        <dd>
-                                            {current
-                                                ? <FuelPriceFigure price={current.price} size="md" />
-                                                : (
-                                                    <span className="font-mono text-sm text-canvas/35">
-                                                        Sin precio vigente
-                                                    </span>
-                                                )}
-                                        </dd>
-                                    </div>
-                                );
-                            })}
-                        </dl>
-                    </div>
-                ))}
-            </div>
-        </section>
+                        return (
+                            <div key={fuelType} className="flex flex-col gap-2 bg-surface px-6 py-5">
+                                <dt className="text-sm text-ink-muted">{name}</dt>
+                                <dd className="flex min-h-10 items-baseline gap-1.5">
+                                    {current ? (
+                                        <>
+                                            <span className="fp-price font-display font-semibold leading-none tracking-tight text-ink tabular-nums">
+                                                Q{current.price}
+                                            </span>
+                                            <span className="text-xs text-ink-muted">/gal</span>
+                                        </>
+                                    ) : (
+                                        <span className="self-center text-sm text-ink-muted">Sin precio vigente</span>
+                                    )}
+                                </dd>
+                            </div>
+                        );
+                    }))}
+                </dl>
+            </section>
+          </div>
+        </div>
     );
 }
