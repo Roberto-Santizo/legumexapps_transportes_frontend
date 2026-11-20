@@ -7,9 +7,9 @@
  *
  * Se eligen los dos a la vez porque la API los exige juntos: no se puede
  * asignar solo piloto o solo vehículo, y `null` en cualquiera de los dos es un
- * 422. Por eso son tarjetas y no desplegables —hay que comparar de un vistazo
- * quién va y en qué unidad antes de un movimiento que no se deshace— y por eso
- * el botón dice «Tomar el viaje» y no «Guardar».
+ * 422. Piloto y unidad se eligen en desplegables con buscador (las listas
+ * crecen: se busca por nombre/correo/empresa o placa/marca/modelo). Por ser un
+ * movimiento que no se deshace el botón dice «Tomar el viaje» y no «Guardar».
  *
  * Solo se ofrecen vehículos `active`: `inactive` y `under_repair` los rechaza
  * el service con un 400, y el piloto y el vehículo tienen que ser de la misma
@@ -51,8 +51,8 @@ import {
     parseAmount,
     tripProvider
 } from "@/features/trips/trips";
-import { CardSelectFormField } from "@/features/pilots/pilots";
-import { VEHICLE_TYPE_LABELS, VehicleCardSelectFormField, vehicleProvider } from "@/features/vehicles/vehicles";
+import { SearchSelectFormField } from "@/features/pilots/pilots";
+import { VEHICLE_TYPE_LABELS, VehiclePhotoThumb, vehicleProvider } from "@/features/vehicles/vehicles";
 import { CustomForm, Modal, SelectFormField, SpinnerComponent, TextAreaFormField, TextFormField, useNotification } from "@/features/shared/shared";
 import { pilotProvider } from "@/features/pilots/pilots";
 import { useForm } from "react-hook-form";
@@ -210,8 +210,9 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
     const vehicleOptions = (vehicles?.data ?? []).map((vehicle) => ({
         value: vehicle.id,
         label: vehicle.plate,
-        code: vehicle.plate,
         description: `${vehicle.brand} ${vehicle.model} · ${VEHICLE_TYPE_LABELS[vehicle.type] ?? vehicle.type} · ${vehicle.year}`,
+        /** La unidad se reconoce por su foto, igual que en la ficha. */
+        icon: <VehiclePhotoThumb image={vehicle.image} alt={`Vehículo ${vehicle.plate}`} />,
     }));
 
     const isLoadingCrew = isLoadingPilots || isLoadingVehicles;
@@ -236,7 +237,7 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                 </p>
             )}
 
-            <CardSelectFormField<TripAssignmentFormValues>
+            <SearchSelectFormField<TripAssignmentFormValues>
                 label="Piloto"
                 name="pilotId"
                 description="Quién conduce. Tiene que ser un piloto de tu misma empresa."
@@ -244,11 +245,13 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                 errorMessage={errors.pilotId?.message}
                 control={control}
                 validation={{ required: "El piloto es obligatorio" }}
-                columns={2}
+                placeholder="Busca por nombre, correo o empresa"
+                noOptionsMessage="Ningún piloto coincide"
+                isLoading={isLoadingPilots}
                 disabled={isPending}
             />
 
-            <VehicleCardSelectFormField<TripAssignmentFormValues>
+            <SearchSelectFormField<TripAssignmentFormValues>
                 label="Unidad"
                 name="vehicleId"
                 description="Solo aparecen las unidades activas: una inactiva o en taller la rechaza el servidor."
@@ -256,7 +259,9 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                 errorMessage={errors.vehicleId?.message}
                 control={control}
                 validation={{ required: "El vehículo es obligatorio" }}
-                columns={2}
+                placeholder="Busca por placa, marca, modelo o año"
+                noOptionsMessage="Ninguna unidad coincide"
+                isLoading={isLoadingVehicles}
                 disabled={isPending}
             />
 

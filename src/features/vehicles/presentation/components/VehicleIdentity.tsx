@@ -70,6 +70,46 @@ const resolveImageUrl = (image: string) => {
     return `${ASSETS_BASE_URL}/${image.replace(/^\//, '')}`;
 }
 
+type PhotoThumbProps = {
+    image?: string | null;
+    alt?: string;
+}
+
+/**
+ * Miniatura de la fotografía, mismo encuadre 4/3 y mismo marco que
+ * `VehiclePhoto` pero inerte: sin botón ni ampliación, para vivir dentro de
+ * otro control (una opción de un select) sin robarle el clic.
+ */
+export function VehiclePhotoThumb({ image, alt = "Fotografía del vehículo" }: PhotoThumbProps) {
+    const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+
+    const source = image ? resolveImageUrl(image) : null;
+    const frame = "block aspect-4/3 w-12 shrink-0 overflow-hidden rounded-md";
+
+    if (!source || source === brokenUrl) {
+        return (
+            <span
+                aria-hidden
+                className={`${frame} flex items-center justify-center border border-dashed border-line-strong bg-canvas text-ink-subtle`}
+            >
+                <ImageOff size={14} strokeWidth={1.5} />
+            </span>
+        );
+    }
+
+    return (
+        <span className={`${frame} border border-line bg-canvas`}>
+            <img
+                src={source}
+                alt={alt}
+                loading="lazy"
+                onError={() => setBrokenUrl(source)}
+                className="h-full w-full object-cover"
+            />
+        </span>
+    );
+}
+
 type PhotoProps = {
     image?: string | null;
     alt?: string;
