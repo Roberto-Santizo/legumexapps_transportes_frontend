@@ -39,9 +39,9 @@ import {
     TRIP_BONUS_MAX_AMOUNT,
     TRIP_CARGO_INSURANCE_MAX_AMOUNT,
     TRIP_CREW_LIMIT,
+    TRIP_EXPENSE_CONCEPTS,
     TRIP_EXPENSE_MAX_AMOUNT,
     TRIP_FUEL_TYPES,
-    TRIP_TEXT_MAX_LENGTH,
     TRIP_NOT_PENDING_MESSAGE,
     TRIP_TAKEN_MESSAGE,
     TripContainer,
@@ -53,7 +53,7 @@ import {
 } from "@/features/trips/trips";
 import { SearchSelectFormField } from "@/features/pilots/pilots";
 import { VEHICLE_TYPE_LABELS, VehiclePhotoThumb, vehicleProvider } from "@/features/vehicles/vehicles";
-import { CustomForm, Modal, SelectFormField, SpinnerComponent, TextAreaFormField, TextFormField, useNotification } from "@/features/shared/shared";
+import { CustomForm, Modal, SelectFormField, SpinnerComponent, TextFormField, useNotification } from "@/features/shared/shared";
 import { pilotProvider } from "@/features/pilots/pilots";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -417,17 +417,18 @@ function TripAssignmentForm({ trip, onClose }: FormProps) {
                         disabled={isPending}
                     />
 
-                    <TextAreaFormField<TripAssignmentFormValues>
-                        label="Descripción del viático"
+                    {/* El concepto viaja como `expenseDescription`: la API no tiene categorías. */}
+                    <SelectFormField<TripAssignmentFormValues>
+                        label="Concepto del viático"
                         name="expenseDescription"
-                        placeholder="Alimentación y peajes"
-                        rows={2}
-                        register={register}
+                        options={TRIP_EXPENSE_CONCEPTS}
+                        control={control}
                         errorMessage={errors.expenseDescription?.message}
                         validation={{
-                            maxLength: {
-                                value: TRIP_TEXT_MAX_LENGTH,
-                                message: `La descripción del viático no puede superar los ${TRIP_TEXT_MAX_LENGTH} caracteres`
+                            /** Solo se exige si hay monto: sin él no hay viático y el concepto no viaja. */
+                            validate: (value, form) => {
+                                const hasAmount = typeof form.expenseAmount === 'number' && !Number.isNaN(form.expenseAmount);
+                                return !hasAmount || Boolean(value) || "Elige el concepto del viático";
                             }
                         }}
                     />
