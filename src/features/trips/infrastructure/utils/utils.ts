@@ -88,7 +88,7 @@ export const canCancelTrip = (trip: Pick<TripListItem, 'status'>): boolean => tr
  * administrador no puede asignar por ninguna ruta.**
  */
 export const canAssignTrips = (role?: string, carrierId?: number | null): boolean =>
-    can(role, 'assignTrip') && typeof carrierId === 'number';
+    can(role, 'assignTrip') && (role === 'carrier' ? typeof carrierId === 'number' : true);
 
 /** Arrancar y cerrar es solo del piloto, y dentro el service exige que sea *el* asignado. */
 export const canRunTrips = (role?: string): boolean => can(role, 'driveTrip');
@@ -919,15 +919,21 @@ export const TRIP_EXPENSE_MAX_AMOUNT = 99999999.99;
  * que son gastos de emergencia.
  */
 export const TRIP_EXPENSE_CONCEPTS: Option[] = [
+    'Peaje',
+    'Parqueo',
     'Alimentación',
     'Hospedaje',
-    'Peaje',
-    'Estacionamiento',
     'Pesaje en báscula',
     'Trámites aduanales',
+    'Gestiones en puerto o predio',
+    'Fumigación',
+    'Carga y descarga (estiba)',
+    'Custodia o seguridad',
     'Pasaje de regreso',
+    'Transporte local (taxi, bus)',
     'Comunicación (saldo telefónico)',
     'Lavado de la unidad',
+    'Agua y aceite para la unidad',
     'Otros gastos de ruta',
 ].map((concept) => ({ value: concept, label: concept }));
 

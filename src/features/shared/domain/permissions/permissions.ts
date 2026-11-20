@@ -34,7 +34,7 @@ export const PERMISSIONS = {
     /* Catálogos: todos leen menos `user` y `shipment`, que ven los nombres ya embebidos en el viaje. */
     readCatalogs: except('user', 'shipment'),
     /** `products`, `zones`, `fuel-prices`, `freight-rates`, `accessories`, `accessory-characteristics`. */
-    writeCoreCatalogs: ['administrator'],
+    writeCoreCatalogs: ['administrator', 'carrier'],
     /** `clients`, `shipping-lines`, `locations`, `departure-points`. */
     writeTripCatalogs: ['administrator', 'export'],
     /** `finished-products`: al revés que el resto de catálogos, `user` y `shipment` leen y el `pilot` no. Escribe `writeTripCatalogs`. */
@@ -52,7 +52,7 @@ export const PERMISSIONS = {
     /** La sección «Productos terminados» del detalle del viaje. Restricción solo de UI. */
     readTripFinishedProducts: ['administrator', 'export', 'shipment'],
     /** Tomar de la bolsa: solo `carrier`, y con empresa (ver `canAssignTrips`). */
-    assignTrip: ['carrier'],
+    assignTrip: ['carrier', 'administrator'],
     /** Arrancar, cerrar, reportar posición y confirmar cargas/viáticos. */
     driveTrip: ['pilot'],
     /** Rastro, paradas y canal en vivo: el piloto emite pero no observa. */
