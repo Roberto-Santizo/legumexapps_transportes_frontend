@@ -1,6 +1,6 @@
 /**
- * Los catorce campos del viaje —más sus productos terminados, el booking y la
- * referencia, en el alta, y la orden de venta en el alta y la edición—,
+ * Los catorce campos del viaje —más el booking, la referencia y la orden de
+ * venta, y, solo en el alta, sus productos terminados—,
  * agrupados como se dicta un viaje por teléfono: qué carga es y de quién,
  * cuándo sale, por dónde va y qué hay que saber al llevarla.
  *
@@ -47,6 +47,8 @@ type Props = {
      * obliga a reprogramarlo.
      */
     isUpdate?: boolean;
+    /** `false` solo al editar un viaje anterior a SPEC 41, que no tiene booking: en blanco no se manda. */
+    requireBooking?: boolean;
     /**
      * El viaje ya tiene productos terminados: cambiarle el cliente es 400. El
      * cliente se muestra fijo y se reenvía el mismo, que no cuenta como cambio.
@@ -72,16 +74,23 @@ const CONTAINER_VALIDATION = {
     }
 } as const;
 
-/** SPEC 41: sin booking el `POST` es 422. No se valida contra la naviera: cualquier texto vale. */
-const BOOKING_VALIDATION = {
-    validate: (value: unknown) => String(value ?? '').trim() !== '' || "El booking es obligatorio",
+/**
+ * SPEC 41: sin booking el `POST` es 422, y el `PATCH` no deja vaciarlo. No se
+ * valida contra la naviera: cualquier texto vale.
+ */
+const OPTIONAL_BOOKING_VALIDATION = {
     maxLength: {
         value: TRIP_TEXT_MAX_LENGTH,
         message: `El booking no puede superar los ${TRIP_TEXT_MAX_LENGTH} caracteres`
     }
 } as const;
 
-/** SPEC 41: opcional. Vacía o en blanco se guarda `null`. */
+const BOOKING_VALIDATION = {
+    ...OPTIONAL_BOOKING_VALIDATION,
+    validate: (value: unknown) => String(value ?? '').trim() !== '' || "El booking es obligatorio"
+} as const;
+
+/** SPEC 41: opcional. Vacía o en blanco se guarda `null`; en la edición, vaciarla la borra. */
 const REFERENCE_VALIDATION = {
     maxLength: {
         value: TRIP_TEXT_MAX_LENGTH,
@@ -119,6 +128,7 @@ export function TripFormComponent({
     errors,
     setValue,
     isUpdate = false,
+    requireBooking = true,
     lockClient = false,
     lockedClientName
 }: Props) {
@@ -162,7 +172,7 @@ export function TripFormComponent({
             <Fieldset
                 legend="La carga"
                 hint={isUpdate
-                    ? "La orden, el contenedor y la orden de venta se guardan en mayúsculas. Ninguno es único: dos viajes pueden compartirlos. Deja la OV vacía para quitarla."
+                    ? "La orden, el contenedor, el booking, la referencia y la orden de venta se guardan en mayúsculas. Ninguno es único: dos viajes pueden compartirlos. Deja la referencia o la OV vacías para quitarlas."
                     : "La orden, el contenedor, el booking, la referencia y la orden de venta se guardan en mayúsculas. Ninguno es único: un mismo booking puede cubrir varios viajes."}
             >
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -187,33 +197,28 @@ export function TripFormComponent({
                     />
                 </div>
 
-                {/* SPEC 41, solo en el alta: la edición de booking y referencia aún no está en el `PATCH` del front. */}
-                {!isUpdate && (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <TextFormField<TripFormValues>
-                            label="Booking"
-                            name="booking"
-                            type="text"
-                            placeholder="BK-2026 001"
-                            register={register}
-                            errorMessage={errors.booking?.message}
-                            validation={BOOKING_VALIDATION}
-                        />
-
-                        <TextFormField<TripFormValues>
-                            label="Referencia/PO#"
-                            name="reference"
-                            type="text"
-                            placeholder="REF-ACME 77"
-                            register={register}
-                            errorMessage={errors.reference?.message}
-                            validation={REFERENCE_VALIDATION}
-                        />
-                    </div>
-                )}
-
-                {/* SPEC 43: opcional en el alta y en la edición; vacía, el `PATCH` la borra. */}
+                {/* Referencia y OV son opcionales; vacías, el `PATCH` las borra (SPEC 41 y 43). */}
                 <div className="grid gap-4 sm:grid-cols-2">
+                    <TextFormField<TripFormValues>
+                        label="Booking"
+                        name="booking"
+                        type="text"
+                        placeholder="BK-2026 001"
+                        register={register}
+                        errorMessage={errors.booking?.message}
+                        validation={requireBooking ? BOOKING_VALIDATION : OPTIONAL_BOOKING_VALIDATION}
+                    />
+
+                    <TextFormField<TripFormValues>
+                        label="Referencia/PO#"
+                        name="reference"
+                        type="text"
+                        placeholder="REF-ACME 77"
+                        register={register}
+                        errorMessage={errors.reference?.message}
+                        validation={REFERENCE_VALIDATION}
+                    />
+
                     <TextFormField<TripFormValues>
                         label="Orden de venta (OV)"
                         name="ov"

@@ -76,6 +76,8 @@ export function UpdateTrip() {
 
         setValue('order', trip.order);
         setValue('container', trip.container);
+        setValue('booking', trip.booking ?? '');
+        setValue('reference', trip.reference ?? '');
         setValue('ov', trip.ov ?? '');
         setValue('transport', trip.transport);
         setValue('destination', trip.destination);
@@ -215,6 +217,7 @@ export function UpdateTrip() {
                                 errors={errors}
                                 setValue={setValue}
                                 isUpdate
+                                requireBooking={trip.booking !== null}
                                 lockClient={lockClient}
                                 lockedClientName={trip.clientName}
                             />
