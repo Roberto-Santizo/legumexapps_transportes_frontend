@@ -483,14 +483,25 @@ export const buildTripPayload = (form: TripFormValues): TripForm => {
  * responde 200 sin aplicarlos. `products` tampoco: las líneas se editan con
  * `/trip-finished-products`.
  *
- * La OV (SPEC 43) viaja siempre: con valor se reescribe y vacía va como
- * `null`, que es como el `PATCH` la borra —omitirla no la tocaría—.
+ * El booking (SPEC 41) **nunca viaja vacío**: en blanco o `null` es 422. El
+ * formulario solo lo deja en blanco en un viaje anterior a SPEC 41, y ahí se
+ * omite para no tocarlo.
+ *
+ * La referencia (SPEC 41) y la OV (SPEC 43) viajan siempre: con valor se
+ * reescriben y vacías van como `null`, que es como el `PATCH` las borra
+ * —omitirlas no las tocaría—.
  */
-export const buildTripUpdatePayload = (form: TripFormValues): TripUpdateForm => ({
-    ...buildTripBasePayload(form),
-    ov: form.ov?.trim() || null,
-    ...(form.status ? { status: form.status } : {}),
-});
+export const buildTripUpdatePayload = (form: TripFormValues): TripUpdateForm => {
+    const booking = form.booking?.trim();
+
+    return {
+        ...buildTripBasePayload(form),
+        ...(booking ? { booking } : {}),
+        reference: form.reference?.trim() || null,
+        ov: form.ov?.trim() || null,
+        ...(form.status ? { status: form.status } : {}),
+    };
+};
 
 /**
  * Los **seis** campos obligatorios de `/assignment`, con los numéricos como
